@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הצוות שלנו | עכשיו באות</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&family=Frank+Ruhl+Libre:wght@300;400;700;900&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">עכשיו <span>באות!</span></div>
+  <ul class="nav-links">
+    <li><a href="#">דף בית</a></li>
+    <li><a href="#" class="active">אודות</a></li>
+    <li><a href="#">הצטרפות</a></li>
+  </ul>
+</nav>
+
+<header class="hero">
+  <div class="hero-inner">
+    <h1>הצוות שלנו —<br><em>אנשים שמחוללים שינוי</em></h1>
+    <p>אזרחיות ואזרחים מרחבי הארץ שהתאגדנו לבנות שמאל גאה ואמיתי</p>
+  </div>
+</header>
+
+<section class="about">
+  <p class="label">מי אנחנו</p>
+  <h2>השמאל שישראל צריכה</h2>
+  <div class="divider"></div>
+  <p>הכרנו במחאה כאשר התארגנו יחד למחות נגד ממשלת החורבן. הבנו שהשבר עמוק ושהמדינה בקריסה בהיעדר כוח פוליטי בשמאל.</p>
+  <p>מתוך הבנה שצריך לרתום את אנרגיות המחאה ליצירת כוח פוליטי, התחלנו לעבוד — לעזור, לייצר, לעצב ולחזק את הבית הפוליטי שלנו.</p>
+</section>
+
+<section class="join">
+  <div class="form-wrap">
+    <h3>הצטרפות לתנועה</h3>
+    <p>מלאי/מלא את הפרטים ונחזור אליך בהקדם.</p>
+    <div class="form-row">
+      <label>שם מלא *<input type="text" placeholder="ישראל ישראלי"></label>
+      <label>אימייל *<input type="email" placeholder="you@example.com"></label>
+    </div>
+    <div class="form-row">
+      <label>טלפון<input type="tel" placeholder="050-0000000"></label>
+      <label>עיר<input type="text" placeholder="תל אביב"></label>
+    </div>
+    <label class="cb-row">
+      <input type="checkbox" checked>
+      אשמח לקבל עדכוני ארועים באימייל
+    </label>
+    <button class="btn-primary" onclick="alert('תודה! נחזור אליך בקרוב.')">להצטרפות ←</button>
+  </div>
+</section>
+
+<section class="grid-section">
+  <div class="sec-head">
+    <p class="label">הצוות</p>
+    <h2>הפנים מאחורי התנועה</h2>
+    <p>רחפו מעל כל תמונה לצפייה בפוזות השונות • לחצו להכיר את האדם</p>
+  </div>
+  <div class="people-grid" id="grid"></div>
+</section>
+
+<footer>
+  <div class="foot-logo">עכשיו <span>באות!</span></div>
+  <div class="foot-bar"></div>
+  <nav class="foot-links">
+    <a href="#">דף בית</a>
+    <a href="#">אודות</a>
+    <a href="#">צור קשר</a>
+    <a href="#">WhatsApp</a>
+  </nav>
+  <p>© 2024 עכשיו באות. כל הזכויות שמורות.</p>
+</footer>
+
+<!-- Popup — populated and positioned by app.js -->
+<div class="popup" id="popup" role="tooltip">
+  <div class="popup-head">
+    <div class="popup-photo"><img id="popupImg" src="" alt=""></div>
+    <div class="popup-title">
+      <div class="popup-name" id="popupName"></div>
+      <div class="popup-role" id="popupRole"></div>
+    </div>
+    <button class="popup-close" id="popupClose" aria-label="סגור">✕</button>
+  </div>
+  <div class="popup-body">
+    <p id="popupBio"></p>
+    <div class="tags" id="popupTags"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
