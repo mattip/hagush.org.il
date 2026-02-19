@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>הצוות שלנו | עכשיו באות</title>
+  <title>מעומדים | עכשיו באות</title>
+  <link rel="icon" href="favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&family=Frank+Ruhl+Libre:wght@300;400;700;900&display=swap">
+  <link rel="stylesheet" href="styles1.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
+<input type="checkbox" id="nav-toggle">
+
 <nav>
-  <div class="nav-logo">עכשיו <span>באות!</span></div>
-  <ul class="nav-links">
-    <li><a href="#">דף בית</a></li>
-    <li><a href="#" class="active">אודות</a></li>
-    <li><a href="#">הצטרפות</a></li>
+  <span class="nav-logo">!עכשיו באות</span>
+  <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
+    <span></span><span></span><span></span>
+  </label>
+  <ul>
+    <li><a href="index.html">דף בית</a></li>
+    <li><a href="about.html">אודות</a></li>
+    <li><a href="#" class="active">מעומדים</a></li>
   </ul>
 </nav>
-
-<header class="hero">
-  <div class="hero-inner">
-    <h1>הצוות שלנו —<br><em>אנשים שמחוללים שינוי</em></h1>
-    <p>אזרחיות ואזרחים מרחבי הארץ שהתאגדנו לבנות שמאל גאה ואמיתי</p>
-  </div>
-</header>
 
 <section class="about">
   <p class="label">מי אנחנו</p>
