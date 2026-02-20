@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>מעומדים | עכשיו באות</title>
+  <title>מעומדים | עכשיו באות!</title>
   <link rel="icon" href="favicon.ico">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&family=Frank+Ruhl+Libre:wght@300;400;700;900&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles1.css">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -27,53 +26,51 @@
 </nav>
 
 <section class="about">
-  <p class="label">מי אנחנו</p>
   <h2>השמאל שישראל צריכה</h2>
   <div class="divider"></div>
   <p>הכרנו במחאה כאשר התארגנו יחד למחות נגד ממשלת החורבן. הבנו שהשבר עמוק ושהמדינה בקריסה בהיעדר כוח פוליטי בשמאל.</p>
   <p>מתוך הבנה שצריך לרתום את אנרגיות המחאה ליצירת כוח פוליטי, התחלנו לעבוד — לעזור, לייצר, לעצב ולחזק את הבית הפוליטי שלנו.</p>
 </section>
 
-<section class="join">
-  <div class="form-wrap">
-    <h3>הצטרפות לתנועה</h3>
-    <p>מלאי/מלא את הפרטים ונחזור אליך בהקדם.</p>
-    <div class="form-row">
-      <label>שם מלא *<input type="text" placeholder="ישראל ישראלי"></label>
-      <label>אימייל *<input type="email" placeholder="you@example.com"></label>
+<!-- Join form — shared markup & styles from styles1.css -->
+<section class="tg-join">
+  <div class="sh2-form">
+    <p>מצטרפות/ים עכשיו!</p>
+    <p class="sub">רק מעורבות ציבורית רחבה תביא לנו כוח לתיקון, בניה ושינוי.</p>
+    <div class="f-field"><input type="text" placeholder="שם מלא"></div>
+    <div class="f-field"><input type="email" placeholder="מייל"></div>
+    <div class="f-field f-phone">
+      <input type="tel" placeholder="טלפון">
+      <span><span>🌐</span><span style="font-size:.6rem;">▼</span></span>
     </div>
-    <div class="form-row">
-      <label>טלפון<input type="tel" placeholder="050-0000000"></label>
-      <label>עיר<input type="text" placeholder="תל אביב"></label>
+    <label class="f-check"><input type="checkbox" checked>אשמח לקבל עדכוני ארועים באימייל</label>
+    <button class="f-submit">להצטרפות</button>
+    <div class="f-wa">
+      <p>רוצים להיות מעורבים ולהשתתף בפעולות נוספות?</p>
+      <a href="https://chat.whatsapp.com/D9FmoaRDlnnJab6suRWVmH" target="_blank" rel="noreferrer">
+        <div class="wa-circle" style="background:#25D366;">
+          <svg preserveAspectRatio="xMidYMid meet" viewBox="30 30 140 140" xmlns="http://www.w3.org/2000/svg" role="presentation" aria-hidden="true">
+            <g>
+              <path d="M132.7 112c-1.7-.9-10-4.9-11.5-5.4-1.6-.5-2.6-.9-3.8.9-1.1 1.8-4.4 5.4-5.3 6.6-1 1.1-1.9 1.2-3.7.4-1.7-.9-7.2-2.6-13.6-8.2-5.1-4.4-8.4-10-9.4-11.6-1-1.7-.1-2.6.8-3.4.8-.8 1.7-1.9 2.5-3 .9-1 1.1-1.7 1.7-2.8.5-1.1.3-2.1-.2-3s-3.8-9-5.2-12.4c-1.4-3.3-2.8-2.8-3.8-2.8s-2.1-.2-3.2-.2-3 .4-4.5 2.1c-1.6 1.7-5.9 5.8-5.9 13.9 0 8.2 6 16.2 6.8 17.3.9 1.1 11.6 18.5 28.8 25.3 17.2 6.7 17.2 4.5 20.2 4.2 3.1-.3 10-4 11.4-7.9 1.4-3.9 1.4-7.3 1-7.9-.3-.9-1.4-1.3-3.1-2.1z" fill="#fff"></path>
+              <path d="M101.2 30c-37.9 0-68.7 30.5-68.7 68.2 0 12.9 3.6 24.9 9.9 35.2L30 170l38.1-12.1c9.9 5.4 21.1 8.5 33.2 8.5 37.9 0 68.7-30.5 68.7-68.2-.1-37.7-30.9-68.2-68.8-68.2zm0 125.5c-11.7 0-22.7-3.5-31.8-9.4l-22.1 7.1 7.2-21.3c-6.9-9.4-11-21.1-11-33.6 0-31.7 25.9-57.3 57.8-57.3S159 66.7 159 98.2c0 31.6-25.9 57.3-57.8 57.3z" fill="#fff"></path>
+            </g>
+          </svg>
+        </div>
+        קבוצת וואטסאפ לעדכונים
+      </a>
     </div>
-    <label class="cb-row">
-      <input type="checkbox" checked>
-      אשמח לקבל עדכוני ארועים באימייל
-    </label>
-    <button class="btn-primary" onclick="alert('תודה! נחזור אליך בקרוב.')">להצטרפות ←</button>
   </div>
 </section>
 
 <section class="grid-section">
   <div class="sec-head">
-    <p class="label">הצוות</p>
     <h2>הפנים מאחורי התנועה</h2>
     <p>רחפו מעל כל תמונה לצפייה בפוזות השונות • לחצו להכיר את האדם</p>
   </div>
   <div class="people-grid" id="grid"></div>
 </section>
 
-<footer>
-  <div class="foot-logo">עכשיו <span>באות!</span></div>
-  <div class="foot-bar"></div>
-  <nav class="foot-links">
-    <a href="#">דף בית</a>
-    <a href="#">אודות</a>
-    <a href="#">צור קשר</a>
-    <a href="#">WhatsApp</a>
-  </nav>
-  <p>© 2024 עכשיו באות. כל הזכויות שמורות.</p>
-</footer>
+<footer>עכשיו באות!</footer>
 
 <!-- Popup — populated and positioned by app.js -->
 <div class="popup" id="popup" role="tooltip">

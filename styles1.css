@@ -401,3 +401,24 @@ footer {
     text-decoration: none;
   }
 }
+
+
+/* ════════════════════
+   SHARED — section intro header
+   Used by team-grid (.about) and extensible to other pages
+════════════════════ */
+.label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 0.5rem;
+}
+.divider {
+  width: 56px;
+  height: 4px;
+  background: linear-gradient(90deg, var(--orange), var(--steel));
+  border-radius: 2px;
+  margin: 1.2rem 0;
+}
