@@ -73,19 +73,61 @@
 <footer>עכשיו באות!</footer>
 
 <!-- Popup — populated and positioned by app.js -->
-<div class="popup" id="popup" role="tooltip">
-  <div class="popup-head">
-    <div class="popup-photo"><img id="popupImg" src="" alt=""></div>
-    <div class="popup-title">
-      <div class="popup-name" id="popupName"></div>
-      <div class="popup-role" id="popupRole"></div>
+<div class="popup" id="popup" role="dialog" aria-modal="true">
+
+  <!-- ① Photo block -->
+  <div class="popup-img-wrap">
+    <img id="popupImg" src="" alt="">
+    <span class="popup-name-badge" id="popupNameBadge"></span>
+  </div>
+
+  <!-- ② Info table -->
+  <div class="popup-info">
+
+    <!-- 2-col rows: tag | value -->
+    <div class="pi-row pi-2col">
+      <span class="pi-tag">שם</span>
+      <span class="pi-val" id="piName"></span>
     </div>
-    <button class="popup-close" id="popupClose" aria-label="סגור">✕</button>
-  </div>
-  <div class="popup-body">
-    <p id="popupBio"></p>
-    <div class="tags" id="popupTags"></div>
-  </div>
+    <div class="pi-row pi-2col">
+      <span class="pi-tag">גיל</span>
+      <span class="pi-val" id="piAge"></span>
+    </div>
+    <div class="pi-row pi-2col">
+      <span class="pi-tag">עיר/ישוב</span>
+      <span class="pi-val" id="piHome"></span>
+    </div>
+    <div class="pi-row pi-2col" id="piRowActivities">
+      <span class="pi-tag">תיאור/תואר</span>
+      <span class="pi-val" id="piActivities"></span>
+    </div>
+
+    <!-- rationale: full width, no tag -->
+    <div class="pi-row pi-full pi-rationale" id="piRowRationale">
+      <span class="pi-val" id="piRationale"></span>
+    </div>
+
+    <!-- recommendation: tag line, blank line, content -->
+    <div class="pi-row pi-full pi-section" id="piRowRecommendation">
+      <span class="pi-tag">מילה טובה</span>
+      <span class="pi-val" id="piRecommendation"></span>
+    </div>
+
+    <!-- minister: tag line, content line -->
+    <div class="pi-row pi-full pi-section" id="piRowMinister">
+      <span class="pi-tag">איזה שר היתה רוצה להיות?</span>
+      <span class="pi-val" id="piMinister"></span>
+    </div>
+
+    <!-- links -->
+    <div class="pi-row pi-links" id="piRowLinks">
+      <span class="pi-tag">לאתר שלי</span>
+      <div class="pi-link-icons" id="piLinks"></div>
+    </div>
+
+  </div><!-- /popup-info -->
+
+  <button class="popup-close" id="popupClose" aria-label="סגור">✕</button>
 </div>
 
 <script src="app.js"></script>

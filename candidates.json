@@ -1,0 +1,48 @@
+[
+  {
+    "id": "mattip",
+    "name": "מתי פיקוס",
+    "age": "52",
+    "home": "לוטן",
+    "activities": "יזם סביבתי, מייסד קואופרטיב אנרגיה קהילתי, מרצה בן-גוריון",
+    "rationale": "רוצה לקדם אנרגיה מתחדשת ולהוביל מדיניות אקלים ריאלית שתשרת את כל אזרחי ישראל, גם בפריפריה.",
+    "recommendation": "יאיר גולן מביא עמדה לא מתפשרת, גלעד קריב ונעמה לזימי מביאים את המציאות ישר לפנים",
+    "minister": "שר האנרגיה",
+    "links": {
+      "facebook": "https://www.facebook.com/matti.picus",
+      "linkedin": "https://www.linkedin.com/in/mattipicus"
+    },
+    "photos": ["carlos_forward.png", "carlos_down.png", "carlos_up.png"]
+  },
+  {
+    "id": "danah",
+    "name": "דנה הלוי",
+    "age": "38",
+    "home": "תל אביב",
+    "activities": "עורכת דין לזכויות אדם, פעילת מחאה, מנחת קבוצות דיאלוג",
+    "rationale": "הגיע הזמן שיהיה ייצוג אמיתי לנשים ולמיעוטים בכנסת. אני כאן כדי לשנות את כללי המשחק.",
+    "recommendation": "מרב מיכאלי — אישה עם עמוד שדרה, שמעולם לא ויתרה על עקרונותיה גם כשזה עלה לה פוליטית",
+    "minister": "שרת המשפטים",
+    "links": {
+      "instagram": "https://www.instagram.com/dana.halevi",
+      "facebook": "https://www.facebook.com/danahalevi",
+      "x": "https://x.com/danahalevi"
+    },
+    "photos": ["dafna_forward.png", "dafna_down.png", "dafna_up.png"]
+  },
+  {
+    "id": "yonatanb",
+    "name": "יונתן בן-דוד",
+    "age": "45",
+    "home": "חיפה",
+    "activities": "כלכלן, לשעבר יועץ בנק ישראל, חוקר אי-שוויון בטכניון",
+    "rationale": "הפערים הכלכליים בישראל הם לא גזירת גורל. יש מדיניות שעובדת — צריך רק את האומץ ליישם אותה.",
+    "recommendation": "אורי מקלב הפתיע אותי עם הבנה עמוקה של כלכלת רווחה. סתאב שייח — קול הכרחי שחסר בדיון הכלכלי",
+    "minister": "שר האוצר",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/yonatanbd",
+      "x": "https://x.com/yonatanbd"
+    },
+    "photos": ["navot_forward.png", "navot_down.png", "navot_up.png"]
+  }
+]
