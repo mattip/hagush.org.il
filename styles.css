@@ -66,10 +66,9 @@ body { background: var(--cream); }
 .people-grid {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 200px));
+  justify-content: center;
 }
-@media (min-width: 480px) { .people-grid { grid-template-columns: repeat(2,1fr); } }
-@media (min-width: 900px) { .people-grid { grid-template-columns: repeat(4,1fr); } }
 
 /* ── Person card ───────────────────────────────────────────────── */
 .card {
@@ -101,14 +100,14 @@ body { background: var(--cream); }
   aspect-ratio: 3 / 4;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(160deg, #e2eaf7, #eef2fb);
+  background: #eef2fb;
 }
 .photo-stage img {
   position: absolute;
   inset: 0;
   width: 100%; height: 100%;
-  object-fit: cover;
-  object-position: top center;
+  object-fit: contain;
+  object-position: center bottom;
   opacity: 0;
   transition: opacity .55s ease;
   pointer-events: none;
@@ -171,7 +170,7 @@ body { background: var(--cream); }
 .popup {
   position: fixed;
   z-index: 300;
-  width: 280px;
+  width: 220px;
   max-height: 88vh;
   overflow-y: auto;
   background: var(--navy);
@@ -231,13 +230,13 @@ body { background: var(--cream); }
   width: 100%;
   aspect-ratio: 3 / 4;
   flex-shrink: 0;
-  background: linear-gradient(160deg, #1a3060, #0d1e40);
+  background: #eef2fb;
   overflow: hidden;
 }
 .popup-img-wrap img {
   width: 100%; height: 100%;
-  object-fit: cover;
-  object-position: top center;
+  object-fit: contain;
+  object-position: center bottom;
   display: block;
 }
 /* Name badge — blue pill bottom-right of photo */
