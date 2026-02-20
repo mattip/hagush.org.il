@@ -1,0 +1,4 @@
+- Hook up the form to a form handler service, like staticforms.dev (free for 500 emails/month)
+- Get real data into candidates.json
+- Tweak the text and formatting of the team-grid page
+- Decide where to host, if on github-pages then move the DNS to here.
