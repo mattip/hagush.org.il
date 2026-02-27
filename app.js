@@ -76,11 +76,24 @@ function createCard(person, i) {
 
   card.append(stage);
 
-  // Events
-  card.addEventListener('mouseenter', () => openPopup(person, card));
-  card.addEventListener('click',      () => openPopup(person, card));
+  // Events — hover on desktop, click-to-toggle on touch
+  const isTouch = () => window.matchMedia('(hover: none)').matches;
+
+  card.addEventListener('mouseenter', () => { if (!isTouch()) openPopup(person, card); });
   card.addEventListener('mouseleave', e => {
-    if (!e.relatedTarget?.closest('#popup')) scheduleClose();
+    if (!isTouch() && !e.relatedTarget?.closest('#popup')) scheduleClose();
+  });
+  card.addEventListener('click', () => {
+    if (isTouch()) {
+      // toggle: if already showing this person, close; otherwise open
+      if (popup.classList.contains('open') && popup.dataset.personId === person.id) {
+        closePopup();
+      } else {
+        openPopup(person, card);
+      }
+    } else {
+      openPopup(person, card);
+    }
   });
   card.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') openPopup(person, card);
@@ -122,6 +135,7 @@ function rowShow(id, show) { const el = document.getElementById(id); if (el) el.
 
 function openPopup(person, card) {
   clearTimeout(closeTimer);
+  justOpened = true;
 
   // Photo
   const photos = person.photos || [];
@@ -159,6 +173,7 @@ function openPopup(person, card) {
   }
 
   popup.classList.add('open');
+  popup.dataset.personId = person.id;
   requestAnimationFrame(() => positionPopup(card));
 }
 
@@ -205,6 +220,10 @@ function closePopup() {
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closePopup(); });
-document.addEventListener('click',   e => {
+
+// Prevent the same click/tap that opens the popup from immediately closing it
+let justOpened = false;
+document.addEventListener('click', e => {
+  if (justOpened) { justOpened = false; return; }
   if (!e.target.closest('.card') && !e.target.closest('#popup')) closePopup();
 });
