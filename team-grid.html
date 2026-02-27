@@ -31,10 +31,40 @@
     <span class="team-dash" aria-hidden="true"> — </span>
     <h2 class="team-top2">דימיון בונה מציאות</h2>
   </div>
-  <div class="divider"></div>
   <p class="team-sub">האנשים שאנו מקוות שיובילו את המדינה • רחפו מעל כל תמונה להכיר את המעומד.ת</p>
+  <div class="team-toolbar">
+    <div class="toolbar-btns">
+      <button class="btn-select" id="btnSelect">☑ בחרו מועמדים</button>
+      <button class="btn-show-choices" id="btnShowChoices" style="display:none">★ הבחירות שלי</button>
+      <button class="btn-reset" id="btnReset" style="display:none">reset</button>
+    </div>
+  </div>
   <div class="people-grid" id="grid"></div>
 </section>
+
+<!-- Cookie consent dialog -->
+<div class="cookie-overlay" id="cookieOverlay" style="display:none">
+  <div class="cookie-dialog" dir="rtl">
+    <p class="cookie-title">שמירת בחירות</p>
+    <p class="cookie-body">שמירת הבחירות שלך מצריכה שימוש בעוגיות (cookies). האם את/ה מסכים/ה?</p>
+    <div class="cookie-btns">
+      <button class="cookie-yes" id="cookieYes">כן, מסכים/ה</button>
+      <button class="cookie-no"  id="cookieNo">לא תודה</button>
+    </div>
+  </div>
+</div>
+
+<!-- Choices modal -->
+<div class="choices-overlay" id="choicesOverlay" style="display:none">
+  <div class="choices-dialog" dir="rtl">
+    <button class="choices-close" id="choicesClose">✕</button>
+    <p class="choices-title">המועמדים שבחרתי</p>
+    <ul class="choices-list" id="choicesList"></ul>
+    <div class="choices-empty" id="choicesEmpty" style="display:none">טרם בחרת מועמדים</div>
+    <button class="choices-copy" id="choicesCopy">העתקה ללוח</button>
+    <div class="choices-copied" id="choicesCopied" style="display:none">✓ הועתק!</div>
+  </div>
+</div>
 
 <section class="under-grid">
   <div class="under-grid1">

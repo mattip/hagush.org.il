@@ -7,11 +7,19 @@ const timers = {};
 const popup  = document.getElementById('popup');
 let closeTimer = null;
 
+let selectMode  = false;
+let selectedIds = new Set();
+let allPeople   = [];
+
 // ── Bootstrap ────────────────────────────────────────────────────
 fetch('candidates.json')
   .then(r => r.json())
   .then(shuffle)
-  .then(buildGrid);
+  .then(people => {
+    allPeople = people;
+    buildGrid(people);
+    restoreFromCookies();
+  });
 
 // Fisher-Yates shuffle
 function shuffle(arr) {
@@ -44,6 +52,7 @@ function createCard(person, i) {
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
   card.setAttribute('aria-label', `${person.name}${person.minister ? ", " + person.minister : ""}`);
+  card.dataset.personId = person.id;
 
   // Photo stage
   const stage = document.createElement('div');
@@ -76,16 +85,20 @@ function createCard(person, i) {
 
   card.append(stage);
 
-  // Events — hover on desktop, click-to-toggle on touch
+  // Events — hover on desktop, click-to-toggle on touch; all blocked in select mode
   const isTouch = () => window.matchMedia('(hover: none)').matches;
 
-  card.addEventListener('mouseenter', () => { if (!isTouch()) openPopup(person, card); });
+  card.addEventListener('mouseenter', () => {
+    if (selectMode) return;
+    if (!isTouch()) openPopup(person, card);
+  });
   card.addEventListener('mouseleave', e => {
+    if (selectMode) return;
     if (!isTouch() && !e.relatedTarget?.closest('#popup')) scheduleClose();
   });
   card.addEventListener('click', () => {
+    if (selectMode) return;
     if (isTouch()) {
-      // toggle: if already showing this person, close; otherwise open
       if (popup.classList.contains('open') && popup.dataset.personId === person.id) {
         closePopup();
       } else {
@@ -227,3 +240,168 @@ document.addEventListener('click', e => {
   if (justOpened) { justOpened = false; return; }
   if (!e.target.closest('.card') && !e.target.closest('#popup')) closePopup();
 });
+
+// ══════════════════════════════════════════════════════════
+// SELECT MODE
+// ══════════════════════════════════════════════════════════
+
+const COOKIE_CONSENT_KEY = 'hagush_cookie_ok';
+const COOKIE_CHOICES_KEY = 'hagush_choices';
+const COOKIE_MAX_AGE     = 60 * 60 * 24 * 365;
+
+function setCookie(name, value, maxAge) {
+  document.cookie = `${name}=${encodeURIComponent(value)};max-age=${maxAge};path=/;SameSite=Lax`;
+}
+function getCookie(name) {
+  const m = document.cookie.match('(?:^|; )' + name + '=([^;]*)');
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+// Copy text to clipboard — works on mobile Safari via execCommand fallback
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text);
+  }
+  // execCommand fallback for Safari / non-HTTPS
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  return Promise.resolve();
+}
+
+function restoreFromCookies() {
+  if (getCookie(COOKIE_CONSENT_KEY) !== '1') return;
+  const saved = getCookie(COOKIE_CHOICES_KEY);
+  if (saved) {
+    try { JSON.parse(saved).forEach(id => selectedIds.add(id)); } catch(e) {}
+  }
+  enterSelectMode();
+}
+
+const btnSelect      = document.getElementById('btnSelect');
+const btnShowChoices = document.getElementById('btnShowChoices');
+const btnReset       = document.getElementById('btnReset');
+const cookieOverlay  = document.getElementById('cookieOverlay');
+const cookieYes      = document.getElementById('cookieYes');
+const cookieNo       = document.getElementById('cookieNo');
+const choicesOverlay = document.getElementById('choicesOverlay');
+const choicesClose   = document.getElementById('choicesClose');
+const choicesCopy    = document.getElementById('choicesCopy');
+
+btnSelect.addEventListener('click', () => {
+  if (selectMode) {
+    exitSelectMode();
+  } else if (getCookie(COOKIE_CONSENT_KEY) === '1') {
+    enterSelectMode();
+  } else {
+    cookieOverlay.style.display = 'flex';
+  }
+});
+
+cookieYes.addEventListener('click', () => {
+  setCookie(COOKIE_CONSENT_KEY, '1', COOKIE_MAX_AGE);
+  cookieOverlay.style.display = 'none';
+  enterSelectMode();
+});
+cookieNo.addEventListener('click', () => { cookieOverlay.style.display = 'none'; });
+cookieOverlay.addEventListener('click', e => { if (e.target === cookieOverlay) cookieOverlay.style.display = 'none'; });
+
+btnShowChoices.addEventListener('click', openChoicesModal);
+btnReset.addEventListener('click', resetChoices);
+choicesClose.addEventListener('click', () => { choicesOverlay.style.display = 'none'; });
+choicesOverlay.addEventListener('click', e => { if (e.target === choicesOverlay) choicesOverlay.style.display = 'none'; });
+
+choicesCopy.addEventListener('click', () => {
+  const names = [...selectedIds]
+    .map(id => { const p = allPeople.find(p => p.id === id); return p ? p.name : null; })
+    .filter(Boolean).join('\n');
+  copyToClipboard(names).then(() => {
+    const copied = document.getElementById('choicesCopied');
+    copied.style.display = 'block';
+    setTimeout(() => { copied.style.display = 'none'; }, 2000);
+  });
+});
+
+function enterSelectMode() {
+  selectMode = true;
+  closePopup();
+  btnSelect.textContent = '✕ יציאה מבחירה';
+  btnSelect.classList.add('active');
+  btnShowChoices.style.display = '';
+  btnReset.style.display = '';
+
+  document.querySelectorAll('.card[data-person-id]').forEach(card => {
+    if (card.querySelector('.card-select-btn')) return;
+    const id  = card.dataset.personId;
+    const btn = document.createElement('button');
+    btn.className = 'card-select-btn' + (selectedIds.has(id) ? ' selected' : '');
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'בחר מועמד');
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleSelection(id, btn);
+    });
+    card.appendChild(btn); // on .card, not .photo-stage, to avoid overflow:hidden clipping
+  });
+}
+
+function exitSelectMode() {
+  selectMode = false;
+  btnSelect.textContent = '☑ בחרו מועמדים';
+  btnSelect.classList.remove('active');
+  btnShowChoices.style.display = 'none';
+  btnReset.style.display = 'none';
+  document.querySelectorAll('.card-select-btn').forEach(b => b.remove());
+}
+
+function toggleSelection(id, btn) {
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id);
+    btn.classList.remove('selected');
+  } else {
+    selectedIds.add(id);
+    btn.classList.add('selected');
+  }
+  setCookie(COOKIE_CHOICES_KEY, JSON.stringify([...selectedIds]), COOKIE_MAX_AGE);
+}
+
+function openChoicesModal() {
+  const list  = document.getElementById('choicesList');
+  const empty = document.getElementById('choicesEmpty');
+  const copy = document.getElementById('choicesCopy');
+  list.innerHTML = '';
+  if (selectedIds.size === 0) {
+    empty.style.display = ''; list.style.display = 'none';
+    copy.style.display = 'none';
+  } else {
+    empty.style.display = 'none';
+    copy.style.display = '';
+    list.style.display = '';
+    [...selectedIds].forEach(id => {
+      const person = allPeople.find(p => p.id === id);
+      if (!person) return;
+      const li = document.createElement('li');
+      li.textContent = person.name;
+      list.appendChild(li);
+    });
+  }
+  document.getElementById('choicesCopied').style.display = 'none';
+  choicesOverlay.style.display = 'flex';
+}
+
+function resetChoices() {
+  // Clear in-memory selections
+  selectedIds.clear();
+
+  // Delete both cookies (max-age=0 expires them immediately)
+  setCookie(COOKIE_CONSENT_KEY, '', 0);
+  setCookie(COOKIE_CHOICES_KEY, '', 0);
+
+  // Exit select mode and return to initial state
+  exitSelectMode();
+}
