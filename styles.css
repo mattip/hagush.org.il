@@ -34,7 +34,7 @@ body { background: var(--cream); }
 .about p { color: var(--muted); font-size: 1.05rem; margin-bottom: 1rem; }
 
 .team-top {
-  background: var(--light);
+  background: var(--nav);
   padding: 0 28px;
 }
 
@@ -43,30 +43,34 @@ body { background: var(--cream); }
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0;
+  padding-top: 1.5rem;
 }
 .team-top1, .team-top2 {
   font-size: 1.6rem;
   font-weight: 800;
-  color: var(--nav);
+  color: #fff;
   margin-bottom: 0;
 }
 .team-dash {
   font-size: 1.6rem;
   font-weight: 800;
-  color: var(--nav);
+  color: #fff;
   padding: 0 0.3em;
   white-space: nowrap;
 }
 .team-sub {
-  color: var(--muted);
+  color: rgba(255,255,255,.7);
   font-size: 0.95rem;
   margin-top: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
 .under-grid {
-  background: var(--light);
+  background: var(--nav);
   padding: 28px;
+  color: rgba(255,255,255,.8);
+  font-size: 0.9rem;
+  line-height: 1.65;
 }
 
 
@@ -112,18 +116,18 @@ body { background: var(--cream); }
 /* ── People grid ───────────────────────────────────────────────── */
 .people-grid {
   display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 200px));
+  gap: 3px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   justify-content: center;
 }
 
 /* ── Person card ───────────────────────────────────────────────── */
 .card {
   background: #fff;
-  border-radius: var(--radius);
+  border-radius: 0;
   overflow: hidden;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  border: none;
+  box-shadow: none;
   cursor: pointer;
   /* reset about-page .card styles from styles1.css */
   padding: 0;
@@ -132,12 +136,11 @@ body { background: var(--cream); }
   opacity: 0;
   animation: reveal .5s forwards;
   animation-delay: calc(var(--i, 0) * .05s);
-  transition: transform .28s cubic-bezier(.22,.68,0,1.2), box-shadow .28s, border-color .2s;
+  transition: transform .28s cubic-bezier(.22,.68,0,1.2), box-shadow .28s;
 }
 .card:hover, .card:focus-within {
-  transform: translateY(-6px) scale(1.015);
+  transform: translateY(-4px) scale(1.015);
   box-shadow: var(--shadow-h);
-  border-color: var(--sky);
 }
 @keyframes reveal { to { opacity: 1; } }
 
@@ -179,39 +182,6 @@ body { background: var(--cream); }
 }
 .dot.active { background: rgba(255,255,255,.95); transform: scale(1.3); }
 
-
-/* ── Add-person button ─────────────────────────────────────────── */
-.add-card {
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
-  background: none;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.8rem;
-  color: var(--muted);
-  font-family: 'Assistant', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  min-height: 200px;
-  opacity: 0;
-  animation: reveal .5s .58s forwards;
-  transition: border-color .2s, color .2s, background .2s;
-}
-.add-card:hover { border-color: var(--sky); color: var(--blue); background: #f0f4fc; }
-
-.add-icon {
-  width: 50px; height: 50px;
-  border-radius: 50%;
-  background: var(--cream);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2rem;
-  color: var(--blue);
-  transition: background .2s;
-}
-.add-card:hover .add-icon { background: #d6e4f7; }
 
 /* ── Popup — candidate pane ────────────────────────────────────── */
 .popup {
@@ -273,7 +243,7 @@ body { background: var(--cream); }
 .popup-img-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 3;
   flex-shrink: 0;
   background: #eef2fb;
   overflow: hidden;
