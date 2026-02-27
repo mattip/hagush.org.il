@@ -10,7 +10,17 @@ let closeTimer = null;
 // ── Bootstrap ────────────────────────────────────────────────────
 fetch('candidates.json')
   .then(r => r.json())
+  .then(shuffle)
   .then(buildGrid);
+
+// Fisher-Yates shuffle
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 // ── Grid ─────────────────────────────────────────────────────────
 function buildGrid(people) {
@@ -26,11 +36,6 @@ function buildGrid(people) {
   });
 
   // "Add person" placeholder
-  const add = document.createElement('button');
-  add.className = 'add-card';
-  add.innerHTML = '<div class="add-icon">＋</div><span>הוספת חבר/ת צוות</span>';
-  add.onclick = () => alert('הוסיפו רשומה נוספת ל-people.json כדי להוסיף אדם.');
-  grid.appendChild(add);
 }
 
 function createCard(person, i) {

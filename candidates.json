@@ -28,7 +28,7 @@
       "facebook": "https://www.facebook.com/danahalevi",
       "x": "https://x.com/danahalevi"
     },
-    "photos": ["dafna_forward.png", "dafna_down.png", "dafna_up.png"]
+    "photos": ["woman_forward.png", "woman_down.png", "woman_up.jpeg"]
   },
   {
     "id": "yonatanb",
@@ -43,6 +43,6 @@
       "linkedin": "https://www.linkedin.com/in/yonatanbd",
       "x": "https://x.com/yonatanbd"
     },
-    "photos": ["navot_forward.png", "navot_down.png", "navot_up.png"]
+    "photos": ["guy_forward.png", "guy_down.jpeg", "guy_up.png"]
   }
 ]

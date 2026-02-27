@@ -33,6 +33,53 @@ body { background: var(--cream); }
 }
 .about p { color: var(--muted); font-size: 1.05rem; margin-bottom: 1rem; }
 
+.team-top {
+  background: var(--light);
+  padding: 0 28px;
+}
+
+.team-headings {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0;
+}
+.team-top1, .team-top2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--nav);
+  margin-bottom: 0;
+}
+.team-dash {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--nav);
+  padding: 0 0.3em;
+  white-space: nowrap;
+}
+.team-sub {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-top: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.under-grid {
+  background: var(--light);
+  padding: 28px;
+}
+
+
+@media (max-width: 480px) {
+  .team-headings {
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .team-dash { display: none; }
+}
+
+
+
 /* ── Join form wrapper (centres the shared sh2-form panel) ─────── */
 .tg-join {
   max-width: 560px;
@@ -97,7 +144,7 @@ body { background: var(--cream); }
 /* ── Photo stage ───────────────────────────────────────────────── */
 .photo-stage {
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 3;
   position: relative;
   overflow: hidden;
   background: #eef2fb;
@@ -170,11 +217,9 @@ body { background: var(--cream); }
 .popup {
   position: fixed;
   z-index: 300;
-  width: 220px;
-  max-height: 88vh;
   overflow-y: auto;
   background: var(--navy);
-  border-radius: 14px;
+  border-radius: 6px;
   border: 1px solid rgba(255,255,255,.12);
   box-shadow: 0 8px 40px rgba(26,39,68,.35), 0 2px 8px rgba(26,39,68,.15);
   display: flex;
@@ -331,3 +376,5 @@ body { background: var(--cream); }
 }
 .pi-social-link:hover { transform: scale(1.15); opacity: .85; }
 .pi-social-link svg   { width: 26px; height: 26px; }
+
+/* ── About headings: side-by-side on desktop, stacked on mobile ── */
