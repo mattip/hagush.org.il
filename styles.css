@@ -1,9 +1,9 @@
-/* ── styles.css — team-grid page only ─────────────────────────────
+/* ── styles.css — candidates page only ─────────────────────────────
    styles1.css handles: reset, tokens, body, nav, footer, form panel
-   This file handles: team-grid layout, cards, popup
+   This file handles: candidates layout, cards, popup
 ──────────────────────────────────────────────────────────────────── */
 
-/* ── Extra tokens (team-grid palette extensions) ──────────────── */
+/* ── Extra tokens (candidates palette extensions) ──────────────── */
 :root {
   --navy:       #1a2744;
   --sky:        #4a90d9;
