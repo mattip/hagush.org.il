@@ -422,3 +422,25 @@ footer {
   border-radius: 2px;
   margin: 1.2rem 0;
 }
+
+/* ── Google Form status message ─────────────────────────────────── */
+.gf-status {
+  margin-top: 0.75rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+.gf-status--success {
+  background: #e6f4ea;
+  color: #1e7e34;
+  border: 1px solid #a8d5b0;
+}
+.gf-status--error {
+  background: #fdecea;
+  color: #c0392b;
+  border: 1px solid #f5c6c2;
+}
+/* Remove iframe CSS (no longer needed) */
+.gform-wrap, .gform-frame { display: none; }

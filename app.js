@@ -405,3 +405,73 @@ function resetChoices() {
   // Exit select mode and return to initial state
   exitSelectMode();
 }
+
+async function submitGForm(e) {
+  e.preventDefault();
+
+  const name    = document.getElementById('gf-name').value.trim();
+  const email   = document.getElementById('gf-email').value.trim();
+  const phone   = document.getElementById('gf-phone').value.trim();
+  const updates = document.getElementById('gf-updates').checked;
+  const btn     = document.getElementById('gf-submit');
+  const status  = document.getElementById('gf-status');
+
+  // Basic validation
+  if (!name || !email || !phone) {
+    showStatus('אנא מלאו את כל השדות הדרושים', 'error');
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showStatus('כתובת המייל אינה תקינה', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'שולח...';
+
+  // Build form data matching Google Form field IDs
+  const data = new FormData();
+  data.append('entry.1687380056', name);
+  data.append('entry.1723229259', email);
+  data.append('entry.1567947338', phone);
+  if (updates) {
+    data.append('entry.1129380525', 'אשמח לקבל עדכוני ארועים באימייל');
+  }
+  // Required hidden fields
+  data.append('fvv', '1');
+  data.append('fbzx', '-2495624912955297433');
+
+  const FORM_URL = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLScFGx_UOdl6izc_UiE4b4hix-r1CYPfdMHH-b4uXYRw2NiHFA/formResponse';
+
+  try {
+    // no-cors: request fires, Google receives it, but browser blocks the response
+    // This is expected — we just assume success if no network error
+    await fetch(FORM_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: data
+    });
+    // Clear fields
+    document.getElementById('gf-name').value  = '';
+    document.getElementById('gf-email').value = '';
+    document.getElementById('gf-phone').value = '';
+    document.getElementById('gf-updates').checked = true;
+    showStatus('תודה! ההרשמה התקבלה בהצלחה 🎉', 'success');
+  } catch (err) {
+    showStatus('שגיאה בשליחה — אנא נסו שוב', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'להצטרפות';
+  }
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('gf-status');
+  el.textContent = msg;
+  el.className = 'gf-status gf-status--' + type;
+  el.style.display = 'block';
+  if (type === 'success') {
+    setTimeout(() => { el.style.display = 'none'; }, 6000);
+  }
+}
+

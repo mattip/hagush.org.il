@@ -84,14 +84,12 @@
     <div class="sh2-form">
       <p>מצטרפות/ים עכשיו!</p>
       <p class="sub">רק מעורבות ציבורית רחבה תביא לנו כוח לתיקון, בניה ושינוי.</p>
-      <div class="f-field"><input type="text" placeholder="שם מלא"></div>
-      <div class="f-field"><input type="email" placeholder="מייל"></div>
-      <div class="f-field f-phone">
-        <input type="tel" placeholder="טלפון">
-        <span><span>🌐</span><span style="font-size:.6rem;">▼</span></span>
-      </div>
-      <label class="f-check"><input type="checkbox" checked>אשמח לקבל עדכוני ארועים באימייל</label>
-      <button class="f-submit">להצטרפות</button>
+      <div class="f-field"><input type="text" id="gf-name" placeholder="שם מלא" required></div>
+      <div class="f-field"><input type="email" id="gf-email" placeholder="מייל" required></div>
+      <div class="f-field"><input type="tel" id="gf-phone" placeholder="טלפון" required></div>
+      <label class="f-check"><input type="checkbox" id="gf-updates" checked>אשמח לקבל עדכוני ארועים באימייל</label>
+      <button class="f-submit" id="gf-submit" onclick="submitGForm(event)">להצטרפות</button>
+      <div id="gf-status" class="gf-status" style="display:none"></div>
       <div class="f-wa">
         <p>רוצים להיות מעורבים ולהשתתף בפעולות נוספות?</p>
         <a href="https://chat.whatsapp.com/D9FmoaRDlnnJab6suRWVmH" target="_blank" rel="noreferrer">
@@ -184,6 +182,8 @@
 
 <footer>עכשיו באות!</footer>
 
+
+<script src="app.js"></script>
 </body>
 </html>
 
