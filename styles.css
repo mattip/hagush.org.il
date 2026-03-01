@@ -201,6 +201,7 @@ body { background: var(--cream); }
   pointer-events: none;
   transform: scale(.93) translateY(5px);
   transition: opacity .18s, transform .18s cubic-bezier(.22,.68,0,1.2), visibility 0s linear .18s;
+  width: 220px;
 }
 .popup.open {
   visibility: visible;
