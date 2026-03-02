@@ -67,16 +67,6 @@ function createCard(person, i) {
     stage.appendChild(img);
   });
 
-  // Dot indicators
-  const dots = document.createElement('div');
-  dots.className = 'pose-dots';
-  person.photos.forEach((_, pi) => {
-    const dot = document.createElement('div');
-    dot.className = 'dot' + (pi === 0 ? ' active' : '');
-    dots.appendChild(dot);
-  });
-  stage.appendChild(dots);
-
   // Name badge overlaid on photo, matching popup style
   const badge = document.createElement('span');
   badge.className = 'popup-name-badge';
@@ -119,15 +109,12 @@ function createCard(person, i) {
 function startCycle(idx, card) {
   if (timers[idx]) return;
   const imgs = card.querySelectorAll('.photo-stage img');
-  const dots = card.querySelectorAll('.dot');
   let current = 0;
 
   function step() {
     imgs[current].classList.remove('active');
-    dots[current]?.classList.remove('active');
     current = (current + 1) % imgs.length;
     imgs[current].classList.add('active');
-    dots[current]?.classList.add('active');
     timers[idx] = setTimeout(step, CYCLE_MIN_MS + Math.random() * (CYCLE_MAX_MS - CYCLE_MIN_MS));
   }
 
