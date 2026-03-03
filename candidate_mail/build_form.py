@@ -42,7 +42,7 @@ for p in HEBREW_FONT_CANDIDATES:
         HEBREW_FONT_PATH = p
         break
 
-if HEBREW_FONT_PATH is None:
+if 0 or HEBREW_FONT_PATH is None:
     print(
         "⚠  No Hebrew-capable font found at known paths.\n"
         "   Set HEBREW_FONT_PATH manually at the top of this script.\n"
@@ -56,6 +56,7 @@ else:
     HEBREW = "Hebrew"
     HEBREW_BOLD = "Hebrew"   # bold variant would need a separate bold TTF
 
+STATIC_FONT = "Helvetica"
 OUTPUT_FILE = "candidate_invite.pdf"
 
 # ── Layout constants ──────────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ def text_field(
         fillColor=colors.HexColor("#f9fbff"),
         textColor=colors.black,
         fontSize=10,
-        fontName=HEBREW,
+        fontName=STATIC_FONT,
         # multiline=multiline,
         fieldFlags="multiline" if multiline else "",
     )
@@ -149,8 +150,8 @@ def check_y(c: canvas.Canvas, y: float, needed=80) -> float:
 
 def build_form():
     c = canvas.Canvas(OUTPUT_FILE, pagesize=A4)
-    c.setTitle("עכשיו באות — טופס הצטרפות כמועמד/ת")
-    c.setAuthor("עכשיו באות")
+    c.setTitle("עכשיו באות — טופס הצטרפות כמועמד/ת"[::-1])
+    c.setAuthor("עכשיו באות"[::-1])
     form = c.acroForm
 
     y = H
@@ -161,16 +162,16 @@ def build_form():
 
     c.setFont(HEBREW_BOLD, 20)
     c.setFillColor(colors.white)
-    c.drawCentredString(W / 2, H - 42, "!עכשיו באות")
+    c.drawCentredString(W / 2, H - 42, "!עכשיו באות"[::1])
 
     c.setFont(HEBREW, 11)
     c.setFillColor(colors.HexColor("#ccddff"))
-    c.drawCentredString(W / 2, H - 62, "טופס הצטרפות כמועמד/ת")
+    c.drawCentredString(W / 2, H - 62, "טופס הצטרפות כמועמד/ת"[::1])
 
     y = H - 80
 
     # ── Intro box ──────────────────────────────────────────────────────────
-    intro_h = 58
+    intro_h = 32
     c.setFillColor(LIGHT)
     c.rect(MARGIN_L, y - intro_h - 10, CONTENT_W, intro_h, fill=1, stroke=0)
     c.setFillColor(BLUE)
@@ -179,9 +180,8 @@ def build_form():
     c.setFont(HEBREW, 9.5)
     c.setFillColor(colors.HexColor("#444444"))
     lines = [
-        "!שלום",
-        ".אנחנו שמחים שאתם שוקלים להצטרף לרשימה שלנו",
-        "אנא מלאו את הפרטים הבאים ושלחו את המייל בחזרה עם שלוש תמונות מצורפות",
+        "אנחנו שמחים שאתם שוקלים להצטרף לרשימה שלנו."[::-1],
+        "אנא מלאו את הפרטים הבאים, שמרו את הקובץ, ושלחו את המייל בחזרה עם שלוש תמונות מצורפות"[::-1],
     ]
     for i, line in enumerate(lines):
         c.drawRightString(MARGIN_R - 10, y - 22 - i * 14, line)
@@ -191,16 +191,16 @@ def build_form():
     # ══════════════════════════════════════════════════════════════════════
     # SECTION 1 — Personal details
     # ══════════════════════════════════════════════════════════════════════
-    y = section_title(c, y, "פרטים אישיים  —  Personal Details")
+    y = section_title(c, y, "פרטים אישיים"[::-1])
 
     # Full name
     y = check_y(c, y)
-    y = label(c, y, "שם מלא", required=True)
-    y = text_field(c, form, y, "full_name", tooltip="שם מלא / Full name")
+    y = label(c, y, "שם מלא"[::-1], required=True)
+    y = text_field(c, form, y, "full_name", tooltip="שם מלא"[::-1])
 
     # Age + City on same row
     y = check_y(c, y)
-    y = label(c, y, "גיל  /  עיר / ישוב", required=True)
+    y = label(c, y, "גיל  ,  עיר / ישוב"[::-1], required=True)
 
     age_w  = 80
     city_w = CONTENT_W - age_w - 12
@@ -209,60 +209,60 @@ def build_form():
     age_x = MARGIN_R - age_w
     cy_age = y - 22
     form.textfield(
-        name="age", tooltip="גיל / Age",
+        name="age", tooltip="גיל"[::-1],
         x=age_x, y=cy_age, width=age_w, height=22,
         borderStyle="inset", borderColor=colors.HexColor("#c8d6ee"),
-        fillColor=colors.HexColor("#f9fbff"), fontSize=10, fontName=HEBREW,
+        fillColor=colors.HexColor("#f9fbff"), fontSize=10, fontName=STATIC_FONT,
     )
 
     # City field
     city_x = MARGIN_L
     form.textfield(
-        name="city", tooltip="עיר / ישוב / City",
+        name="city", tooltip="עיר / ישוב"[::-1],
         x=city_x, y=cy_age, width=city_w, height=22,
         borderStyle="inset", borderColor=colors.HexColor("#c8d6ee"),
-        fillColor=colors.HexColor("#f9fbff"), fontSize=10, fontName=HEBREW,
+        fillColor=colors.HexColor("#f9fbff"), fontSize=10, fontName=STATIC_FONT,
     )
     y = cy_age - 8
 
     # Title / description
     y = check_y(c, y)
-    y = label(c, y, "תיאור / תואר", required=True, hint="(עד שורה אחת)")
-    y = text_field(c, form, y, "title", tooltip="תיאור / Title — e.g. עורכת דין, פעילת קהילה")
+    y = label(c, y, "תיאור / תואר"[::-1], required=True, hint=")עד שורה אחת("[::-1])
+    y = text_field(c, form, y, "title", tooltip="תיאור: עורכת דין, פעילת קהילה"[::-1])
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION 2 — About yourself
     # ══════════════════════════════════════════════════════════════════════
     y = check_y(c, y, 160)
-    y = section_title(c, y, "על עצמך  —  About You")
+    y = section_title(c, y, "על עצמך"[::-1])
 
     # Motivation
-    y = label(c, y, "?למה אני רוצה להיות בכנסת", required=True, hint="(2–4 משפטים)")
-    y = text_field(c, form, y, "rationale", height=70, multiline=True,
-                   tooltip="Motivation for joining the Knesset")
+    y = label(c, y, "?למה אני רוצה להיות בכנסת"[::-1], required=True, hint=")2–4 משפטים("[::-1])
+    y = text_field(c, form, y, "rationale", height=70, multiline=True)
 
     # Recommendation
     y = check_y(c, y, 80)
-    y = label(c, y, "מילה טובה על מועמד/ת אחר/ת ברשימה", hint="(אופציונלי)")
+    y = label(c, y, "מילה טובה על מועמד/ת אחר/ת ברשימה"[::-1], hint=")אופציונלי("[::-1])
     y = text_field(c, form, y, "recommendation", height=50, multiline=True,
-                   tooltip="Recommendation for another candidate (optional)")
+                   #tooltip="Recommendation for another candidate (optional)",
+        )
 
     # Minister role
     y = check_y(c, y)
-    y = label(c, y, "?איזה שר/ה היית רוצה להיות", required=True)
-    y = text_field(c, form, y, "minister_role", tooltip="Desired ministerial role")
+    y = label(c, y, "?איזה שר/ה היית רוצה להיות"[::-1], required=True)
+    y = text_field(c, form, y, "minister_role") #, tooltip="Desired ministerial role")
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION 3 — Social links
     # ══════════════════════════════════════════════════════════════════════
     y = check_y(c, y, 140)
-    y = section_title(c, y, "קישורים (אופציונלי)  —  Social Links")
+    y = section_title(c, y, "קישורים )אופציונלי("[::-1])
 
     link_fields = [
-        ("facebook",  "פייסבוק"),
-        ("instagram", "אינסטגרם"),
-        ("linkedin",  "לינקדאין"),
-        ("twitter",   "X / טוויטר"),
+        ("facebook",  "פייסבוק"[::-1]),
+        ("instagram", "אינסטגרם"[::-1]),
+        ("linkedin",  "לינקדאין"[::-1]),
+        ("twitter",   "X / טוויטר"[::-1]),
     ]
     col_w = (CONTENT_W - 12) / 2
 
@@ -288,7 +288,7 @@ def build_form():
             x=fx, y=row_y - 22 - 4,
             width=col_w, height=22,
             borderStyle="inset", borderColor=colors.HexColor("#c8d6ee"),
-            fillColor=colors.HexColor("#f9fbff"), fontSize=9, fontName=HEBREW,
+            fillColor=colors.HexColor("#f9fbff"), fontSize=9, fontName=STATIC_FONT,
         )
         if col == 1:
             y = row_y - 22 - 4 - 8
@@ -299,7 +299,7 @@ def build_form():
     # SECTION 4 — Photos note
     # ══════════════════════════════════════════════════════════════════════
     y = check_y(c, y, 120)
-    y = section_title(c, y, "תמונות  —  Photos")
+    y = section_title(c, y, "תמונות"[::-1])
 
     # Dashed box with instructions
     box_h = 90
@@ -311,9 +311,9 @@ def build_form():
     c.setDash()
 
     photo_lines = [
-        "נא לצרף 3 תמונות כקבצים מצורפים למייל (JPG / PNG / WEBP, עד 1MB כל אחת)",
-        "  תמונה 1 — מבט קדמי / ישיר  •  תמונה 2 — מבט שני  •  תמונה 3 — מבט שלישי",
-        "(לא ניתן לצרף קבצים ישירות לטופס PDF — יש לשלוח כמייל)",
+        "נא לצרף 3 תמונות כקבצים מצורפים למייל"[::-1],
+        "  תמונה 1 — מבט קדמי / ישיר  •  תמונה 2 — מבט למטה  •  תמונה 3 — מבט למעלה"[::-1],
+        "שלחו את תמונות ביחד עם הטופס במייל חוזר"[::-1],
     ]
     c.setFont(HEBREW, 9)
     c.setFillColor(colors.HexColor("#555555"))
@@ -321,14 +321,6 @@ def build_form():
         c.drawCentredString(W / 2, y - 22 - i * 18, line)
 
     y -= box_h + 10
-
-    # ══════════════════════════════════════════════════════════════════════
-    # Footer
-    # ══════════════════════════════════════════════════════════════════════
-    y = check_y(c, y, 40)
-    c.setFont(HEBREW, 8)
-    c.setFillColor(colors.HexColor("#aaaaaa"))
-    c.drawCentredString(W / 2, 28, "עכשיו באות  |  candidate_invite_form")
 
     # ── Finalize ──────────────────────────────────────────────────────────
     c.save()

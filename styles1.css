@@ -138,12 +138,12 @@ nav ul a:not(.active):hover { background: rgba(255,255,255,0.15); }
 .f-wa a { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; }
 
 .wa-circle {
-  width: 28px; height: 28px;
+  width: 16; height: 16;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.wa-circle svg { width: 15px; height: 15px; fill: #fff; }
+.wa-circle svg { width: 16px; height: 16px; fill: "black"; }
 
 
 /* ════════════════════
