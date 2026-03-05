@@ -152,6 +152,7 @@ function rowShow(id, show) {
 }
 
 function openPopup(person, card) {
+  document.body.classList.add("no-scroll");
   clearTimeout(closeTimer);
   justOpened = true;
 
@@ -200,7 +201,7 @@ function openPopup(person, card) {
 
   popup.classList.add("open");
   popup.dataset.personId = person.id;
-  // requestAnimationFrame(() => positionPopup(card));
+  // requestAnimationFrame(() => positionPopup(card)); // Don't position the popup for now, as it is fullscreen on mobile.
 }
 
 function positionPopup(card) {
@@ -247,6 +248,7 @@ function scheduleClose() {
 }
 
 function closePopup() {
+  document.body.classList.remove("no-scroll");
   popup.classList.remove("open");
 }
 
