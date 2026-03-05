@@ -22,9 +22,7 @@ body {
 .team-top {
   padding: 3rem 2rem 0;
   text-align: center;
-}
-.team-top {
-  max-width: 680px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 .team-top h2 {
@@ -168,6 +166,7 @@ body {
   right: var(--popup-margin);
   bottom: var(--popup-margin);
   width: auto !important;
+  max-width: 350px;
 }
 
 /* Arrow notch */
@@ -416,6 +415,7 @@ body {
 /* Card select circle — on .card not .photo-stage (avoids overflow:hidden clip) */
 .card {
   position: relative;
+  max-width: 400px;
 }
 .card-select-btn {
   position: absolute;
