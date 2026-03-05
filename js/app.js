@@ -153,6 +153,7 @@ function rowShow(id, show) {
 
 function openPopup(person, card) {
   document.body.classList.add("no-scroll");
+  document.getElementsByTagName("html")[0].classList.add("no-scroll");
   clearTimeout(closeTimer);
   justOpened = true;
 
@@ -249,6 +250,7 @@ function scheduleClose() {
 
 function closePopup() {
   document.body.classList.remove("no-scroll");
+  document.getElementsByTagName("html")[0].classList.remove("no-scroll");
   popup.classList.remove("open");
 }
 
