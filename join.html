@@ -319,7 +319,6 @@
       </div>
     </div>
 
-    <!-- ── HONEYPOT (hidden from real users) ── -->
     <div style="position:absolute;left:-9999px;opacity:0;pointer-events:none" aria-hidden="true">
       <label for="id">מזהה</label>
       <input type="text" name="id" id="id" tabindex="-1" autocomplete="off">
@@ -338,7 +337,7 @@
 
 <script>
   // ── Configuration ──────────────────────────────────────────────
-  const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzVZGohLvoiLr-fE7iDFRl0ZQhWXS5sPeGeal814We7b-kd1z4O1XCkf3rAV7zDpa8/exec';
+  const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzstA_tScpY5TOVVXWf1dGL_CCuYrvLX2FpFQ3kBwFExBpam3wCCyOGOSynEY312__I/exec';
   // ── Image compression ──────────────────────────────────────────
   const MAX_PX    = 1200;
   const QUALITY   = 0.82;
@@ -496,18 +495,15 @@
     };
 
     try {
-      const res = await fetch(APP_SCRIPT_URL, {
+      // no-cors: avoids CORS preflight — Apps Script doesn't support OPTIONS.
+      // We can't read the response, so we assume success if no network error.
+      await fetch(SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
         body: JSON.stringify(payload),
       });
-      const json = await res.json();
-      if (json.ok) {
-        showJoinStatus('תודה! הפרטים התקבלו בהצלחה 🎉', 'success');
-        btn.textContent = 'נשלח ✓';
-      } else {
-        throw new Error(json.message || 'server error');
-      }
+      showJoinStatus('תודה! הפרטים התקבלו בהצלחה 🎉', 'success');
+      btn.textContent = 'נשלח ✓';
     } catch (err) {
       showJoinStatus('שגיאה בשליחה — אנא נסו שוב', 'error');
       btn.disabled = false;
