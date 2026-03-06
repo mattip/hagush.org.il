@@ -1,135 +1,246 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="he" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>אודות | עכשיו באות!</title>
-  <link rel="icon" href="favicon.ico">
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/main.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>אודות | עכשיו באות!</title>
+    <link rel="icon" href="favicon.ico" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/main.css" />
+  </head>
+  <body>
+    <input type="checkbox" id="nav-toggle" />
 
-<input type="checkbox" id="nav-toggle">
+    <header>
+      <nav>
+        <span class="nav-logo">!עכשיו באות</span>
+        <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
+          <span></span><span></span><span></span>
+        </label>
+        <ul>
+          <li><a href="index.html">דף בית</a></li>
+          <li><a href="#" class="active">אודות</a></li>
+          <li><a href="candidates.html">בחירות בדמוקרטים!</a></li>
+        </ul>
+      </nav>
+    </header>
 
-<nav>
-  <span class="nav-logo">!עכשיו באות</span>
-  <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
-    <span></span><span></span><span></span>
-  </label>
-  <ul>
-    <li><a href="index.html">דף בית</a></li>
-    <li><a href="#" class="active">אודות</a></li>
-    <li><a href="candidates.html">בחירות בדמוקרטים!</a></li>
-  </ul>
-</nav>
-
-<section class="s1">
-  <div class="s1-text">
-    <h2>למה עכשיו באות?</h2>
-    <p>כי חלק מהמאבק להפלת הממשלה כולל בתוכו יצירת אלטרנטיבה אמיתית. שמאל גאה.</p>
-    <p>כי יש לנו מחויבות לדאוג לכך שאסון ממשלת ימין על מלא לא יחזור על עצמו בבחירות הקרובות.</p>
-    <p>כי אנחנו מבינות שדרושה עבודה קשה וארוכת טווח כדי להעביר את המדינה שלנו לפסים של שיקום, שפיות ותקווה.</p>
-    <h3>מי אנחנו?</h3>
-    <p>אנחנו, בדיוק כמוכם/ן — אזרחיות ואזרחים מודאגים מרחבי הארץ: נבות, פולה, אודי, מירי, דפנה, נינה, אורי, קרלוס, שני, גלי ועוד רבים/ות. הכרנו במחאה כאשר התארגנו יחד למחות נגד ממשלת החורבן וההפיכה המשפטית. הבנו שהשבר עמוק ושהמדינה בקריסה בהיעדר כוח פוליטי בשמאל.</p>
-    <p>מתוך הבנה שצריך לרתום את אנרגיות המחאה ליצירת כוח פוליטי, התחלנו לעבוד — לעזור, לייצר, לעצב ולחזק את הבית הפוליטי שלנו.</p>
-    <h3>אנחנו השמאל!</h3>
-    <p>אנחנו נחושות לקדם מדיניות שמאל בתחום המדיני-ביטחוני ובתחום החברתי-כלכלי. מדיניות שבעיניינו היא הכרחית למשטר דמוקרטי יציב ומתפקד</p>
-    <h3>מה זה שמאל מבחינתנו?</h3>
-    <p>״אין דמוקרטיה בלי שיוויון״ — חובתה של המדינה היא להבטיח בטחון, חינוך ליברלי ומתקדם, ובריאות לכל אזרחיה. ללא שיוויון — לא תהיה דמוקרטיה, לא משטרה של ישראל. במקרה של ישראל- המשמעות היא שלא תהיה בכלל מדינה. מעאקרון בסיסי זה נגזר:</p>
-    <ul>
-      <li>- פיתרון מדיני לסכסוך הישראלי-פלסטיני.</li>
-      <li>- שיוויון אזרחי ברוח מגילת העצמאות.</li>
-      <li>- קידום שיוויון כלכלי - מדינת רווחה - באופן שלוקח בחשבון ומתכלל קיומה של חרדית ולא דמוקרטית, שנדרש להבטיח כי לידיה יזכו לחינוך ליברלי שיאפשר להם להתקיים בכבוד ולהיות אזרחי מדינה מערבית.</li>
-      <li>- הפרדת דת ומדינה</li>
-    </ul>
-    <h3>איך באות?</h3>
-    <p>אנחנו רוצות להוות שדולה שתעבוד עם ובשביל פוליטיקאים שמוכנים לייצג אותנו, כדי שאלה ידחפו ויפעלו בזירה הפוליטית</p>
-  </div>
-
-  <div class="sh2-form-col">
-      <a class="f-submit" href="https://l.democrats.org.il/baot">להתפקדות והצטרפות</a>
-      <div class="f-wa">
-        <p>רוצים להיות מעורבים ולהשתתף בפעולות נוספות?</p>
-        <a href="https://chat.whatsapp.com/D9FmoaRDlnnJab6suRWVmH" target="_blank" rel="noreferrer">
-          
-        <div class="wa-circle" style="background:#25D366;">
-          <img src="whatsapp.svg" alt="Whatsapp logo">
+    <main>
+      <section class="s1">
+        <div class="s1-text">
+          <h2>למה עכשיו באות?</h2>
+          <p>
+            כי חלק מהמאבק להפלת הממשלה כולל בתוכו יצירת אלטרנטיבה אמיתית. שמאל
+            גאה.
+          </p>
+          <p>
+            כי יש לנו מחויבות לדאוג לכך שאסון ממשלת ימין על מלא לא יחזור על עצמו
+            בבחירות הקרובות.
+          </p>
+          <p>
+            כי אנחנו מבינות שדרושה עבודה קשה וארוכת טווח כדי להעביר את המדינה
+            שלנו לפסים של שיקום, שפיות ותקווה.
+          </p>
+          <h3>מי אנחנו?</h3>
+          <p>
+            אנחנו, בדיוק כמוכם/ן — אזרחיות ואזרחים מודאגים מרחבי הארץ: נבות,
+            פולה, אודי, מירי, דפנה, נינה, אורי, קרלוס, שני, גלי ועוד רבים/ות.
+            הכרנו במחאה כאשר התארגנו יחד למחות נגד ממשלת החורבן וההפיכה המשפטית.
+            הבנו שהשבר עמוק ושהמדינה בקריסה בהיעדר כוח פוליטי בשמאל.
+          </p>
+          <p>
+            מתוך הבנה שצריך לרתום את אנרגיות המחאה ליצירת כוח פוליטי, התחלנו
+            לעבוד — לעזור, לייצר, לעצב ולחזק את הבית הפוליטי שלנו.
+          </p>
+          <h3>אנחנו השמאל!</h3>
+          <p>
+            אנחנו נחושות לקדם מדיניות שמאל בתחום המדיני-ביטחוני ובתחום
+            החברתי-כלכלי. מדיניות שבעיניינו היא הכרחית למשטר דמוקרטי יציב ומתפקד
+          </p>
+          <h3>מה זה שמאל מבחינתנו?</h3>
+          <p>
+            ״אין דמוקרטיה בלי שיוויון״ — חובתה של המדינה היא להבטיח בטחון, חינוך
+            ליברלי ומתקדם, ובריאות לכל אזרחיה. ללא שיוויון — לא תהיה דמוקרטיה,
+            לא משטרה של ישראל. במקרה של ישראל- המשמעות היא שלא תהיה בכלל מדינה.
+            מעאקרון בסיסי זה נגזר:
+          </p>
+          <ul>
+            <li>- פיתרון מדיני לסכסוך הישראלי-פלסטיני.</li>
+            <li>- שיוויון אזרחי ברוח מגילת העצמאות.</li>
+            <li>
+              - קידום שיוויון כלכלי - מדינת רווחה - באופן שלוקח בחשבון ומתכלל
+              קיומה של חרדית ולא דמוקרטית, שנדרש להבטיח כי לידיה יזכו לחינוך
+              ליברלי שיאפשר להם להתקיים בכבוד ולהיות אזרחי מדינה מערבית.
+            </li>
+            <li>- הפרדת דת ומדינה</li>
+          </ul>
+          <h3>איך באות?</h3>
+          <p>
+            אנחנו רוצות להוות שדולה שתעבוד עם ובשביל פוליטיקאים שמוכנים לייצג
+            אותנו, כדי שאלה ידחפו ויפעלו בזירה הפוליטית
+          </p>
         </div>
 
-          קבוצת וואטסאפ לעדכונים
-        </a>
-    </div>
-  </div>
-</section>
+        <div class="sh2-form-col">
+          <a class="f-submit" href="https://l.democrats.org.il/baot"
+            >להתפקדות והצטרפות</a
+          >
+          <div class="f-wa">
+            <p>רוצים להיות מעורבים ולהשתתף בפעולות נוספות?</p>
+            <a
+              href="https://chat.whatsapp.com/D9FmoaRDlnnJab6suRWVmH"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <div class="wa-circle" style="background: #25d366">
+                <img src="whatsapp.svg" alt="Whatsapp logo" />
+              </div>
 
-<section class="s2">
-  <h2>מידע נוסף לינקים חשובים</h2>
-  <p>אלו לינקים שמצאנו לנכון לשתף, נמשיך להוסיף בקרוב עוד</p>
+              קבוצת וואטסאפ לעדכונים
+            </a>
+          </div>
+        </div>
+      </section>
 
-  <div class="grid4">
-    <div class="card">
-      <img src="images/smal_bithoni.avif" alt="שמאל ביטחוני">
-      <span class="c-name">שמאל ביטחוני</span>
-      <span class="c-desc">דור סטרטייבסקי מציג את חשיבות השמאל הביטחוני בצורה בלתי ניתנת לערעור</span>
-    </div>
-    <div class="card">
-      <img src="images/bonot.avif" alt="בונות מחנה">
-      <span class="c-name">בונות מחנה</span>
-      <span class="c-desc">יוזמת אחות אשר מקדמת את השמאל בקרב סטודנטים וצעירים</span>
-    </div>
-    <div class="card">
-      <img src="images/berl_katz.avif" alt="קרן ברל כצנלסון">
-      <span class="c-name">קרן ברל כצנלסון</span>
-      <span class="c-desc">אתר מלא רעיונות, מדיניות ומנהיגות למחנה השוויון. כולל מפת דרכים מדינית לבטחון ארוך טווח.</span>
-    </div>
-    <div class="card">
-      <img src="images/omdim_yahad.avif" alt="עומדים יחד">
-      <span class="c-name">עומדים יחד</span>
-      <span class="c-desc">ארגון המבטא את השותפות הערבית-יהודית שיש בארץ ומחזקת אותה</span>
-    </div>
-    <div class="card">
-      <img src="images/security-political-unit.avif" alt="היחידה המדינית ביטחונית">
-      <span class="c-name">היחידה המדינית-ביטחונית — קרן ברל כצנלסון ומכון מיתווים</span>
-      <a class="c-link" href="#">לא תמצאו כאן תוכן מסוג זה בשום מקום אחר</a>
-      <span class="c-desc">ניתוח מעמיק של הסכסוך הישראלי-פלסטיני, ודרך ראלית לפיתרון.</span>
-    </div>
-    <div class="card">
-      <img src="images/uri_kinrot.avif" alt="אורי כנרות">
-      <span class="c-name">אורי כנרות</span>
-      <span class="c-desc">״בחירה בין נבחרות״ — שיטה חדשנית לבחירות פנימיות במפלגות דמוקרטיות.</span>
-    </div>
-  </div>
+      <section class="s2">
+        <h2>מידע נוסף לינקים חשובים</h2>
+        <p>אלו לינקים שמצאנו לנכון לשתף, נמשיך להוסיף בקרוב עוד</p>
 
-  <div class="links-grid">
-    <div class="l-card"><a href="#">היוזמה הישראלית</a><p>איך משיגים הסכם מדיני ראלי ובטוח — מכון ״מיתווים״</p></div>
-    <div class="l-card"><a href="#">אידאה — מרכז לדמוקרטיה ליברלית</a><p>המון ידע וכנסים חשובים.</p></div>
-    <div class="l-card"><a href="#">האינטרס הישראלי</a><p>האינטרס הביטחוני, הכלכלי והחברתי של ישראל הוא ייצוב הציר המתון במזרח התיכון</p></div>
-    <div class="l-card"><a href="#">שתיל</a><p>מרכז את כל פעילויות השלום, לקידום דמוקרטיה ושיווין.</p></div>
-    <div class="l-card"><a href="#">קריאת האמהות</a><p>של ״נשים עושות שלום״ הישראליות יחד עם ״נשות השמש״ הפלסטיניות.</p></div>
-    <div class="l-card"><a href="#">ברית ערים</a><p>ארגון המאגד תפיסות ליברליות ואיך ניתן לקדם אותם במערכות הפוליטיות</p></div>
-    <div class="l-card"><a href="#">בונות אלטרנטיבה</a><p>תנועת נשים המקדמות שילוב נשים במערכות ציבוריות.</p></div>
-    <div class="l-card"><a href="#">מי אנחנו? — מאמר ראשון</a><p>מאמר מתחילת דרכן של ״עכשיו באות!״</p></div>
-  </div>
-</section>
+        <div class="grid4">
+          <div class="card">
+            <img src="images/smal_bithoni.avif" alt="שמאל ביטחוני" />
+            <span class="c-name">שמאל ביטחוני</span>
+            <span class="c-desc"
+              >דור סטרטייבסקי מציג את חשיבות השמאל הביטחוני בצורה בלתי ניתנת
+              לערעור</span
+            >
+          </div>
+          <div class="card">
+            <img src="images/bonot.avif" alt="בונות מחנה" />
+            <span class="c-name">בונות מחנה</span>
+            <span class="c-desc"
+              >יוזמת אחות אשר מקדמת את השמאל בקרב סטודנטים וצעירים</span
+            >
+          </div>
+          <div class="card">
+            <img src="images/berl_katz.avif" alt="קרן ברל כצנלסון" />
+            <span class="c-name">קרן ברל כצנלסון</span>
+            <span class="c-desc"
+              >אתר מלא רעיונות, מדיניות ומנהיגות למחנה השוויון. כולל מפת דרכים
+              מדינית לבטחון ארוך טווח.</span
+            >
+          </div>
+          <div class="card">
+            <img src="images/omdim_yahad.avif" alt="עומדים יחד" />
+            <span class="c-name">עומדים יחד</span>
+            <span class="c-desc"
+              >ארגון המבטא את השותפות הערבית-יהודית שיש בארץ ומחזקת אותה</span
+            >
+          </div>
+          <div class="card">
+            <img
+              src="images/security-political-unit.avif"
+              alt="היחידה המדינית ביטחונית"
+            />
+            <span class="c-name"
+              >היחידה המדינית-ביטחונית — קרן ברל כצנלסון ומכון מיתווים</span
+            >
+            <a class="c-link" href="#"
+              >לא תמצאו כאן תוכן מסוג זה בשום מקום אחר</a
+            >
+            <span class="c-desc"
+              >ניתוח מעמיק של הסכסוך הישראלי-פלסטיני, ודרך ראלית לפיתרון.</span
+            >
+          </div>
+          <div class="card">
+            <img src="images/uri_kinrot.avif" alt="אורי כנרות" />
+            <span class="c-name">אורי כנרות</span>
+            <span class="c-desc"
+              >״בחירה בין נבחרות״ — שיטה חדשנית לבחירות פנימיות במפלגות
+              דמוקרטיות.</span
+            >
+          </div>
+        </div>
 
-<section class="s4">
-  <h2>הצוותים שלנו</h2>
-  <div class="teams-row">
-    <div><img src="images/leadership_team.avif" alt="צוות הנהלה"><p>צוות הנהלה</p></div>
-    <div><img src="images/events_team.avif" alt="צוות ארועים וחוגי בית"><p>צוות ארועים וחוגי בית</p></div>
-    <div><img src="images/volunteers.avif" alt="צוות ריכוז מתנדבים"><p>צוות ריכוז מתנדבים</p></div>
-  </div>
-</section>
+        <div class="links-grid">
+          <div class="l-card">
+            <a href="#">היוזמה הישראלית</a>
+            <p>איך משיגים הסכם מדיני ראלי ובטוח — מכון ״מיתווים״</p>
+          </div>
+          <div class="l-card">
+            <a href="#">אידאה — מרכז לדמוקרטיה ליברלית</a>
+            <p>המון ידע וכנסים חשובים.</p>
+          </div>
+          <div class="l-card">
+            <a href="#">האינטרס הישראלי</a>
+            <p>
+              האינטרס הביטחוני, הכלכלי והחברתי של ישראל הוא ייצוב הציר המתון
+              במזרח התיכון
+            </p>
+          </div>
+          <div class="l-card">
+            <a href="#">שתיל</a>
+            <p>מרכז את כל פעילויות השלום, לקידום דמוקרטיה ושיווין.</p>
+          </div>
+          <div class="l-card">
+            <a href="#">קריאת האמהות</a>
+            <p>של ״נשים עושות שלום״ הישראליות יחד עם ״נשות השמש״ הפלסטיניות.</p>
+          </div>
+          <div class="l-card">
+            <a href="#">ברית ערים</a>
+            <p>
+              ארגון המאגד תפיסות ליברליות ואיך ניתן לקדם אותם במערכות הפוליטיות
+            </p>
+          </div>
+          <div class="l-card">
+            <a href="#">בונות אלטרנטיבה</a>
+            <p>תנועת נשים המקדמות שילוב נשים במערכות ציבוריות.</p>
+          </div>
+          <div class="l-card">
+            <a href="#">מי אנחנו? — מאמר ראשון</a>
+            <p>מאמר מתחילת דרכן של ״עכשיו באות!״</p>
+          </div>
+        </div>
+      </section>
 
-<section class="s5">
-  <div class="events-grid">
-    <div><img src="images/events1.avif" alt="ארוע 1"><img src="images/events2.avif" alt="ארוע 2"></div>
-    <div><img src="images/events3.avif" alt="ארוע 3"><img src="images/events4.avif" alt="ארוע 4"></div>
-  </div>
-</section>
+      <section class="s4">
+        <h2>הצוותים שלנו</h2>
+        <div class="teams-row">
+          <div>
+            <img src="images/leadership_team.avif" alt="צוות הנהלה" />
+            <p>צוות הנהלה</p>
+          </div>
+          <div>
+            <img src="images/events_team.avif" alt="צוות ארועים וחוגי בית" />
+            <p>צוות ארועים וחוגי בית</p>
+          </div>
+          <div>
+            <img src="images/volunteers.avif" alt="צוות ריכוז מתנדבים" />
+            <p>צוות ריכוז מתנדבים</p>
+          </div>
+        </div>
+      </section>
 
-<footer>עכשיו באות!</footer>
-
-</body>
+      <section class="s5">
+        <div class="events-grid">
+          <div>
+            <img src="images/events1.avif" alt="ארוע 1" /><img
+              src="images/events2.avif"
+              alt="ארוע 2"
+            />
+          </div>
+          <div>
+            <img src="images/events3.avif" alt="ארוע 3" /><img
+              src="images/events4.avif"
+              alt="ארוע 4"
+            />
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer>עכשיו באות!</footer>
+  </body>
 </html>

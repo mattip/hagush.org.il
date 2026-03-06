@@ -1,45 +1,48 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="he" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>עכשיו באות!</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/main.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>עכשיו באות!</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/main.css" />
+  </head>
+  <body>
+    <input type="checkbox" id="nav-toggle" />
 
-<input type="checkbox" id="nav-toggle">
+    <header>
+      <nav>
+        <span class="nav-logo">!עכשיו באות</span>
+        <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
+          <span></span><span></span><span></span>
+        </label>
+        <ul>
+          <li><a href="index.html" class="active">דף בית</a></li>
+          <li><a href="about.html">אודות</a></li>
+          <li><a href="candidates.html">מעומדים</a></li>
+        </ul>
+      </nav>
+    </header>
 
-<nav>
-  <span class="nav-logo">!עכשיו באות</span>
-  <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
-    <span></span><span></span><span></span>
-  </label>
-  <ul>
-    <li><a href="index.html" class="active">דף בית</a></li>
-    <li><a href="about.html">אודות</a></li>
-    <li><a href="candidates.html">מעומדים</a></li>
-  </ul>
-</nav>
+    <!-- ═══════════ S3 — WHITE: big slogan + body text + two links ═══════════ -->
+    <main>
+      <section class="sh3">
+        <div class="sh3-heading-col">
+          <div class="sh3-heading">
+            <h2>עוד לא מוכן</h2>
+          </div>
+        </div>
 
-<!-- ═══════════ S3 — WHITE: big slogan + body text + two links ═══════════ -->
-<section class="sh3">
-
-  <div class="sh3-heading-col">
-    <div class="sh3-heading">
-      <h2>עוד לא מוכן</h2>
-    </div>
-  </div>
-
-  <!-- second in DOM = left in RTL: body + links -->
-  <div class="sh3-body">
-    <p>אנחנו עובדים על הדף, עוד מעט יגיע...</p>
-  </div>
-
-</section>
-
-<footer>עכשיו באות!</footer>
-
-
+        <!-- second in DOM = left in RTL: body + links -->
+        <div class="sh3-body">
+          <p>אנחנו עובדים על הדף, עוד מעט יגיע...</p>
+        </div>
+      </section>
+    </main>
+    <footer>עכשיו באות!</footer>
+  </body>
+</html>
