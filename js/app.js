@@ -81,14 +81,14 @@ function createCard(person, i) {
   // Events — hover on desktop, click-to-toggle on touch; all blocked in select mode
   const isTouch = () => window.matchMedia("(hover: none)").matches;
 
-  card.addEventListener("mouseenter", () => {
-    if (selectMode) return;
-    if (!isTouch()) openPopup(person, card);
-  });
-  card.addEventListener("mouseleave", (e) => {
-    if (selectMode) return;
-    if (!isTouch() && !e.relatedTarget?.closest("#popup")) scheduleClose();
-  });
+  // card.addEventListener("mouseenter", () => {
+  //   if (selectMode) return;
+  //   if (!isTouch()) openPopup(person, card);
+  // });
+  // card.addEventListener("mouseleave", (e) => {
+  //   if (selectMode) return;
+  //   if (!isTouch() && !e.relatedTarget?.closest("#popup")) scheduleClose();
+  // });
   card.addEventListener("click", () => {
     if (selectMode) return;
     if (isTouch()) {
@@ -134,8 +134,8 @@ function startCycle(idx, card) {
 }
 
 // ── Popup ─────────────────────────────────────────────────────────
-popup.addEventListener("mouseenter", () => clearTimeout(closeTimer));
-popup.addEventListener("mouseleave", scheduleClose);
+// popup.addEventListener("mouseenter", () => clearTimeout(closeTimer));
+// popup.addEventListener("mouseleave", scheduleClose);
 document.getElementById("popupClose").addEventListener("click", closePopup);
 
 function set(id, txt) {
@@ -312,7 +312,7 @@ function restoreFromCookies() {
       JSON.parse(saved).forEach((id) => selectedIds.add(id));
     } catch (e) {}
   }
-  enterSelectMode();
+  // enterSelectMode();
 }
 
 const btnSelect = document.getElementById("btnSelect");
@@ -457,5 +457,3 @@ function resetChoices() {
   // Exit select mode and return to initial state
   exitSelectMode();
 }
-
-

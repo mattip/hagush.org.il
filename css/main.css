@@ -125,6 +125,11 @@ nav ul a:not(.active):hover {
 ════════════════════ */
 main {
   min-height: var(--main-height);
+  background-color: var(--light);
+  padding-bottom: 1rem;
+}
+main.no-padding-bottom {
+  padding-bottom: 0;
 }
 
 /* ════════════════════
