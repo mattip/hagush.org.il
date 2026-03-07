@@ -17,6 +17,8 @@
   --light: #eaeff6;
   --border: #c8d4e0;
   --text: #1a1a1a;
+  --cream: #faf8f4;
+  --muted: #5a6380;
   --soft: #555;
   --font: "Assistant", "Helvetica Neue", Arial, sans-serif;
 
@@ -133,10 +135,124 @@ main.no-padding-bottom {
 }
 
 /* ════════════════════
+   TEXT CONTENT
+════════════════════ */
+.section {
+  padding: 2rem 2rem 1rem;
+}
+.text {
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: normal;
+  color: var(--text);
+}
+.text p {
+  margin-bottom: 0.5em;
+}
+.text h1 {
+  font-size: clamp(2rem, 8vw, 3.2rem);
+  font-weight: 800;
+  margin-bottom: 1rem;
+  color: var(--nav);
+}
+.text h2 {
+  font-size: clamp(1.2rem, 4vw, 1.6rem);
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: var(--nav);
+}
+.text h2:first-of-type {
+  margin-top: 0;
+}
+.text h3 {
+  font-size: clamp(1rem, 3vw, 1.2rem);
+  font-weight: 700;
+  margin-bottom: 0.5em;
+  color: var(--nav);
+}
+.text ul,
+.text ol {
+  padding-right: 1rem;
+  margin: 0.25rem 0 0.5rem;
+}
+.text ul li,
+.text ol li {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+.strong {
+  font-weight: 700;
+}
+
+/* ════════════════════
+   COLORS
+════════════════════ */
+.nav {
+  background: var(--nav);
+}
+.blue {
+  color: var(--blue);
+}
+.light {
+  color: var(--light);
+}
+.orange {
+  color: var(--orange);
+}
+.steel {
+  color: var(--steel);
+}
+.cream {
+  color: var(--cream);
+}
+.muted {
+  color: var(--muted);
+}
+.black {
+  color: black;
+}
+.white {
+  color: white;
+}
+.bg-nav {
+  background-color: var(--nav);
+}
+.bg-blue {
+  background-color: var(--blue);
+}
+.bg-light {
+  background-color: var(--light);
+}
+.bg-orange {
+  background-color: var(--orange);
+}
+.bg-steel {
+  background-color: var(--steel);
+}
+.bg-cream {
+  background-color: var(--cream);
+}
+.bg-muted {
+  background-color: var(--muted);
+}
+.bg-black {
+  background-color: black;
+}
+.bg-white {
+  background-color: white;
+}
+
+/* ════════════════════
    SHARED: FORM PANEL
    .s1-form (about) and .sh2-form (index)
    share identical form chrome styles.
 ════════════════════ */
+.s1-form {
+  border-right: 1px solid var(--border);
+  padding: 28px 20px 32px;
+  text-align: center;
+}
 .s1-form,
 .sh2-form {
   background: var(--light);
@@ -223,7 +339,7 @@ main.no-padding-bottom {
   border: none;
   padding: 11px;
   font-family: var(--font);
-  font-size: 0.96rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   max-width: 400px;
@@ -234,7 +350,7 @@ main.no-padding-bottom {
   text-align: center;
 }
 .f-wa > p {
-  font-size: 0.78rem;
+  font-size: 1rem;
   color: var(--soft);
   margin-bottom: 6px;
   font-weight: 400;
@@ -243,7 +359,7 @@ main.no-padding-bottom {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.82rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -272,36 +388,7 @@ main.no-padding-bottom {
   min-height: 700px;
 }
 .s1-text {
-  padding: 40px 44px 48px 32px;
   background: #fff;
-}
-.s1-text h2 {
-  font-size: 1.6rem;
-  font-weight: 800;
-  margin-bottom: 16px;
-}
-.s1-text h3 {
-  font-size: 0.95rem;
-  font-weight: 700;
-  margin: 22px 0 7px;
-}
-.s1-text p {
-  font-size: 0.88rem;
-  margin-bottom: 6px;
-  line-height: 1.65;
-}
-.s1-text ul {
-  padding-right: 20px;
-  margin: 4px 0 8px;
-}
-.s1-text li {
-  font-size: 0.86rem;
-  margin-bottom: 3px;
-  line-height: 1.55;
-}
-.s1-form {
-  border-right: 1px solid var(--border);
-  padding: 28px 20px 32px;
 }
 
 /* ════════════════════
@@ -309,7 +396,6 @@ main.no-padding-bottom {
 ════════════════════ */
 .s2 {
   background: var(--steel);
-  padding: 36px 32px;
 }
 .s2 > * {
   max-width: 1100px;
@@ -318,14 +404,11 @@ main.no-padding-bottom {
 }
 .s2 > h2 {
   color: #fff;
-  font-size: 1.1rem;
   font-weight: 700;
-  margin-bottom: 4px;
 }
 .s2 > p {
   color: rgba(255, 255, 255, 0.82);
-  font-size: 0.78rem;
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 
 .grid4 {
@@ -353,17 +436,13 @@ main.no-padding-bottom {
   object-fit: cover;
 }
 .c-name {
-  font-size: 0.82rem;
   font-weight: 700;
   color: var(--nav);
 }
 .c-desc {
-  font-size: 0.74rem;
   color: var(--soft);
-  line-height: 1.45;
 }
 .c-link {
-  font-size: 0.74rem;
   color: var(--blue);
   text-decoration: underline;
 }
@@ -374,7 +453,6 @@ main.no-padding-bottom {
   min-height: 70px;
 }
 .l-card a {
-  font-size: 0.78rem;
   font-weight: 700;
   color: var(--blue);
   text-decoration: underline;
@@ -382,9 +460,7 @@ main.no-padding-bottom {
   margin-bottom: 5px;
 }
 .l-card p {
-  font-size: 0.72rem;
   color: var(--soft);
-  line-height: 1.4;
 }
 
 /* ════════════════════
@@ -397,9 +473,6 @@ main.no-padding-bottom {
 .s4 > h2 {
   text-align: center;
   color: #fff;
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 24px;
 }
 .teams-row {
   display: grid;
@@ -422,7 +495,6 @@ main.no-padding-bottom {
 .teams-row p {
   text-align: center;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.8rem;
   font-weight: 600;
 }
 
@@ -492,21 +564,6 @@ main.no-padding-bottom {
   justify-content: center;
   gap: 20px;
 }
-.sh1-content h1 {
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--nav);
-  line-height: 1.2;
-}
-.sh1-subtitle {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--nav);
-}
-.sh1-content > p {
-  font-size: 0.9rem;
-  line-height: 1.7;
-}
 
 .sh1-features {
   display: flex;
@@ -537,16 +594,10 @@ main.no-padding-bottom {
   display: flex;
   flex-direction: column;
   gap: 1px;
-}
-.sh1-feature-text strong {
-  font-size: 0.88rem;
-  font-weight: 700;
-  line-height: 1.3;
+  line-height: 1;
 }
 .sh1-feature-text span {
-  font-size: 0.78rem;
   color: var(--soft);
-  line-height: 1.4;
 }
 
 /* ════════════════════
@@ -575,30 +626,19 @@ main.no-padding-bottom {
   gap: 1em;
 }
 .sh2-text h2 {
-  font-size: 0.95rem;
   font-weight: 700;
   color: #fff;
-  line-height: 1.45;
-  margin-top: 1em;
-}
-.sh2-text h2:first-child {
-  margin-top: 0;
 }
 .sh2-text ul {
   padding-right: 1.2em;
 }
 .sh2-text li {
-  font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.92);
-  line-height: 1.65;
   margin-bottom: 0.3em;
 }
 .sh2-text p {
-  font-size: 0.85rem;
   color: #fff;
   font-weight: 700;
-  line-height: 1.5;
-  margin-top: 0.5em;
 }
 
 /* ════════════════════
@@ -618,22 +658,12 @@ main.no-padding-bottom {
 .sh3-heading {
   padding: 6% 5%;
 }
-.sh3-heading h2 {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--nav);
-  line-height: 1.2;
-}
 
 .sh3-body {
   padding: 6% 4% 6% 8%;
   display: flex;
   flex-direction: column;
   gap: 1.2em;
-}
-.sh3-body p {
-  font-size: 0.88rem;
-  line-height: 1.75;
 }
 
 .sh3-links {
@@ -645,7 +675,6 @@ main.no-padding-bottom {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
-  font-size: 0.88rem;
   font-weight: 700;
   color: var(--blue);
   text-decoration: underline;
@@ -674,8 +703,8 @@ footer {
   background: #fff;
   border-top: 1px solid var(--border);
   text-align: center;
-  padding: 18px;
-  font-size: 0.9rem;
+  padding: 1rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--nav);
   height: var(--footer-height);
