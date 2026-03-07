@@ -162,7 +162,7 @@ main.no-padding-bottom {
   margin-bottom: 0.5em;
   color: var(--nav);
 }
-.text h2:first-of-type {
+.text h2:first-child {
   margin-top: 0;
 }
 .text h3 {
