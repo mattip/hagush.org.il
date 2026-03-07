@@ -1,146 +1,181 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="he" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>עכשיו באות!</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/main.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>עכשיו באות!</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/main.css" />
+  </head>
+  <body>
+    <header>
+      <input type="checkbox" id="nav-toggle" />
+      <nav>
+        <span class="nav-logo">עכשיו באות!</span>
+        <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
+          <span></span><span></span><span></span>
+        </label>
+        <ul>
+          <li><a href="index.html" class="active">דף בית</a></li>
+          <li><a href="about.html">אודות</a></li>
+          <li><a href="candidates.html">בחירות בדמוקרטים!</a></li>
+        </ul>
+      </nav>
+    </header>
 
-<input type="checkbox" id="nav-toggle">
+    <!-- ═══════════ S1 — HERO: protest image + content ═══════════ -->
+    <main>
+      <section class="sh1">
+        <div class="sh1-content-wrap">
+          <div class="sh1-content">
+            <h1>ממחאה לכוח פוליטי!</h1>
 
-<nav>
-  <span class="nav-logo">!עכשיו באות</span>
-  <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
-    <span></span><span></span><span></span>
-  </label>
-  <ul>
-    <li><a href="index.html" class="active">דף בית</a></li>
-    <li><a href="about.html">אודות</a></li>
-    <li><a href="candidates.html">בחירות בדמוקרטים!</a></li>
-  </ul>
-</nav>
+            <p>
+              אנחנו, הציבור הליברלי, נאבקנו ברחובות, הפגנו, נעצרנו, צעקנו
+              ותרמנו, ונמשיך לעשות כל שביכולתנו כדי להביא להפלת ממשלת החורבן.
+            </p>
+            <p>
+              חלק מהמאבק הוא להיות מעורבים ולייצר הנהגה פוליטית שתוביל
+              <b
+                >אלטרנטיבה — פתרון מדיני, ביטחוני, כלכלי וחברתי. מתפקדות/ים
+                עכשיו ובונות את הבית הפוליטי שלנו! במפגלת הדמוקרטים</b
+              >
+            </p>
 
-<!-- ═══════════ S1 — HERO: protest image + content ═══════════ -->
-<section class="sh1">
-
-  <div class="sh1-content-wrap">
-  <div class="sh1-content">
-    <h1>ממחאה לכוח פוליטי!</h1>
-
-    <p>אנחנו, הציבור הליברלי, נאבקנו ברחובות, הפגנו,
-    נעצרנו, צעקנו ותרמנו, ונמשיך לעשות כל שביכולתנו כדי להביא להפלת ממשלת
-    החורבן.</p>
-    <p>חלק מהמאבק הוא להיות מעורבים ולייצר הנהגה פוליטית שתוביל <b>אלטרנטיבה —
-    פתרון מדיני, ביטחוני, כלכלי וחברתי. מתפקדות/ים עכשיו ובונות את הבית הפוליטי
-    שלנו! במפגלת הדמוקרטים</b></p>
-
-    <div class="sh1-features">
-      <div class="sh1-feature">
-        <div class="sh1-check">✓</div>
-        <div class="sh1-feature-text">
-          <strong>לייצר מציאות</strong>
-          <span>נקבע מי יהיו חברי הכנסת שמייצגים אותנו</span>
+            <div class="sh1-features">
+              <div class="sh1-feature">
+                <div class="sh1-check">✓</div>
+                <div class="sh1-feature-text">
+                  <strong>לייצר מציאות</strong>
+                  <span>נקבע מי יהיו חברי הכנסת שמייצגים אותנו</span>
+                </div>
+              </div>
+              <div class="sh1-feature">
+                <div class="sh1-check">✓</div>
+                <div class="sh1-feature-text">
+                  <strong>לבנות בסיס רחב</strong>
+                  <span>נגדיל את הכוח הפוליטי של המחנה שלנו</span>
+                </div>
+              </div>
+              <div class="sh1-feature">
+                <div class="sh1-check">✓</div>
+                <div class="sh1-feature-text">
+                  <strong>להשמיע קול ברור וגאה</strong>
+                  <span>נבטא את הערכים שלנו בזירה הפוליטית</span>
+                </div>
+              </div>
+              <div class="sh1-feature">
+                <div class="sh1-check">✓</div>
+                <div class="sh1-feature-text">
+                  <strong>לקחת אחריות</strong>
+                  <span>המשבר הגדול מחייב התגייסות אזרחית</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- /sh1-content -->
         </div>
-      </div>
-      <div class="sh1-feature">
-        <div class="sh1-check">✓</div>
-        <div class="sh1-feature-text">
-          <strong>לבנות בסיס רחב</strong>
-          <span>נגדיל את הכוח הפוליטי של המחנה שלנו</span>
+        <!-- /sh1-content-wrap -->
+        <div class="sh1-img">
+          <img src="images/hagush_protest.avif" alt="הפגנה — עכשיו באות!" />
         </div>
-      </div>
-      <div class="sh1-feature">
-        <div class="sh1-check">✓</div>
-        <div class="sh1-feature-text">
-          <strong>להשמיע קול ברור וגאה</strong>
-          <span>נבטא את הערכים שלנו בזירה הפוליטית</span>
-        </div>
-      </div>
-      <div class="sh1-feature">
-        <div class="sh1-check">✓</div>
-        <div class="sh1-feature-text">
-          <strong>לקחת אחריות</strong>
-          <span>המשבר הגדול מחייב התגייסות אזרחית</span>
-        </div>
-      </div>
-    </div>
-  </div><!-- /sh1-content -->
-  </div><!-- /sh1-content-wrap -->
-  <div class="sh1-img">
-    <img src="images/hagush_protest.avif" alt="הפגנה — עכשיו באות!">
-  </div>
+      </section>
 
+      <section class="sh2">
+        <div class="sh2-form-col">
+          <a class="f-submit" href="https://l.democrats.org.il/baot"
+            >להתפקדות והצטרפות</a
+          >
+          <div class="f-wa">
+            <p>רוצים להיות מעורבים ולהשתתף בפעולות נוספות?</p>
+            <a
+              href="https://chat.whatsapp.com/D9FmoaRDlnnJab6suRWVmH"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <div class="wa-circle" style="background: #25d366">
+                <img src="whatsapp.svg" alt="Whatsapp logo" />
+              </div>
 
-</section>
-
-<section class="sh2">
-
-  <div class="sh2-form-col">
-    <a class="f-submit" href="https://l.democrats.org.il/baot">להתפקדות והצטרפות</a>
-    <div class="f-wa">
-      <p>רוצים להיות מעורבים ולהשתתף בפעולות נוספות?</p>
-      <a href="https://chat.whatsapp.com/D9FmoaRDlnnJab6suRWVmH" target="_blank" rel="noreferrer">
-        
-        <div class="wa-circle" style="background:#25D366;">
-          <img src="whatsapp.svg" alt="Whatsapp logo">
+              קבוצת וואטסאפ לעדכונים
+            </a>
+          </div>
         </div>
 
-          קבוצת וואטסאפ לעדכונים
-        </a>
-    </div>
-  </div>
-
-  <div class="sh2-text">
-    <h2>למה להצטרף ולמה עכשיו?</h2>
-    <ul>
-      <li>לחברי מפלגות יש כוח גדול פי כמה מכל אזרח אחר לקבוע מי יהיו חברי הכנסת ולהשפיע על המפה הפוליטית.</li>
-      <li>אי אפשר לחכות לבחירות — חייבים להתארגן מראש ולהגיע מוכנים כדי לדאוג להציב אלטרנטיבה נחושה אל מול הימין הקיצוני.</li>
-      <li>התגייסות ציבורית רחבה תאפשר צבירה של כוח והשפעה, שיתורגמו לעוד כוח והשפעה.</li>
-      <li>הפקרת הזירה הפוליטית — לא אופציה יותר. חייבים לתקן.</li>
-    </ul>
-    <h2>למה דרך קהילת ״עכשיו באות!״?</h2>
-    <ul>
-      <li>כי התארגנות כחלק מקבוצה מאפשרת השפעה ופעולה אפקטיבית משותפת.</li>
-      <li>נפעל יחד כדי לחזק את מחנה השמאל ולחדש את פניה, כדי שתהיה מסוגלת לצרף אליה קהלים חדשים ולגבש סביבה כוח משמעותי.</li>
-      <li>כדי להיות מעודכנים בפעילויות ואירועים, להכיר את הנציגים שלנו בכנסת ולחבר אותם אלינו ואל מה שחשוב לנו.</li>
-    </ul>
-    <p><b>מעבר ממחאה להשפעה — מתחיל בהצטרפות לפוליטיקה</b></p>
-  </div>
-
-</section>
-
-<!-- ═══════════ S3 — WHITE: big slogan + body text + two links ═══════════ -->
-<section class="sh3">
-
-  <div class="sh3-heading-col">
-    <div class="sh3-heading">
-      <h2>מי אנחנו?</h2>
-    </div>
-  </div>
-
-  <!-- second in DOM = left in RTL: body + links -->
-  <div class="sh3-body">
-    <p>אנחנו השמאל! אנחנו: מירי, נינה, נבות, נאוה, נועה, שני, ליאת, אורי, שירה, גלי, גילה, חנן, דפנה, יועד, מתי, ועוד רבות וטובים. אנחנו קבוצת פעילי/ות מחאה מכל רחבי הארץ. מתוך הבנה שצריך לתרגם את הישגי המחאה לכוח פוליטי, ושצריך להתחיל לעבוד - לעזור לייצר, לעצב ולחזק את הבית הפוליטי שלנו. להרחבה >
-נשמח אם אתם, שמרגישים כמונו, תצטרפו אלינו.</p>
-    <div class="sh3-links">
-      <a href="https://chat.whatsapp.com/D9FmoaRDlnnJab6suRWVmH" target="_blank" rel="noreferrer">
-        <div class="wa-circle" style="background:#25D366;">
-          <img src="whatsapp.svg" alt="Whatsapp logo">
+        <div class="sh2-text">
+          <h2>למה להצטרף ולמה עכשיו?</h2>
+          <ul>
+            <li>
+              לחברי מפלגות יש כוח גדול פי כמה מכל אזרח אחר לקבוע מי יהיו חברי
+              הכנסת ולהשפיע על המפה הפוליטית.
+            </li>
+            <li>
+              אי אפשר לחכות לבחירות — חייבים להתארגן מראש ולהגיע מוכנים כדי
+              לדאוג להציב אלטרנטיבה נחושה אל מול הימין הקיצוני.
+            </li>
+            <li>
+              התגייסות ציבורית רחבה תאפשר צבירה של כוח והשפעה, שיתורגמו לעוד כוח
+              והשפעה.
+            </li>
+            <li>הפקרת הזירה הפוליטית — לא אופציה יותר. חייבים לתקן.</li>
+          </ul>
+          <h2>למה דרך קהילת ״עכשיו באות!״?</h2>
+          <ul>
+            <li>
+              כי התארגנות כחלק מקבוצה מאפשרת השפעה ופעולה אפקטיבית משותפת.
+            </li>
+            <li>
+              נפעל יחד כדי לחזק את מחנה השמאל ולחדש את פניה, כדי שתהיה מסוגלת
+              לצרף אליה קהלים חדשים ולגבש סביבה כוח משמעותי.
+            </li>
+            <li>
+              כדי להיות מעודכנים בפעילויות ואירועים, להכיר את הנציגים שלנו בכנסת
+              ולחבר אותם אלינו ואל מה שחשוב לנו.
+            </li>
+          </ul>
+          <p><b>מעבר ממחאה להשפעה — מתחיל בהצטרפות לפוליטיקה</b></p>
         </div>
-        קבוצת וואטסאפ לעדכונים
-      </a>
-    </div>
-    <a class="f-submit" href="https://l.democrats.org.il/baot">להתפקדות והצטרפות</a>
-  </div>
+      </section>
 
-</section>
+      <!-- ═══════════ S3 — WHITE: big slogan + body text + two links ═══════════ -->
+      <section class="sh3">
+        <div class="sh3-heading-col">
+          <div class="sh3-heading">
+            <h2>מי אנחנו?</h2>
+          </div>
+        </div>
 
-<footer>עכשיו באות!</footer>
-
-</body>
+        <!-- second in DOM = left in RTL: body + links -->
+        <div class="sh3-body">
+          <p>
+            אנחנו השמאל! אנחנו: מירי, נינה, נבות, נאוה, נועה, שני, ליאת, אורי,
+            שירה, גלי, גילה, חנן, דפנה, יועד, מתי, ועוד רבות וטובים. אנחנו קבוצת
+            פעילי/ות מחאה מכל רחבי הארץ. מתוך הבנה שצריך לתרגם את הישגי המחאה
+            לכוח פוליטי, ושצריך להתחיל לעבוד - לעזור לייצר, לעצב ולחזק את הבית
+            הפוליטי שלנו. להרחבה > נשמח אם אתם, שמרגישים כמונו, תצטרפו אלינו.
+          </p>
+          <div class="sh3-links">
+            <a
+              href="https://chat.whatsapp.com/D9FmoaRDlnnJab6suRWVmH"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <div class="wa-circle" style="background: #25d366">
+                <img src="whatsapp.svg" alt="Whatsapp logo" />
+              </div>
+              קבוצת וואטסאפ לעדכונים
+            </a>
+          </div>
+          <a class="f-submit" href="https://l.democrats.org.il/baot"
+            >להתפקדות והצטרפות</a
+          >
+        </div>
+      </section>
+    </main>
+    <footer>עכשיו באות!</footer>
+  </body>
 </html>
-

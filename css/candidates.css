@@ -18,7 +18,6 @@ body {
   background: var(--light);
 }
 
-
 .team-top {
   padding: 3rem 2rem 0;
   text-align: center;
@@ -128,7 +127,8 @@ body {
   position: fixed;
   z-index: 300;
   overflow-y: auto;
-  background: var(--navy);
+  background: var(--light);
+  color: var(--text);
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow:
@@ -166,7 +166,6 @@ body {
   right: var(--popup-margin);
   bottom: var(--popup-margin);
   width: auto !important;
-  max-width: 350px;
 }
 
 /* Arrow notch */
@@ -223,7 +222,7 @@ body {
   transition: background 0.15s;
 }
 .popup-close:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 /* ── Photo block ───────────────────────────────────────────────── */
@@ -267,7 +266,7 @@ body {
 
 /* Base row */
 .pi-row {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   padding: 6px 14px;
   align-items: baseline;
 }
@@ -294,6 +293,7 @@ body {
 /* Section rows: tag on its own line, blank gap, then value */
 .pi-section {
   display: flex;
+  align-items: flex-start;
   flex-direction: column;
   gap: 5px;
   padding: 8px 14px 10px;
@@ -312,13 +312,12 @@ body {
 .pi-tag {
   font-size: 0.7rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--navy);
   white-space: nowrap;
   line-height: 1.4;
 }
 .pi-val {
   font-size: 0.84rem;
-  color: #fff;
   line-height: 1.55;
 }
 
@@ -415,8 +414,9 @@ body {
 /* Card select circle — on .card not .photo-stage (avoids overflow:hidden clip) */
 .card {
   position: relative;
-  max-width: 400px;
+  max-width: 480px;
 }
+
 .card-select-btn {
   position: absolute;
   bottom: 32px;
@@ -617,4 +617,28 @@ body {
   font-size: 0.85rem;
   margin-top: 8px;
   font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  /* tablet */
+  .card {
+    max-width: 390px;
+  }
+
+  .popup.full-size {
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    max-width: 550px;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* desktop */
+}
+
+@media (min-width: 1280px) {
+  /* wide desktop */
 }

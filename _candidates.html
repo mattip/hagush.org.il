@@ -1,146 +1,162 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="he" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>מעומדים | עכשיו באות!</title>
-  <link rel="icon" href="favicon.ico">
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/main.css">
-  <link rel="stylesheet" href="./css/candidates.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>מעומדים | עכשיו באות!</title>
+    <link rel="icon" href="favicon.ico" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/main.css" />
+    <link rel="stylesheet" href="./css/candidates.css" />
+  </head>
+  <body>
+    <header>
+      <input type="checkbox" id="nav-toggle" />
+      <nav>
+        <span class="nav-logo">עכשיו באות!</span>
+        <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
+          <span></span><span></span><span></span>
+        </label>
+        <ul>
+          <li><a href="index.html">דף בית</a></li>
+          <li><a href="about.html">אודות</a></li>
+          <li><a href="#" class="active">בחירות בדמוקרטים!</a></li>
+        </ul>
+      </nav>
+    </header>
 
-<input type="checkbox" id="nav-toggle">
+    <main>
+      <section class="team-top">
+        <div>
+          <h2>בחירות בדמוקרטים!</h2>
+          <span class="team-dash" aria-hidden="true"> — </span>
+          <h3>
+            בקרוב יוכרזו הבחירות והמרוץ ייפתח! החלטנו להקדים ולהציג לפניכם את
+            הא.נשים המוכשרים והאמיצים שכבר הודיעו שהם מתגייסים למשימה הלאומית של
+            הצלת המדינה.
+          </h3>
+          <p>
+            שימו לב - הרשימה אינה רשמית, אינה מפלגתית ואינה מחייבת.
+            <br />
+            אם שכחנו מישהו.י, פנו אלינו ונשמח להוסיף.
+          </p>
+        </div>
+        <div class="team-toolbar">
+          <div class="toolbar-btns">
+            <button class="btn-select" id="btnSelect">☑ בחרו מועמדים</button>
+            <button
+              class="btn-show-choices"
+              id="btnShowChoices"
+              style="display: none"
+            >
+              ★ הבחירות שלי
+            </button>
+            <button class="btn-reset" id="btnReset" style="display: none">
+              reset
+            </button>
+          </div>
+        </div>
+        <div class="people-grid full-width" id="grid"></div>
+      </section>
 
-<nav>
-  <span class="nav-logo">!עכשיו באות</span>
-  <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
-    <span></span><span></span><span></span>
-  </label>
-  <ul>
-    <li><a href="index.html">דף בית</a></li>
-    <li><a href="about.html">אודות</a></li>
-    <li><a href="#" class="active">בחירות בדמוקרטים!</a></li>
-  </ul>
-</nav>
+      <!-- Cookie consent dialog -->
+      <div class="cookie-overlay" id="cookieOverlay" style="display: none">
+        <div class="cookie-dialog" dir="rtl">
+          <p class="cookie-title">שמירת בחירות</p>
+          <p class="cookie-body">
+            שמירת הבחירות שלך מצריכה שימוש בעוגיות (cookies). האם את/ה מסכים/ה?
+          </p>
+          <div class="cookie-btns">
+            <button class="cookie-yes" id="cookieYes">כן, מסכים/ה</button>
+            <button class="cookie-no" id="cookieNo">לא תודה</button>
+          </div>
+        </div>
+      </div>
 
-<section class="team-top">
-  <div>
-    <h2>בחירות בדמוקרטים! </h2>
-    <span class="team-dash" aria-hidden="true"> — </span>
-    <h3>
-      בקרוב יוכרזו הבחירות והמרוץ ייפתח!
-      החלטנו להקדים ולהציג לפניכם את הא.נשים המוכשרים והאמיצים שכבר הודיעו שהם מתגייסים למשימה הלאומית של הצלת המדינה.
-    </h3>
-    <p>
-      שימו לב - הרשימה אינה רשמית, אינה מפלגתית ואינה מחייבת.
-      <br/>
-      אם שכחנו מישהו.י, פנו אלינו ונשמח להוסיף.
-    </p>
-  </div>
-  <div class="team-toolbar">
-    <div class="toolbar-btns">
-      <button class="btn-select" id="btnSelect">☑ בחרו מועמדים</button>
-      <button class="btn-show-choices" id="btnShowChoices" style="display:none">★ הבחירות שלי</button>
-      <button class="btn-reset" id="btnReset" style="display:none">reset</button>
-    </div>
-  </div>
-  <div class="people-grid full-width" id="grid"></div>
-</section>
+      <!-- Choices modal -->
+      <div class="choices-overlay" id="choicesOverlay" style="display: none">
+        <div class="choices-dialog" dir="rtl">
+          <button class="choices-close" id="choicesClose">✕</button>
+          <p class="choices-title">המועמדים שבחרתי</p>
+          <ul class="choices-list" id="choicesList"></ul>
+          <div class="choices-empty" id="choicesEmpty" style="display: none">
+            טרם בחרת מועמדים
+          </div>
+          <button class="choices-copy" id="choicesCopy">העתקה ללוח</button>
+          <div class="choices-copied" id="choicesCopied" style="display: none">
+            ✓ הועתק!
+          </div>
+        </div>
+      </div>
 
-<!-- Cookie consent dialog -->
-<div class="cookie-overlay" id="cookieOverlay" style="display:none">
-  <div class="cookie-dialog" dir="rtl">
-    <p class="cookie-title">שמירת בחירות</p>
-    <p class="cookie-body">שמירת הבחירות שלך מצריכה שימוש בעוגיות (cookies). האם את/ה מסכים/ה?</p>
-    <div class="cookie-btns">
-      <button class="cookie-yes" id="cookieYes">כן, מסכים/ה</button>
-      <button class="cookie-no"  id="cookieNo">לא תודה</button>
-    </div>
-  </div>
-</div>
-
-<!-- Choices modal -->
-<div class="choices-overlay" id="choicesOverlay" style="display:none">
-  <div class="choices-dialog" dir="rtl">
-    <button class="choices-close" id="choicesClose">✕</button>
-    <p class="choices-title">המועמדים שבחרתי</p>
-    <ul class="choices-list" id="choicesList"></ul>
-    <div class="choices-empty" id="choicesEmpty" style="display:none">טרם בחרת מועמדים</div>
-    <button class="choices-copy" id="choicesCopy">העתקה ללוח</button>
-    <div class="choices-copied" id="choicesCopied" style="display:none">✓ הועתק!</div>
-  </div>
-</div>
-
-<!-- section class="under-grid">
+      <!-- section class="under-grid">
   <div class="under-grid1">
     אנחנו פעילות שטח , דברנו עם אנשים שהראו נכונות להתמודד במפלגת הדמוקטים, חלק ממש הצהירו, חלק מתלבטים אבל תומכים, כולם אשרו לנו לשם אותם ברשימה של החלומות שלנו לכנסת הקרובה.
 ככל שהמפלגה תיהיה יותר גדולה יותר מהחלומות שלנו יתגשמו.
 אם יש מועמד שבטעות ובתום לב - לא שלבנו פה באתר - אנא פנו אלינו במהרה! מבטיחות להעלות
   </div>
 </section -->
+    </main>
+    <footer>עכשיו באות!</footer>
 
-<footer>עכשיו באות!</footer>
+    <!-- Popup — populated and positioned by ./js/app.js -->
+    <div class="popup full-size" id="popup" role="dialog" aria-modal="true">
+      <!-- ① Photo block -->
+      <div class="popup-img-wrap">
+        <img id="popupImg" src="" alt="" />
+        <span class="popup-name-badge" id="popupNameBadge"></span>
+        <button class="popup-close" id="popupClose" aria-label="סגור">✕</button>
+      </div>
 
-<!-- Popup — populated and positioned by ./js/app.js -->
-<div class="popup full-size" id="popup" role="dialog" aria-modal="true">
+      <!-- ② Info table -->
+      <div class="popup-info">
+        <!-- 2-col rows: tag | value -->
+        <div class="pi-row pi-2col">
+          <span class="pi-tag">שם</span>
+          <span class="pi-val" id="piName"></span>
+        </div>
+        <div class="pi-row pi-2col">
+          <span class="pi-tag">גיל</span>
+          <span class="pi-val" id="piAge"></span>
+        </div>
+        <div class="pi-row pi-2col">
+          <span class="pi-tag">עיר/ישוב</span>
+          <span class="pi-val" id="piHome"></span>
+        </div>
+        <div class="pi-row pi-2col" id="piRowActivities">
+          <span class="pi-tag">תיאור/תואר</span>
+          <span class="pi-val" id="piActivities"></span>
+        </div>
 
-  <!-- ① Photo block -->
-  <div class="popup-img-wrap">
-    <img id="popupImg" src="" alt="">
-    <span class="popup-name-badge" id="popupNameBadge"></span>
-  <button class="popup-close" id="popupClose" aria-label="סגור">✕</button>
-  </div>
+        <!-- rationale: full width, no tag -->
+        <div class="pi-row pi-full pi-rationale" id="piRowRationale">
+          <span class="pi-val" id="piRationale"></span>
+        </div>
 
-  <!-- ② Info table -->
-  <div class="popup-info">
+        <!-- recommendation: tag line, blank line, content -->
+        <div class="pi-row pi-full pi-section" id="piRowRecommendation">
+          <span class="pi-tag">מילה טובה</span>
+          <span class="pi-val" id="piRecommendation"></span>
+        </div>
 
-    <!-- 2-col rows: tag | value -->
-    <div class="pi-row pi-2col">
-      <span class="pi-tag">שם</span>
-      <span class="pi-val" id="piName"></span>
+        <!-- minister: tag line, content line -->
+        <div class="pi-row pi-full pi-section" id="piRowMinister">
+          <span class="pi-tag">איזה שר היתה רוצה להיות?</span>
+          <span class="pi-val" id="piMinister"></span>
+        </div>
+
+        <!-- links -->
+        <div class="pi-row pi-links" id="piRowLinks">
+          <span class="pi-tag">לאתר שלי</span>
+          <div class="pi-link-icons" id="piLinks"></div>
+        </div>
+      </div>
+      <!-- /popup-info -->
     </div>
-    <div class="pi-row pi-2col">
-      <span class="pi-tag">גיל</span>
-      <span class="pi-val" id="piAge"></span>
-    </div>
-    <div class="pi-row pi-2col">
-      <span class="pi-tag">עיר/ישוב</span>
-      <span class="pi-val" id="piHome"></span>
-    </div>
-    <div class="pi-row pi-2col" id="piRowActivities">
-      <span class="pi-tag">תיאור/תואר</span>
-      <span class="pi-val" id="piActivities"></span>
-    </div>
 
-    <!-- rationale: full width, no tag -->
-    <div class="pi-row pi-full pi-rationale" id="piRowRationale">
-      <span class="pi-val" id="piRationale"></span>
-    </div>
-
-    <!-- recommendation: tag line, blank line, content -->
-    <div class="pi-row pi-full pi-section" id="piRowRecommendation">
-      <span class="pi-tag">מילה טובה</span>
-      <span class="pi-val" id="piRecommendation"></span>
-    </div>
-
-    <!-- minister: tag line, content line -->
-    <div class="pi-row pi-full pi-section" id="piRowMinister">
-      <span class="pi-tag">איזה שר היתה רוצה להיות?</span>
-      <span class="pi-val" id="piMinister"></span>
-    </div>
-
-    <!-- links -->
-    <div class="pi-row pi-links" id="piRowLinks">
-      <span class="pi-tag">לאתר שלי</span>
-      <div class="pi-link-icons" id="piLinks"></div>
-    </div>
-
-  </div><!-- /popup-info -->
-
-</div>
-
-<script src="./js/app.js"></script>
-</body>
+    <script src="./js/app.js"></script>
+  </body>
 </html>
