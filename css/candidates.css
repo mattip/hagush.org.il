@@ -312,19 +312,28 @@ body {
   color: var(--blue, #1a6aff);
   text-decoration: underline;
   white-space: nowrap;
+  position: relative;
 }
 .pi-rec-link:hover {
   opacity: 0.8;
 }
 .pi-rec-show {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 50%;
+  transform: translateX(50%);
   font-size: 0.75em;
   font-weight: 700;
-  background: var(--blue, #1a6aff);
+  background: var(--nav, #09366d);
   color: #fff;
   border-radius: 4px;
-  padding: 1px 5px;
-  margin-right: 3px;
-  vertical-align: middle;
+  padding: 2px 7px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.pi-rec-link:hover .pi-rec-show {
+  display: block;
 }
 
 .pi-tag {
