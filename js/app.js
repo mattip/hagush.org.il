@@ -10,6 +10,7 @@ let closeTimer = null;
 let selectMode = false;
 let selectedIds = new Set();
 let allPeople = [];
+let popupHistory = []; // stack of {person, card} for back navigation
 
 // ── Bootstrap ────────────────────────────────────────────────────
 fetch("candidates.json")
@@ -137,6 +138,7 @@ function startCycle(idx, card) {
 // popup.addEventListener("mouseenter", () => clearTimeout(closeTimer));
 // popup.addEventListener("mouseleave", scheduleClose);
 document.getElementById("popupClose").addEventListener("click", closePopup);
+document.getElementById("popupBack").addEventListener("click", popupGoBack);
 
 function set(id, txt) {
   const el = document.getElementById(id);
@@ -151,11 +153,21 @@ function rowShow(id, show) {
   if (el) el.style.display = show ? "" : "none";
 }
 
-function openPopup(person, card) {
+function openPopup(person, card, pushHistory = true) {
   document.body.classList.add("no-scroll");
   document.getElementsByTagName("html")[0].classList.add("no-scroll");
   clearTimeout(closeTimer);
   justOpened = true;
+
+  if (pushHistory && popup.classList.contains("open")) {
+    const prevId = popup.dataset.personId;
+    const prevPerson = allPeople.find((p) => p.id === prevId);
+    const prevCard = document.querySelector(`.card[data-person-id="${prevId}"]`);
+    if (prevPerson) popupHistory.push({ person: prevPerson, card: prevCard });
+  }
+
+  document.getElementById("popupBack").style.display =
+    popupHistory.length > 0 ? "" : "none";
 
   // Photo
   const photos = person.photos || [];
@@ -178,7 +190,9 @@ function openPopup(person, card) {
   rowShow("piRowRationale", !!person.rationale);
   set("piRationale", person.rationale);
   rowShow("piRowRecommendation", !!person.recommendation);
-  set("piRecommendation", person.recommendation);
+  if (person.recommendation) {
+    setHTML("piRecommendation", linkRecommendation(person.recommendation));
+  }
   rowShow("piRowMinister", !!person.minister);
   set("piMinister", person.minister);
 
@@ -206,6 +220,45 @@ function openPopup(person, card) {
   popup.dataset.personId = person.id;
   // requestAnimationFrame(() => positionPopup(card)); // Don't position the popup for now, as it is fullscreen on mobile.
 }
+
+// ── Recommendation name linking ───────────────────────────────────
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function linkRecommendation(text) {
+  let result = escapeHTML(text);
+  for (const person of allPeople) {
+    const escapedName = escapeHTML(person.name);
+    result = result.replace(
+      new RegExp(escapedName, "g"),
+      `<a href="#" class="pi-rec-link" data-person-id="${person.id}">${escapedName} <span class="pi-rec-show">הצג</span></a>`,
+    );
+  }
+  return result;
+}
+
+// Delegate clicks on recommendation name links
+document.getElementById("popup").addEventListener("click", (e) => {
+  const link = e.target.closest(".pi-rec-link");
+  if (!link) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const targetId = link.dataset.personId;
+  const targetPerson = allPeople.find((p) => p.id === targetId);
+  if (!targetPerson) return;
+  const targetCard = document.querySelector(`.card[data-person-id="${targetId}"]`);
+  if (targetCard) {
+    targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => openPopup(targetPerson, targetCard), 350);
+  } else {
+    openPopup(targetPerson, document.body);
+  }
+});
 
 function positionPopup(card) {
   const GAP = 12;
@@ -254,6 +307,14 @@ function closePopup() {
   document.body.classList.remove("no-scroll");
   document.getElementsByTagName("html")[0].classList.remove("no-scroll");
   popup.classList.remove("open");
+  popupHistory = [];
+  document.getElementById("popupBack").style.display = "none";
+}
+
+function popupGoBack() {
+  const prev = popupHistory.pop();
+  if (!prev) return;
+  openPopup(prev.person, prev.card, false);
 }
 
 document.addEventListener("keydown", (e) => {

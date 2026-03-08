@@ -204,6 +204,29 @@ body {
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Back button */
+.popup-back {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--blue);
+  border: none;
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.popup-back:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
 /* ── Photo block ───────────────────────────────────────────────── */
 .popup-img-wrap {
   position: relative;
@@ -283,6 +306,34 @@ body {
   color: var(--blue, #1a6aff);
   text-decoration: underline;
   margin-left: 8px;
+}
+
+.pi-rec-link {
+  color: var(--blue, #1a6aff);
+  text-decoration: underline;
+  white-space: nowrap;
+  position: relative;
+}
+.pi-rec-link:hover {
+  opacity: 0.8;
+}
+.pi-rec-show {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 50%;
+  transform: translateX(50%);
+  font-size: 0.75em;
+  font-weight: 700;
+  background: var(--nav, #09366d);
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.pi-rec-link:hover .pi-rec-show {
+  display: block;
 }
 
 .pi-tag {
