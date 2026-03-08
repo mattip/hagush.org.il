@@ -274,12 +274,15 @@ body {
 
 /* Links row */
 .pi-links {
-  display: grid;
-  grid-template-columns: 5em 1fr;
-  column-gap: 0.5em;
+  display: flex;
   align-items: center;
-  border-bottom: none;
   padding: 10px 14px;
+}
+
+.pi-homepage-link {
+  color: var(--blue, #1a6aff);
+  text-decoration: underline;
+  margin-left: 8px;
 }
 
 .pi-tag {

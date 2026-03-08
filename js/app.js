@@ -190,9 +190,11 @@ function openPopup(person, card) {
     setHTML(
       "piLinks",
       Object.entries(links)
-        .map(
-          ([platform, url]) =>
-            `<a href="${url}" target="_blank" rel="noreferrer" class="pi-social-link" title="${platform}">
+        .sort(([a], [b]) => (a === "homepage" ? -1 : b === "homepage" ? 1 : 0))
+        .map(([platform, url]) =>
+          platform === "homepage"
+            ? `<a href="${url}" target="_blank" rel="noreferrer" class="pi-homepage-link">לאתר שלי</a>`
+            : `<a href="${url}" target="_blank" rel="noreferrer" class="pi-social-link" title="${platform}">
             <img src="${platform}.svg" alt="${platform} icon" class="social-icon-img" />
           </a>`,
         )

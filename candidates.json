@@ -10,7 +10,8 @@
     "minister": "שר האנרגיה",
     "links": {
       "facebook": "https://www.facebook.com/matti.picus",
-      "linkedin": "https://www.linkedin.com/in/mattipicus"
+      "linkedin": "https://www.linkedin.com/in/mattipicus",
+	  "homepage": "https://www.github.com/mattip"
     },
     "photos": ["carlos_forward.png", "carlos_down.png", "carlos_up.png"]
   },
