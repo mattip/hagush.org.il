@@ -178,7 +178,9 @@ function openPopup(person, card) {
   rowShow("piRowRationale", !!person.rationale);
   set("piRationale", person.rationale);
   rowShow("piRowRecommendation", !!person.recommendation);
-  set("piRecommendation", person.recommendation);
+  if (person.recommendation) {
+    setHTML("piRecommendation", linkRecommendation(person.recommendation));
+  }
   rowShow("piRowMinister", !!person.minister);
   set("piMinister", person.minister);
 
@@ -206,6 +208,58 @@ function openPopup(person, card) {
   popup.dataset.personId = person.id;
   // requestAnimationFrame(() => positionPopup(card)); // Don't position the popup for now, as it is fullscreen on mobile.
 }
+
+// ── Recommendation name linking ───────────────────────────────────
+function linkRecommendation(text) {
+  let result = escapeHTML(text);
+  for (const person of allPeople) {
+    const escapedName = escapeHTML(person.name);
+    // Only match whole-word occurrences (Hebrew names, use simple boundary)
+    const re = new RegExp(escapedName, "g");
+    result = result.replace(
+      re,
+      `<a href="#" class="pi-rec-link" data-person-id="${person.id}" title="הצג מועמד">${escapedName} <span class="pi-rec-show">הצג</span></a>`,
+    );
+  }
+  return result;
+}
+
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Delegate clicks on recommendation name links
+document.getElementById("popup").addEventListener("click", (e) => {
+  const link = e.target.closest(".pi-rec-link");
+  if (!link) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const targetId = link.dataset.personId;
+  const targetPerson = allPeople.find((p) => p.id === targetId);
+  if (!targetPerson) return;
+
+  // Find the card in the grid
+  const targetCard = document.querySelector(`.card[data-person-id="${targetId}"]`);
+
+  closePopup();
+
+  function openTarget() {
+    openPopup(targetPerson, targetCard || document.body);
+  }
+
+  if (targetCard) {
+    // Scroll card into view, then open popup
+    targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Wait for scroll to settle before opening
+    setTimeout(openTarget, 350);
+  } else {
+    openTarget();
+  }
+});
 
 function positionPopup(card) {
   const GAP = 12;

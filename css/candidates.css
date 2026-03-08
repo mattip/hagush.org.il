@@ -285,6 +285,25 @@ body {
   margin-left: 8px;
 }
 
+.pi-rec-link {
+  color: var(--blue, #1a6aff);
+  text-decoration: underline;
+  white-space: nowrap;
+}
+.pi-rec-link:hover {
+  opacity: 0.8;
+}
+.pi-rec-show {
+  font-size: 0.75em;
+  font-weight: 700;
+  background: var(--blue, #1a6aff);
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+
 .pi-tag {
   font-weight: 700;
   color: var(--nav);
