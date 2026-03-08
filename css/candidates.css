@@ -204,6 +204,29 @@ body {
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Back button */
+.popup-back {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--blue);
+  border: none;
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.popup-back:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
 /* ── Photo block ───────────────────────────────────────────────── */
 .popup-img-wrap {
   position: relative;
