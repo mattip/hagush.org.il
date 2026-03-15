@@ -92,6 +92,9 @@ function createCard(person, i) {
   // });
   card.addEventListener("click", () => {
     if (selectMode) return;
+    if (!person.rationale && !person.activities) {
+      return;
+    }
     if (isTouch()) {
       if (
         popup.classList.contains("open") &&
@@ -162,7 +165,9 @@ function openPopup(person, card, pushHistory = true) {
   if (pushHistory && popup.classList.contains("open")) {
     const prevId = popup.dataset.personId;
     const prevPerson = allPeople.find((p) => p.id === prevId);
-    const prevCard = document.querySelector(`.card[data-person-id="${prevId}"]`);
+    const prevCard = document.querySelector(
+      `.card[data-person-id="${prevId}"]`,
+    );
     if (prevPerson) popupHistory.push({ person: prevPerson, card: prevCard });
   }
 
@@ -251,7 +256,9 @@ document.getElementById("popup").addEventListener("click", (e) => {
   const targetId = link.dataset.personId;
   const targetPerson = allPeople.find((p) => p.id === targetId);
   if (!targetPerson) return;
-  const targetCard = document.querySelector(`.card[data-person-id="${targetId}"]`);
+  const targetCard = document.querySelector(
+    `.card[data-person-id="${targetId}"]`,
+  );
   if (targetCard) {
     targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
     setTimeout(() => openPopup(targetPerson, targetCard), 350);
