@@ -1,7 +1,7 @@
 const PORTRAITS_DIR = "portraits/";
-const CYCLE_MIN_MS = 2000;
-const CYCLE_MAX_MS = 3000;
-const CYCLE_JITTER_MS = 2000; // max random start delay
+const CYCLE_MIN_MS = 1000;
+const CYCLE_MAX_MS = 2000;
+const CYCLE_JITTER_MS = 1000; // max random start delay
 
 const timers = {};
 const popup = document.getElementById("popup");
@@ -36,12 +36,12 @@ function buildGrid(people) {
   const grid = document.getElementById("grid");
 
   people.forEach((person, i) => {
-    const card = createCard(person, i);
+    const { card, firstPhoto } = createCard(person, i);
     grid.appendChild(card);
     // Staggered CSS entrance animation via custom property
     card.style.setProperty("--i", i);
     // Start photo cycling after a random initial delay
-    setTimeout(() => startCycle(i, card), Math.random() * CYCLE_JITTER_MS);
+    setTimeout(() => startCycle(i, card, firstPhoto), Math.random() * CYCLE_JITTER_MS);
   });
 
   // "Add person" placeholder
@@ -62,12 +62,15 @@ function createCard(person, i) {
   const stage = document.createElement("div");
   stage.className = "photo-stage";
 
+  const firstPhoto = Math.floor(Math.random() * person.photos.length);
+
   person.photos.forEach((filename, pi) => {
     const img = document.createElement("img");
     img.src = PORTRAITS_DIR + filename;
     img.alt = person.name;
     img.draggable = false;
-    if (pi === 0) img.classList.add("active");
+    img.loading = "lazy";
+    if (pi === firstPhoto) img.classList.add("active");
     stage.appendChild(img);
   });
 
@@ -112,18 +115,19 @@ function createCard(person, i) {
     if (e.key === "Enter" || e.key === " ") openPopup(person, card);
   });
 
-  return card;
+  return { card, firstPhoto };
 }
 
 // ── Photo cycling ─────────────────────────────────────────────────
-function startCycle(idx, card) {
+function startCycle(idx, card, firstPhoto) {
   if (timers[idx]) return;
   const imgs = card.querySelectorAll(".photo-stage img");
-  let current = 0;
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  let current = firstPhoto;
 
   function step() {
     imgs[current].classList.remove("active");
-    current = (current + 1) % imgs.length;
+    current = (current + dir + imgs.length) % imgs.length;
     imgs[current].classList.add("active");
     timers[idx] = setTimeout(
       step,
@@ -179,6 +183,7 @@ function openPopup(person, card, pushHistory = true) {
   document.getElementById("popupImg").src = photos.length
     ? PORTRAITS_DIR + photos[0]
     : "";
+  document.getElementById("popupImg").loading = "eager";
   document.getElementById("popupImg").alt = person.name;
 
   // Name badge on photo (name only)
