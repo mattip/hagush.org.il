@@ -394,6 +394,7 @@ function restoreFromCookies() {
 const btnSelect = document.getElementById("btnSelect");
 const btnShowChoices = document.getElementById("btnShowChoices");
 const btnReset = document.getElementById("btnReset");
+const btnSelectOriginalText = btnSelect.textContent;
 const cookieOverlay = document.getElementById("cookieOverlay");
 const cookieYes = document.getElementById("cookieYes");
 const cookieNo = document.getElementById("cookieNo");
@@ -475,7 +476,7 @@ function enterSelectMode() {
 
 function exitSelectMode() {
   selectMode = false;
-  btnSelect.textContent = "☑ בחרו מועמדים";
+  btnSelect.textContent = btnSelectOriginalText;
   btnSelect.classList.remove("active");
   btnShowChoices.style.display = "none";
   btnReset.style.display = "none";
