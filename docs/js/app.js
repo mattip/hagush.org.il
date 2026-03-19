@@ -5,6 +5,8 @@ const CYCLE_JITTER_MS = 1000; // max random start delay
 
 const timers = {};
 const popup = document.getElementById("popup");
+const POPUPS_ENABLED = document.currentScript.dataset.popups !== "false";
+
 let closeTimer = null;
 
 let selectMode = false;
@@ -95,9 +97,7 @@ function createCard(person, i) {
   // });
   card.addEventListener("click", () => {
     if (selectMode) return;
-    if (!person.rationale && !person.activities) {
-      return;
-    }
+    if (!POPUPS_ENABLED) return;
     if (isTouch()) {
       if (
         popup.classList.contains("open") &&
