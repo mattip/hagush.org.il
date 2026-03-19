@@ -15,7 +15,11 @@
       "instagram": "https://www.instagram.com/amir_khnifess/",
       "x": "https://x.com/akhnifess"
     },
-    "photos": ["amirh-03.webp", "amirh-02.webp", "amirh-01.webp"]
+    "photos": [
+      "amirh-03.webp",
+      "amirh-02.webp",
+      "amirh-01.webp"
+    ]
   },
   {
     "id": "meheretabr",
@@ -32,7 +36,11 @@
       "instagram": "https://www.instagram.com/mehereta.baruch.ron/",
       "x": "https://x.com/Meheretabr"
     },
-    "photos": ["meheretabr-03.webp", "meheretabr-02.webp", "meheretabr-01.webp"]
+    "photos": [
+      "meheretabr-03.webp",
+      "meheretabr-02.webp",
+      "meheretabr-01.webp"
+    ]
   },
   {
     "id": "mossir",
@@ -49,7 +57,11 @@
       "instagram": "https://www.instagram.com/mossi_raz/",
       "x": "https://x.com/mossi_raz"
     },
-    "photos": ["mossir-03.webp", "mossir-02.webp", "mossir-01.webp"]
+    "photos": [
+      "mossir-03.webp",
+      "mossir-02.webp",
+      "mossir-01.webp"
+    ]
   },
   {
     "id": "tomera",
@@ -69,6 +81,141 @@
       "telegram": "https://www.t.me/tomeravital1",
       "youtube": "https://www.youtube.com/c/tomeravital"
     },
-    "photos": ["tomera-03.webp", "tomera-02.webp", "tomera-01.webp"]
+    "photos": [
+      "tomera-03.webp",
+      "tomera-02.webp",
+      "tomera-01.webp"
+    ]
+  },
+  {
+    "id": "inbar_b",
+    "name": "ענבר בזק",
+    "age": "52",
+    "home": "יובלים",
+    "activities": "",
+    "rationale": "",
+    "recommendation": "",
+    "minister": "",
+    "links": {
+      "facebook": "https://www.facebook.com/share/17zDZwJZsy/",
+      "instagram": "https://www.instagram.com/inbar.bezek/",
+      "x": "https://x.com/InbarBezek",
+      "linkedin": "https://www.linkedin.com/in/inbarbezek",
+      "tiktok": "https://www.tiktok.com/@inbarbezek?_r=1&_t=ZS-94bkgo5QlAW",
+      "homepage": "https://inbarbezek.com"
+    },
+    "photos": [
+      "inbar_b_01.webp",
+      "inbar_b_02.webp",
+      "inbar_b_03.webp"
+    ]
+  },
+  {
+    "id": "hadas_r",
+    "name": "הדס רגולסקי",
+    "age": "52",
+    "home": "תל אביב-יפו",
+    "activities": "",
+    "rationale": "",
+    "recommendation": "",
+    "minister": "",
+    "links": {
+      "facebook": "https://www.facebook.com/share/1FJub5Diyv/?mibextid=wwXIfr",
+      "instagram": "https://www.instagram.com/hadasragolsky?igsh=NDh3MDlmaXZ4OG82&utm_source=qr",
+      "x": "https://@hragolsky",
+      "linkedin": "https://www.linkedin.com/in/hadas-ragolsky-0ab73491?utm_source=share_via&utm_content=profile&utm_medium=member_ios",
+      "tiktok": "https://www.tiktok.com/@hragolsky?_r=1&_t=ZS-94YQhYxc3Sp",
+      "homepage": "https://Hadasragolsky.com"
+    },
+    "photos": [
+      "Hadas_r_01.webp",
+      "Hadas_r_02.webp",
+      "Hadas_r_03.webp"
+    ]
+  },
+  {
+    "id": "somaya_b",
+    "name": "סומיה בשיר",
+    "age": "50",
+    "home": "ג'ת",
+    "activities": "",
+    "rationale": "",
+    "recommendation": "",
+    "minister": "",
+    "links": {
+      "facebook": "https://www.facebook.com/share/r/1B2hxN3t27/",
+      "instagram": "https://www.instagram.com/bashirsomaya?igsh=cW5wbjhqazV5NTYx",
+      "x": "https://x.com/bashsomaya",
+      "linkedin": "https://www.linkedin.com/in/somaya-bashir-940b4125a?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
+      "tiktok": "https://www.tiktok.com/@humanity10.2022?_r=1&_t=ZS-94bELmSyPll",
+      "homepage": "https://."
+    },
+    "photos": [
+      "Somaya_b_01.webp",
+      "Somaya_b_02.webp",
+      "Somaya_b_03.webp"
+    ]
+  },
+  {
+    "id": "galeb_s",
+    "name": "גאלב סלאמנה",
+    "age": "32",
+    "home": "כעביה",
+    "activities": "",
+    "rationale": "",
+    "recommendation": "",
+    "minister": "",
+    "links": {
+      "facebook": "https://www.facebook.com/share/1AmCHAToev/",
+      "instagram": "https://www.instagram.com/slamna_ghaleb_adv?igsh=MWZpNjg4NTIxc3Nwaw==",
+      "x": "https://x.com/LbMnh",
+      "tiktok": "https://www.tiktok.com/@ghaleb.s?_r=1&_t=ZS-94b80bNkqKD"
+    },
+    "photos": [
+      "Galeb_s_01.webp",
+      "Galeb_s_02.webp",
+      "Galeb_s_03.webp"
+    ]
+  },
+  {
+    "id": "dany_e",
+    "name": "דני אלגרט",
+    "age": "",
+    "home": "גן יבנה",
+    "activities": "",
+    "rationale": "",
+    "recommendation": "",
+    "minister": "",
+    "links": {
+      "facebook": "https://Tinyurl.com/ElgaratF",
+      "x": "https://Tinyurl.com/ElgaratT",
+      "tiktok": "https://www.tiktok.com/@user6830107222467"
+    },
+    "photos": [
+      "Dany_e_01.webp",
+      "Dany_e_02.webp",
+      "Dany_e_03.webp"
+    ]
+  },
+  {
+    "id": "lee_h",
+    "name": "לי הופמן אגיב",
+    "age": "38",
+    "home": "הוד השרון",
+    "activities": "",
+    "rationale": "",
+    "recommendation": "",
+    "minister": "",
+    "links": {
+      "facebook": "https://www.facebook.com/share/18DFcMhFGH/?mibextid=wwXIfr",
+      "instagram": "https://www.instagram.com/leehoffmann_agiv?igsh=MXY4cjlpcGtvYnJ3Ng%3D%3D&utm_source=qr",
+      "x": "https://x.com/leehoffmannagiv?s=21&t=n0o5_IrKMzE3WltvgznBWA",
+      "tiktok": "https://www.tiktok.com/@leehoffmannagiv?_r=1&_t=ZS-94k0Q0AgaNL"
+    },
+    "photos": [
+      "Lee_h_01.webp",
+      "Lee_h_02.webp",
+      "Lee_h_03.webp"
+    ]
   }
 ]
