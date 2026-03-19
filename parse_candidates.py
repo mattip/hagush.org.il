@@ -156,8 +156,43 @@ def save_json(path, data):
 def clean(s):
     return (s or "").strip()
 
+# Honorifics to strip before name matching.
+# Built at runtime to avoid Python 3.12+ issues with U+05F3/U+05F4 in literals.
+_HONORIFIC_LIST = [
+    "\u05d3\u05f4\u05e8", '\u05d3"\u05e8',
+    "\u05d3\u05e8\u05f3", "\u05d3'\u05e8",
+    "\u05e4\u05e8\u05d5\u05e4\u05f3", "\u05e4\u05e8\u05d5\u05e4'",
+    "\u05e4\u05e8\u05d5\u05e4\u05e1\u05d5\u05e8",
+    "\u05d4\u05e8\u05d1", "\u05d4\u05e9\u05e8",
+    "\u05d7\u05f4\u05db", '\u05d7"\u05db',
+    "\u05e2\u05d5\u05f4\u05d3", '\u05e2\u05d5"\u05d3',
+]
+_HONORIFICS = re.compile(
+    r"^(" + "|".join(re.escape(h) for h in _HONORIFIC_LIST) + r")\s+",
+    re.UNICODE
+)
+# Hebrew geresh/gershayim (U+05F3, U+05F4) -> ASCII equivalents
+_GERESH_MAP = str.maketrans("׳״", "'\"")
+
 def normalize_name(s):
-    return " ".join(clean(s).split())
+    s = " ".join(clean(s).split())
+    s = s.translate(_GERESH_MAP)
+    s = _HONORIFICS.sub("", s)
+    return s
+
+def fuzzy_warn(csv_name, json_names, threshold=0.7):
+    """If csv_name has no exact match, warn if it is close to any json name."""
+    from difflib import SequenceMatcher
+    best_ratio, best_match = 0.0, None
+    for jname in json_names:
+        ratio = SequenceMatcher(None, csv_name, jname).ratio()
+        if ratio > best_ratio:
+            best_ratio, best_match = ratio, jname
+    if best_ratio >= threshold:
+        print(
+            f"  \u2139\ufe0f  No match for '{csv_name}' \u2014 "
+            f"closest JSON name: '{best_match}' (similarity: {best_ratio:.0%})"
+        )
 
 def csv_to_links(row):
     links = {}
@@ -299,9 +334,14 @@ def fill_existing(candidates, rows):
     CORE_FIELDS = {"age": COL_AGE, "home": COL_HOME}
     filled = warnings = 0
 
+    json_names_normalized = list(name_to_candidate.keys())
+
     for row in rows:
         name = normalize_name(row.get(COL_NAME, ""))
-        if not name or name not in name_to_candidate:
+        if not name:
+            continue
+        if name not in name_to_candidate:
+            fuzzy_warn(name, json_names_normalized)
             continue
         c = name_to_candidate[name]
         for field, col in CORE_FIELDS.items():

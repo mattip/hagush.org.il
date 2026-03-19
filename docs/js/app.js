@@ -161,6 +161,8 @@ function rowShow(id, show) {
 }
 
 function openPopup(person, card, pushHistory = true) {
+  const photos = person.photos || [];
+  if (!photos.length) return;
   document.body.classList.add("no-scroll");
   document.getElementsByTagName("html")[0].classList.add("no-scroll");
   clearTimeout(closeTimer);
@@ -179,10 +181,7 @@ function openPopup(person, card, pushHistory = true) {
     popupHistory.length > 0 ? "" : "none";
 
   // Photo
-  const photos = person.photos || [];
-  document.getElementById("popupImg").src = photos.length
-    ? PORTRAITS_DIR + photos[0]
-    : "";
+  document.getElementById("popupImg").src = PORTRAITS_DIR + photos[photos.length - 1];
   document.getElementById("popupImg").loading = "eager";
   document.getElementById("popupImg").alt = person.name;
 
@@ -191,7 +190,9 @@ function openPopup(person, card, pushHistory = true) {
 
   // 2-col rows
   set("piName", person.name);
+  rowShow("piRowAge", !!person.age);
   set("piAge", person.age);
+  rowShow("piRowHome", !!person.home);
   set("piHome", person.home);
   rowShow("piRowActivities", !!person.activities);
   set("piActivities", person.activities);
