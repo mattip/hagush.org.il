@@ -163,6 +163,10 @@ function rowShow(id, show) {
 function openPopup(person, card, pushHistory = true) {
   const photos = person.photos || [];
   if (!photos.length) return;
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  document.body.style.paddingRight = `${scrollbarWidth}px`;
+
+  document.body.style.top = `-${window.scrollY}px`;
   document.body.classList.add("no-scroll");
   document.querySelector(".popup-info").scrollTop = 0;
   document.getElementsByTagName("html")[0].classList.add("no-scroll");
@@ -318,8 +322,12 @@ function scheduleClose() {
 }
 
 function closePopup() {
+  const scrollY = parseInt(document.body.style.top || "0") * -1;
+  document.body.style.top = "";
+  document.body.style.paddingRight = "";
   document.body.classList.remove("no-scroll");
   document.getElementsByTagName("html")[0].classList.remove("no-scroll");
+  window.scrollTo(0, scrollY);
   popup.classList.remove("open");
   popupHistory = [];
   document.getElementById("popupBack").style.display = "none";

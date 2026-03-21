@@ -1,16 +1,29 @@
-/* ── styles.css — candidates page only ─────────────────────────────
-   styles1.css handles: reset, tokens, body, nav, footer, form panel
-   This file handles: candidates layout, cards, popup
+/* ── candidates.css ─────────────────────────────────────────────────
+   Scoped to the candidates page only.
+   main.css handles: reset, tokens, body, nav, footer.
+   Sections:
+     1. Tokens
+     2. Page & grid
+     3. Card
+     4. Popup shell
+     5. Popup image block
+     6. Popup info table
+     7. Select mode
+     8. Cookie consent dialog
+     9. Choices modal
+    10. Responsive overrides
 ──────────────────────────────────────────────────────────────────── */
 
-/* ── Extra tokens (candidates palette extensions) ──────────────── */
+
+/* ── 1. Tokens ──────────────────────────────────────────────────── */
 :root {
-  --shadow: 0 4px 24px rgba(26, 39, 68, 0.1);
+  --shadow:   0 4px 24px rgba(26, 39, 68, 0.1);
   --shadow-h: 0 12px 40px rgba(26, 39, 68, 0.22);
-  --radius: 16px;
+  --radius:   16px;
 }
 
-/* ── Page background ───────────────────────────────────────────── */
+
+/* ── 2. Page & grid ─────────────────────────────────────────────── */
 body {
   background: var(--light);
 }
@@ -21,16 +34,13 @@ body {
   max-width: 1200px;
   margin: 0 auto;
 }
-
 .team-top .full-width {
   width: auto;
   margin: 0 -2rem;
 }
-
 .team-dash {
   display: none;
 }
-
 .under-grid {
   padding: 28px;
   color: var(--nav, #09366d);
@@ -38,7 +48,6 @@ body {
   line-height: 1.65;
 }
 
-/* ── People grid ───────────────────────────────────────────────── */
 .people-grid {
   display: flex;
   flex-wrap: wrap;
@@ -46,16 +55,19 @@ body {
   justify-content: center;
 }
 
-/* ── Person card ───────────────────────────────────────────────── */
+
+/* ── 3. Card ────────────────────────────────────────────────────── */
 .card {
+  position: relative;
   width: 100%;
+  max-width: 480px;
   background: #fff;
   border-radius: 0;
   overflow: hidden;
   border: none;
   box-shadow: none;
   cursor: pointer;
-  /* reset about-page .card styles from styles1.css */
+  /* reset about-page .card styles from main.css */
   padding: 0;
   flex-direction: unset;
   gap: unset;
@@ -72,12 +84,9 @@ body {
   box-shadow: var(--shadow-h);
 }
 @keyframes reveal {
-  to {
-    opacity: 1;
-  }
+  to { opacity: 1; }
 }
 
-/* ── Photo stage ───────────────────────────────────────────────── */
 .photo-stage {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -101,7 +110,8 @@ body {
   opacity: 1;
 }
 
-/* ── Popup — candidate pane ────────────────────────────────────── */
+
+/* ── 4. Popup shell ─────────────────────────────────────────────── */
 .popup {
   position: fixed;
   z-index: 300;
@@ -115,6 +125,7 @@ body {
     0 2px 8px rgba(26, 39, 68, 0.15);
   display: flex;
   flex-direction: column;
+  width: 90vw;
   /* hidden state */
   top: -9999px;
   left: -9999px;
@@ -126,7 +137,6 @@ body {
     opacity 0.18s,
     transform 0.18s cubic-bezier(0.22, 0.68, 0, 1.2),
     visibility 0s linear 0.18s;
-  width: 90vw;
 }
 .popup.open {
   visibility: visible;
@@ -145,9 +155,10 @@ body {
   right: var(--popup-margin);
   bottom: var(--popup-margin);
   width: auto !important;
+  max-height: calc(100vh - 2 * var(--popup-margin));
 }
 
-/* Arrow notch */
+/* Arrow notch (used in non-full-size mode) */
 .popup::before {
   content: "";
   position: absolute;
@@ -157,58 +168,17 @@ body {
   transform: rotate(45deg);
   z-index: -1;
 }
-.popup.arrow-top::before {
-  top: -6px;
-  left: 50%;
-  margin-left: -6px;
-}
-.popup.arrow-bottom::before {
-  bottom: -6px;
-  left: 50%;
-  margin-left: -6px;
-}
-.popup.arrow-left::before {
-  left: -6px;
-  top: 50%;
-  margin-top: -6px;
-}
-.popup.arrow-right::before {
-  right: -6px;
-  top: 50%;
-  margin-top: -6px;
-}
-.popup.full-size::before {
-  display: none;
-}
+.popup.arrow-top::before    { top: -6px;    left: 50%; margin-left: -6px; }
+.popup.arrow-bottom::before { bottom: -6px; left: 50%; margin-left: -6px; }
+.popup.arrow-left::before   { left: -6px;   top: 50%;  margin-top: -6px; }
+.popup.arrow-right::before  { right: -6px;  top: 50%;  margin-top: -6px; }
+.popup.full-size::before    { display: none; }
 
-/* Close button */
-.popup-close {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: var(--blue);
-  border: none;
-  color: #fff;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  transition: background 0.15s;
-}
-.popup-close:hover {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-/* Back button */
+/* Close & back buttons — shared styles, differ only in position */
+.popup-close,
 .popup-back {
   position: absolute;
   top: 8px;
-  right: 8px;
   background: var(--blue);
   border: none;
   color: #fff;
@@ -223,11 +193,15 @@ body {
   z-index: 10;
   transition: background 0.15s;
 }
+.popup-close:hover,
 .popup-back:hover {
   background: rgba(0, 0, 0, 0.3);
 }
+.popup-close { left: 8px; }
+.popup-back  { right: 8px; }
 
-/* ── Photo block ───────────────────────────────────────────────── */
+
+/* ── 5. Popup image block ───────────────────────────────────────── */
 .popup-img-wrap {
   position: relative;
   width: 100%;
@@ -243,7 +217,6 @@ body {
   object-position: center;
   display: block;
 }
-/* Name badge — blue pill bottom-right of photo */
 .popup-name-badge {
   position: absolute;
   bottom: 0;
@@ -256,69 +229,86 @@ body {
   border-radius: 4px 0 0 0;
 }
 
-.social-icon-img {
-  color: white;
-}
 
-/* ── Info table ────────────────────────────────────────────────── */
+/* ── 6. Popup info table ────────────────────────────────────────── */
 .popup-info {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   flex: 1;
+  min-height: 0; /* Safari: allow flex child to shrink below content size */
 }
 
-/* Base row */
 .pi-row {
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   padding: 6px 14px;
   align-items: baseline;
 }
-
-/* 2-col: tag | value side by side */
 .pi-2col {
   display: grid;
   grid-template-columns: 5em 1fr;
   column-gap: 0.5em;
 }
-
-/* Full-width rows */
 .pi-full {
   display: block;
   padding: 8px 14px 10px;
 }
-
-/* Section rows: tag on its own line, blank gap, then value */
 .pi-section {
   display: flex;
-  align-items: flex-start;
   flex-direction: column;
+  align-items: flex-start;
   gap: 5px;
   padding: 8px 14px 10px;
 }
-
-/* Links row */
 .pi-links {
   display: flex;
   align-items: center;
   padding: 10px 14px;
 }
+.pi-tag {
+  font-weight: 700;
+  color: var(--nav);
+  white-space: nowrap;
+}
 
+/* Social icon links */
+.pi-link-icons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.pi-social-link {
+  display: flex;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.pi-social-link:hover {
+  transform: scale(1.15);
+  opacity: 0.85;
+}
+.pi-social-link svg { width: 26px; height: 26px; }
+.social-icon-img    { color: white; }
+
+/* Homepage text link */
 .pi-homepage-link {
   color: var(--blue, #1a6aff);
   text-decoration: underline;
   margin-left: 8px;
 }
 
+/* Recommendation name links with hover tooltip */
 .pi-rec-link {
+  position: relative;
   color: var(--blue, #1a6aff);
   text-decoration: underline;
   white-space: nowrap;
-  position: relative;
 }
-.pi-rec-link:hover {
-  opacity: 0.8;
-}
+.pi-rec-link:hover { opacity: 0.8; }
 .pi-rec-show {
   display: none;
   position: absolute;
@@ -334,50 +324,10 @@ body {
   white-space: nowrap;
   pointer-events: none;
 }
-.pi-rec-link:hover .pi-rec-show {
-  display: block;
-}
+.pi-rec-link:hover .pi-rec-show { display: block; }
 
-.pi-tag {
-  font-weight: 700;
-  color: var(--nav);
-  white-space: nowrap;
-}
 
-/* Social link icons */
-.pi-link-icons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.pi-social-link {
-  display: flex;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  transition:
-    transform 0.15s,
-    opacity 0.15s;
-}
-.pi-social-link:hover {
-  transform: scale(1.15);
-  opacity: 0.85;
-}
-.pi-social-link svg {
-  width: 26px;
-  height: 26px;
-}
-
-/* ── About headings: side-by-side on desktop, stacked on mobile ── */
-
-/* ══════════════════════════════════════
-   SELECT MODE
-══════════════════════════════════════ */
-
-/* Toolbar: buttons on RIGHT in RTL, subtitle fills left */
+/* ── 7. Select mode ─────────────────────────────────────────────── */
 .team-toolbar {
   display: flex;
   align-items: center;
@@ -386,7 +336,6 @@ body {
   gap: 0.5rem;
   margin-bottom: 1.5rem;
 }
-/* In RTL, first child = rightmost. Buttons are first in DOM. */
 .toolbar-btns {
   display: flex;
   gap: 8px;
@@ -417,29 +366,15 @@ body {
   color: var(--nav, #09366d);
   border: 1px solid rgba(9, 54, 109, 0.3);
 }
-.btn-select:hover {
-  background: rgba(9, 54, 109, 0.18);
-}
-.btn-select.active {
-  background: var(--blue);
-  border-color: var(--blue);
-}
+.btn-select:hover  { background: rgba(9, 54, 109, 0.18); }
+.btn-select.active { background: var(--blue); border-color: var(--blue); }
+
 .btn-show-choices,
-.btn-reset {
-  background: var(--orange, #e47f09);
-  color: #fff;
-}
+.btn-reset         { background: var(--orange, #e47f09); color: #fff; }
 .btn-show-choices:hover,
-.btn-reset:hover {
-  background: #c96f00;
-}
+.btn-reset:hover   { background: #c96f00; }
 
-/* Card select circle — on .card not .photo-stage (avoids overflow:hidden clip) */
-.card {
-  position: relative;
-  max-width: 480px;
-}
-
+/* Per-card selection circle */
 .card-select-btn {
   position: absolute;
   bottom: 32px;
@@ -455,10 +390,7 @@ body {
   justify-content: center;
   font-size: 1.1rem;
   color: transparent;
-  transition:
-    background 0.18s,
-    border-color 0.18s,
-    color 0.18s;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
   z-index: 20;
   pointer-events: all;
   -webkit-tap-highlight-color: transparent;
@@ -473,17 +405,24 @@ body {
   border-color: var(--blue, #1a6aff);
   color: #fff;
 }
-.card-select-btn.selected::after {
-  content: "✓";
+.card-select-btn.selected::after { content: "✓"; }
+
+/* Scroll-lock: position:fixed prevents Safari background scroll */
+body.no-scroll {
+  overflow: hidden;
+  width: 100%;
 }
 
-/* Cookie consent overlay */
+html.no-scroll {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* ── 8. Cookie consent dialog ───────────────────────────────────── */
 .cookie-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.55);
   z-index: 700;
   display: flex;
@@ -527,28 +466,16 @@ body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.cookie-yes {
-  background: var(--blue, #1a6aff);
-  color: #fff;
-}
-.cookie-yes:hover {
-  background: #155fe6;
-}
-.cookie-no {
-  background: #eee;
-  color: #444;
-}
-.cookie-no:hover {
-  background: #ddd;
-}
+.cookie-yes       { background: var(--blue, #1a6aff); color: #fff; }
+.cookie-yes:hover { background: #155fe6; }
+.cookie-no        { background: #eee; color: #444; }
+.cookie-no:hover  { background: #ddd; }
 
-/* Choices modal */
+
+/* ── 9. Choices modal ───────────────────────────────────────────── */
 .choices-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.55);
   z-index: 700;
   display: flex;
@@ -556,13 +483,13 @@ body {
   justify-content: center;
 }
 .choices-dialog {
+  position: relative;
   background: var(--nav);
   border-radius: 12px;
   padding: 28px 24px 24px;
   max-width: 340px;
   width: 88vw;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-  position: relative;
   color: #fff;
 }
 .choices-close {
@@ -582,9 +509,8 @@ body {
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
 }
-.choices-close:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
+.choices-close:hover { background: rgba(255, 255, 255, 0.3); }
+
 .choices-title {
   font-size: 1.05rem;
   font-weight: 800;
@@ -631,9 +557,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
-.choices-copy:hover {
-  background: #155fe6;
-}
+.choices-copy:hover { background: #155fe6; }
 .choices-copied {
   text-align: center;
   color: #6ee06e;
@@ -642,12 +566,10 @@ body {
   font-weight: 700;
 }
 
-@media (min-width: 768px) {
-  /* tablet */
-  .card {
-    max-width: 390px;
-  }
 
+/* ── 10. Responsive overrides ───────────────────────────────────── */
+@media (min-width: 768px) {
+  .card { max-width: 390px; }
   .popup.full-size {
     top: 50%;
     left: 50%;
@@ -655,13 +577,9 @@ body {
     bottom: auto;
     transform: translate(-50%, -50%);
     max-width: 550px;
+    max-height: 90vh;
   }
 }
 
-@media (min-width: 1024px) {
-  /* desktop */
-}
-
-@media (min-width: 1280px) {
-  /* wide desktop */
-}
+@media (min-width: 1024px) { /* desktop — add overrides here */ }
+@media (min-width: 1280px) { /* wide desktop — add overrides here */ }
