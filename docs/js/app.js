@@ -164,6 +164,7 @@ function openPopup(person, card, pushHistory = true) {
   const photos = person.photos || [];
   if (!photos.length) return;
   document.body.classList.add("no-scroll");
+  document.querySelector(".popup-info").scrollTop = 0;
   document.getElementsByTagName("html")[0].classList.add("no-scroll");
   clearTimeout(closeTimer);
   justOpened = true;
