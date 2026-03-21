@@ -227,6 +227,11 @@ def verify_links(candidates):
                 errors.append(
                     f"  {c['name']} [{c['id']}]: '{platform}' URL looks wrong → {url}"
                 )
+            if "utm_" in url.lower():
+                errors.append(
+                    f"  {c['name']} [{c['id']}]: "
+                    f"'{platform}' URL contains UTM parameters → {url}"
+                )
     if errors:
         print("⚠️  Link verification issues:")
         for e in errors:
