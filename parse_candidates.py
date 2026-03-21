@@ -466,8 +466,20 @@ def main():
     if modified and not args.dry_run:
         save_json(args.json, candidates)
     elif modified and args.dry_run:
-        print("\n[dry-run] Would write updated candidates.json")
-        print(json.dumps(candidates, ensure_ascii=False, indent=2))
+        import difflib
+        original = load_json(args.json)
+        before = json.dumps(original, ensure_ascii=False, indent=2).splitlines(keepends=True)
+        after  = json.dumps(candidates, ensure_ascii=False, indent=2).splitlines(keepends=True)
+        diff = list(difflib.unified_diff(
+            before, after,
+            fromfile="candidates.json (current)",
+            tofile="candidates.json (new)",
+        ))
+        if diff:
+            print("\n[dry-run] Diff:")
+            print("".join(diff))
+        else:
+            print("\n[dry-run] No changes.")
 
 
 if __name__ == "__main__":
