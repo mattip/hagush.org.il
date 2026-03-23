@@ -1,18 +1,37 @@
-This is the source code for hagush.org.il. The pages are deployed via github
-pages from the docs directory.
+# hagush.org.il
+This is the source code for hagush.org.il.
 
+The pages are deployed via github pages from the docs directory.
 
-The images are converted from PNG to WEBP with compression by
+## Image conversion:
+The images are converted from PNG to WEBP with compression by running:
 ```
 for f in *.png; do filename=${f%.*}; convert $f -quality 82 $filename.webp; done
 ```
+It loops over all .png files in the current folder and uses ImageMagick’s `convert` command to generate a .webp version of each one.
 
-To import new candidates from the google form, use the `parse_candidates.py`
-script. It uses the current candidates.json, and a downloaded csv file from the
-google responses. If you want to add new candidates, there is a missing field:
-the english ID. This will be used to relate the pictures in portraits to the hebrew
-name. You can either input the ascii name or (better) use a mapping.txt file
-like
+To install ImageMagik:
+```
+brew install imagemagick
+```
+
+
+## Importing Candidates from Google-Forms:
+To import new candidates from the google form, use the `parse_candidates.py` python script.
+
+First, download the latest responses.csv file to the repo root folder.<br>
+Then, Run the script from there:
+```
+python3 parse_candidates.py --json docs/candidatas.json --csv <responses.csv> --portraits docs/portraits
+```
+
+It uses the current `candidates.json`, and a downloaded <responses.csv> file from the
+google responses.
+
+If you want to add new candidates, you **MUST** update the `English-ID` when promped to.<br>
+It is used to relate the pictures in portraits to the Hebrew names.
+
+You can also use a mapping.txt file (for bulk imports) like so:
 ```
 Dany_e    דני אלגרט
 Galeb_s   גאלב סלאמנה
