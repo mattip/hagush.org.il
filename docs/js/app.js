@@ -2,6 +2,8 @@ const PORTRAITS_DIR = "portraits/";
 const CYCLE_MIN_MS = 1000;
 const CYCLE_MAX_MS = 2000;
 const CYCLE_JITTER_MS = 1000; // max random start delay
+const PINNED_IDS = ["gilad_k"];  // always appear in first PINNED_WINDOW slots
+const PINNED_WINDOW = 5;        // how many leading slots the pinned ids are spread across
 
 const timers = {};
 const popup = document.getElementById("popup");
@@ -24,13 +26,40 @@ fetch("candidates.json")
     restoreFromCookies();
   });
 
-// Fisher-Yates shuffle
+// Fisher-Yates shuffle, with pinned IDs guaranteed in first PINNED_WINDOW slots
 function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
+  const pinned   = arr.filter(p => PINNED_IDS.includes(p.id));
+  const unpinned = arr.filter(p => !PINNED_IDS.includes(p.id));
+
+  for (let i = pinned.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    [pinned[i], pinned[j]] = [pinned[j], pinned[i]];
   }
-  return arr;
+  for (let i = unpinned.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [unpinned[i], unpinned[j]] = [unpinned[j], unpinned[i]];
+  }
+
+  // Pick random slots within [0, PINNED_WINDOW) for the pinned ids
+  const windowSize = Math.min(PINNED_WINDOW, pinned.length + unpinned.length);
+  const slots = Array.from({ length: windowSize }, (_, i) => i);
+  for (let i = slots.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [slots[i], slots[j]] = [slots[j], slots[i]];
+  }
+  const pinnedSlots = new Set(slots.slice(0, pinned.length));
+
+  // Interleave pinned and unpinned into result
+  const result = new Array(arr.length);
+  let pi = 0, ui = 0;
+  for (let i = 0; i < arr.length; i++) {
+    if (i < windowSize && pinnedSlots.has(i)) {
+      result[i] = pinned[pi++];
+    } else {
+      result[i] = unpinned[ui++];
+    }
+  }
+  return result;
 }
 
 // ── Grid ─────────────────────────────────────────────────────────
