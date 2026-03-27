@@ -241,6 +241,68 @@ def verify_links(candidates):
     return len(errors) == 0
 
 
+
+TEXT_FIELDS = ["activities", "rationale", "recommendation", "minister"]
+
+def _find_bad_chars(text):
+    """Return list of (char, pos, description) for suspicious characters.
+    Zero-width joiners between emoji are allowed (used for combined emoji like heart-on-fire).
+    """
+    issues = []
+    for i, ch in enumerate(text):
+        cp = ord(ch)
+        if cp < 0x20 and cp not in (0x09, 0x0A):
+            issues.append((ch, i, f"control character U+{cp:04X}"))
+        elif 0xE000 <= cp <= 0xF8FF:
+            issues.append((ch, i, f"private-use character U+{cp:04X}"))
+        elif cp == 0xFFFD:
+            issues.append((ch, i, "replacement character U+FFFD (possible encoding error)"))
+        elif cp == 0x200B:
+            issues.append((ch, i, "zero-width space U+200B"))
+        elif cp == 0x200C:
+            issues.append((ch, i, "zero-width non-joiner U+200C"))
+        elif cp == 0xFEFF:
+            issues.append((ch, i, "BOM/zero-width no-break space U+FEFF"))
+        elif cp == 0x200D:
+            # Zero-width joiner is legitimate between emoji — skip if surrounded by emoji
+            prev_cp = ord(text[i - 1]) if i > 0 else 0
+            next_cp = ord(text[i + 1]) if i + 1 < len(text) else 0
+            if not (prev_cp >= 0x1F000 or next_cp >= 0x1F000
+                    or 0x2600 <= prev_cp <= 0x27BF or 0x2600 <= next_cp <= 0x27BF):
+                issues.append((ch, i, "zero-width joiner U+200D (not between emoji)"))
+    return issues
+
+def _find_escape_sequences(text):
+    """Return list of (sequence, suggestion) for literal \n escape sequences."""
+    found = []
+    if re.search(r"\\n", text):
+        found.append(("\\n", "a real newline (the JSON value should contain an actual newline character)"))
+    return found
+
+def verify_texts(candidates):
+    """Check text fields for unprintable characters and stray \n escape sequences."""
+    issues_found = False
+    for c in candidates:
+        name = c.get("name", c.get("id", "?"))
+        cid  = c.get("id", "?")
+        for field in TEXT_FIELDS:
+            text = c.get(field, "") or ""
+            if not text:
+                continue
+            for ch, pos, desc in _find_bad_chars(text):
+                ctx = text[max(0, pos - 10):pos + 10]
+                print(f"  ⚠️  {name} [{cid}] '{field}': {desc} at position {pos}")
+                print(f"       context: ...{repr(ctx)}...")
+                issues_found = True
+            for seq, suggestion in _find_escape_sequences(text):
+                print(f"  ⚠️  {name} [{cid}] '{field}': literal '{seq}' found")
+                print(f"       suggestion: replace with {suggestion}")
+                issues_found = True
+    if not issues_found:
+        print("✓ All text fields look clean.")
+    return not issues_found
+
+
 # ── Modes ─────────────────────────────────────────────────────────────────────
 
 def prompt_id(name, candidates):
@@ -467,6 +529,8 @@ def main():
     if args.verify:
         print("\n── Link verification ────────────────────────────────")
         verify_links(candidates)
+        print("\n── Text field verification ──────────────────────────")
+        verify_texts(candidates)
 
     if modified and not args.dry_run:
         save_json(args.json, candidates)
