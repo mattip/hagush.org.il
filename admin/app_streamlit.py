@@ -23,6 +23,9 @@ import streamlit as st
 DEV_MODE = "--dev" in sys.argv or os.environ.get("DEV_MODE", "") == "1"
 
 
+# ── Version ──────────────────────────────────────────────────────────────────
+APP_VERSION = "1.0.0"
+
 # ── i18n strings ──────────────────────────────────────────────────────────────
 # Add a "lang" key to .streamlit/secrets.toml: lang = "he"  (or "en", default)
 
@@ -233,7 +236,8 @@ def get_secret(key, default=None):
     try:
         val = st.secrets[key]
     except (KeyError, FileNotFoundError):
-        val = os.environ.get(key.upper())
+        # Cloud Run injects secrets as lowercase env vars; also check uppercase
+        val = os.environ.get(key) or os.environ.get(key.upper())
     if val is None:
         return default
     if key == "lang" and val not in _KNOWN_LANGS:
@@ -287,7 +291,7 @@ def github_headers():
 def fetch_candidates_from_github() -> tuple[list[dict], str]:
     """Fetch candidates.json from GitHub. Returns (candidates, sha)."""
     import requests
-    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/candidates.json"
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/docs/candidates.json"
     r = requests.get(url, headers=github_headers(), params={"ref": GITHUB_BRANCH})
     r.raise_for_status()
     data = r.json()
@@ -868,9 +872,15 @@ def render_deploy():
             st.caption(t("nothing_staged"))
 
     # ── Verify ────────────────────────────────────────────────────────────────
+    dup_errors  = lib.verify_duplicates(final_candidates) if has_changes else []
     link_errors = lib.verify_links(final_candidates) if has_changes else []
     text_warns  = lib.verify_texts(final_candidates) if has_changes else []
-    has_errors  = bool(link_errors)
+    has_errors  = bool(dup_errors or link_errors)
+
+    if dup_errors:
+        st.error(t("dup_issues"))
+        for e in dup_errors:
+            st.write(f"  • {e}")
 
     if link_errors:
         st.error(t("deploy_fix_links"))
@@ -950,6 +960,7 @@ def render_about():
 
     st.markdown("---")
     st.markdown(t("about_source"))
+    st.caption(f"v{APP_VERSION}")
     st.markdown("---")
 
     st.subheader(t("about_flow_header"))
@@ -960,8 +971,15 @@ def render_about():
     st.write(t("about_verify_text"))
     if st.button(t("btn_verify")):
         if candidates:
+            dup_errors  = lib.verify_duplicates(candidates)
             link_errors = lib.verify_links(candidates)
             text_warns  = lib.verify_texts(candidates)
+            if dup_errors:
+                st.error(t("dup_issues"))
+                for e in dup_errors:
+                    st.write(f"  • {e}")
+            else:
+                st.success(t("all_no_dups"))
             if link_errors:
                 st.error(t("link_issues"))
                 for e in link_errors:
@@ -990,47 +1008,54 @@ def render_about():
 def main():
     init_state()
 
-    # Hide Streamlit toolbar; set RTL for Hebrew
-    st.markdown("""
-<style>
-[data-testid="stToolbar"] { display: none; }
+    # Hide Streamlit toolbar; language-aware direction
+    lang = st.session_state.get("lang", "he")
+    is_rtl = lang == "he"
+    dir_val = "rtl" if is_rtl else "ltr"
+    text_align = "right" if is_rtl else "left"
+    tab_dir = "row-reverse" if is_rtl else "row"
+    list_pr = "1.5em" if is_rtl else "0"
+    list_pl = "0" if is_rtl else "1.5em"
 
-/* RTL for the whole app */
+    st.markdown(f"""
+<style>
+[data-testid="stToolbar"] {{ display: none; }}
+
+/* Layout direction */
 .stApp,
 [data-testid="stAppViewContainer"],
 [data-testid="stMain"],
 [data-testid="stVerticalBlock"],
-[data-testid="stHorizontalBlock"],
-section[data-testid="stSidebar"] { direction: rtl; }
+[data-testid="stHorizontalBlock"] {{ direction: {dir_val}; }}
 
 /* Text alignment */
 h1, h2, h3, h4, p, li, label, span,
 [data-testid="stMarkdownContainer"],
 [data-testid="stText"],
 [data-testid="stCaption"],
-[data-testid="stAlert"] { text-align: right; direction: rtl; }
+[data-testid="stAlert"] {{ text-align: {text_align}; direction: {dir_val}; }}
 
-/* Numbered/bulleted lists */
-ol, ul { padding-right: 1.5em; padding-left: 0; }
-li { text-align: right; }
+/* Lists */
+ol, ul {{ padding-right: {list_pr}; padding-left: {list_pl}; }}
+li {{ text-align: {text_align}; }}
 
-/* Inputs */
-textarea, input[type="text"] { direction: rtl; text-align: right; }
+/* Text inputs — always RTL for Hebrew content */
+textarea, input[type="text"] {{ direction: rtl; text-align: right; }}
 
-/* Tabs — reverse order so first tab is on the right */
-[data-testid="stTabs"] > div:first-child { flex-direction: row-reverse; }
+/* Tabs */
+[data-testid="stTabs"] > div:first-child {{ flex-direction: {tab_dir}; }}
 
 /* Expanders */
-[data-testid="stExpander"] { direction: rtl; }
-[data-testid="stExpander"] summary { direction: rtl; text-align: right; }
+[data-testid="stExpander"] {{ direction: {dir_val}; }}
+[data-testid="stExpander"] summary {{ direction: {dir_val}; text-align: {text_align}; }}
 
-/* Buttons — keep centered */
-button { direction: rtl; }
+/* Buttons */
+button {{ direction: {dir_val}; }}
 
-/* Selectbox and other inputs */
+/* Selectbox */
 [data-testid="stSelectbox"],
 [data-testid="stTextInput"],
-[data-testid="stTextArea"] { direction: rtl; }
+[data-testid="stTextArea"] {{ direction: {dir_val}; }}
 </style>
 """, unsafe_allow_html=True)
 
