@@ -314,6 +314,69 @@ Users log in with their existing Google (Gmail) account.
 
 ---
 
+### Step 9 — Map a custom domain (optional)
+
+This lets `https://admin.hagush.org.il` point to the Cloud Run service, so the
+`/admin.html` redirect on the static site lands on a clean URL instead of the
+long `run.app` address.
+
+**A. Create the domain mapping:**
+
+```bash
+gcloud beta run domain-mappings create \
+  --service hagush-admin \
+  --domain admin.hagush.org.il \
+  --region europe-west1
+```
+
+> Note: the `beta` track is required — the `gcloud run` (GA) command does not
+> yet accept `--region` for domain mappings.
+
+The command prints the DNS record(s) you need to add, typically:
+
+```
+CNAME  admin  ghs.googlehosted.com.
+```
+
+**B. Add the DNS record:**
+
+In your DNS provider (wherever `hagush.org.il` is managed), add:
+
+| Type | Name | Value |
+|---|---|---|
+| CNAME | `admin` | `ghs.googlehosted.com.` |
+
+DNS propagation takes a few minutes to an hour.
+
+**C. Wait for SSL provisioning:**
+
+Google provisions a TLS certificate automatically. Check the status with:
+
+```bash
+gcloud beta run domain-mappings describe \
+  --domain admin.hagush.org.il \
+  --region europe-west1
+```
+
+Look for `certificateStatus: ACTIVE` — this can take up to 30 minutes.
+
+**D. Update `docs/admin.html`:**
+
+Change the redirect target to the new domain:
+
+```html
+<meta http-equiv="refresh" content="0;url=https://admin.hagush.org.il">
+```
+
+**E. Add the domain to the OAuth client:**
+
+1. Go to [APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials)
+2. Click your `Hagush Admin` OAuth client
+3. Under **Authorized JavaScript origins** add `https://admin.hagush.org.il`
+4. Click **Save**
+
+---
+
 ### One-time local setup
 
 Before deploying for the first time, run these once on your machine:
