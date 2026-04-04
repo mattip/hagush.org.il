@@ -310,6 +310,25 @@ def apply_fill(candidates: list[dict], rows: list[dict]) -> tuple[list[dict], li
 
 # ── Verification ─────────────────────────────────────────────────────────────
 
+def verify_duplicates(candidates: list[dict]) -> list[str]:
+    """Return list of error strings for duplicate IDs or names."""
+    errors = []
+    seen_ids   = {}
+    seen_names = {}
+    for i, c in enumerate(candidates):
+        cid  = c.get("id", "")
+        name = c.get("name", "")
+        if cid in seen_ids:
+            errors.append(f"Duplicate id '{cid}': entries {seen_ids[cid]} and {i}")
+        else:
+            seen_ids[cid] = i
+        if name in seen_names:
+            errors.append(f"Duplicate name '{name}': entries {seen_names[name]} and {i}")
+        else:
+            seen_names[name] = i
+    return errors
+
+
 def verify_links(candidates: list[dict]) -> list[str]:
     """Return list of error strings for bad/suspicious links."""
     errors = []

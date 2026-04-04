@@ -102,7 +102,64 @@ gcloud services enable run.googleapis.com \
 
 ---
 
-### Step 2 — Store secrets in Secret Manager
+### Step 2 — Create a GitHub token
+
+The app needs a fine-grained GitHub token to open Pull Requests.
+
+1. Go to [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new)
+2. **Token name:** `hagush-admin`
+3. **Expiration:** 1 year (or no expiration)
+4. **Resource owner:** your org or personal account
+5. **Repository access:** Only select repositories → `hagush.org.il`
+6. **Permissions** — set these two:
+   - `Contents` → **Read and Write** (to push a branch with the updated files)
+   - `Pull requests` → **Read and Write** (to open the PR)
+7. Click **Generate token** and copy it — you only see it once
+
+The token cannot merge PRs, cannot access other repos, and cannot change settings.
+A repo owner (Matti or Elad) still needs to review and merge.
+
+---
+
+### Step 3 — Create a Google Service Account
+
+The app uses a service account to read Google Drive (portraits) and Google Sheets (form responses) without requiring user login.
+
+1. Go to [GCP Console](https://console.cloud.google.com) → **IAM & Admin → Service Accounts**
+2. Click **Create Service Account**
+3. **Name:** `hagush-admin` — click **Create and Continue**
+4. **Grant roles** — skip this step, click **Continue**
+5. Click **Done**
+
+**Download the key file:**
+1. Click the service account you just created
+2. Go to the **Keys** tab → **Add Key → Create new key**
+3. Choose **JSON** → **Create**
+4. A `service_account.json` file downloads automatically — keep it safe, this is the only copy
+
+**Grant the service account access to your Drive folder and Sheet:**
+
+For the Google Drive portraits folder:
+1. Open the Drive folder in your browser
+2. Click **Share** → paste the service account email (looks like `hagush-admin@your-project.iam.gserviceaccount.com`)
+3. Set permission to **Viewer** → **Share**
+
+For the Google Sheet (form responses):
+1. Open the Sheet in your browser
+2. Click **Share** → paste the same service account email
+3. Set permission to **Viewer** → **Share**
+
+Now store the key file as a secret:
+
+```bash
+gcloud secrets create google_service_account --data-file=service_account.json
+```
+
+After the following step you can delete the local `service_account.json` — the secret is safely stored in GCP.
+
+---
+
+### Step 4 — Store remaining secrets
 
 ```bash
 echo -n "ghp_yourtoken" | gcloud secrets create github_token --data-file=-
@@ -121,7 +178,7 @@ echo -n "new_value" | gcloud secrets versions add github_token --data-file=-
 
 ---
 
-### Step 3 — Create Dockerfile
+### Step 4 — Create Dockerfile
 
 Create `admin/Dockerfile`:
 
@@ -146,7 +203,20 @@ CMD ["streamlit", "run", "app_streamlit.py", \
 
 ---
 
-### Step 4 — Deploy
+### Step 5 — Grant Secret Manager access
+
+The Cloud Run service account needs permission to read secrets. Run:
+
+```bash
+PROJECT_NUMBER=$(gcloud projects describe hagush-admin --format="value(projectNumber)")
+gcloud projects add-iam-policy-binding hagush-admin \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+---
+
+### Step 6 — Deploy
 
 ```bash
 cd admin/
@@ -174,29 +244,114 @@ gcloud run services describe hagush-admin \
 
 ---
 
-### Step 5 — Set up Identity-Aware Proxy (IAP)
+### Step 7 — Configure OAuth consent screen
 
-IAP gates the app behind Google login — no passwords needed.
+IAP requires an OAuth client to handle Google login.
 
-1. Go to [GCP Console](https://console.cloud.google.com) → **Security → Identity-Aware Proxy**
-2. Find `hagush-admin` under Cloud Run and enable IAP
-3. Click **Add Principal** for each allowed user:
-   - Email: their Google account
-   - Role: `IAP-secured Web App User`
+**A. Configure the consent screen** (once per project):
+1. Go to [APIs & Services → OAuth consent screen](https://console.cloud.google.com/apis/auth/consent)
+2. Choose **External** → **Create**
+3. Fill in:
+   - App name: `Hagush Admin`
+   - Support email: your email
+4. Click **Save and Continue** through all remaining screens — skip scopes and test users
 
-To grant access to a new user, just add their Google account in IAP.
-To revoke, remove them.
+**B. Create the OAuth client:**
+1. Go to [APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials)
+2. Click **Create Credentials → OAuth client ID**
+3. Application type: **Web application**
+4. Name: `Hagush Admin`
+5. Click **Create**
+6. Copy the **Client ID** and **Client Secret** from the dialog
+
+**C. Add the IAP redirect URI to the OAuth client:**
+
+IAP needs to be whitelisted as an authorized redirect target:
+
+1. Go to [APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials)
+2. Click your OAuth client
+3. Under **Authorized redirect URIs** click **Add URI** and paste:
+   ```
+   https://iap.googleapis.com/v1/oauth/clientIds/YOUR_CLIENT_ID.apps.googleusercontent.com:handleRedirect
+   ```
+   Replace `YOUR_CLIENT_ID` with your full client ID (visible at the top of the client page)
+4. Click **Save**
+
+**D. Register the client with IAP:**
+
+1. Go to [Security → Identity-Aware Proxy](https://console.cloud.google.com/security/iap)
+2. Click the `hagush-admin` row to open the info panel
+3. Click the settings icon (⚙️) or **Edit OAuth configuration**
+4. Select **Custom OAuth**
+5. Paste your **Client ID** and **Client Secret**
+6. Click **Save**
 
 ---
 
-### Updating the app
+### Step 8 — Set up Identity-Aware Proxy (IAP)
+
+IAP gates the app behind Google login — no separate passwords or accounts needed.
+Users log in with their existing Google (Gmail) account.
+
+**Enable IAP:**
+1. Go to [GCP Console](https://console.cloud.google.com) → **Security → Identity-Aware Proxy**
+2. Find `hagush-admin` under Cloud Run and toggle IAP on
+3. If prompted, configure the OAuth consent screen — choose **Internal** if your accounts are in a Google Workspace, otherwise **External**
+
+**Add users (Nina, Elad, yourself):**
+1. Click the `hagush-admin` service to open its permissions panel
+2. Click **Add Principal**
+3. Enter their Gmail address (e.g. `nina@gmail.com`)
+4. Role: **Cloud IAP → IAP-secured Web App User**
+5. Click **Save**
+6. Repeat for each person
+
+**That's it** — send them the Cloud Run URL. They visit it, Google asks them to log in, and they're in. No app-specific password, no account to create.
+
+**To add a new user later:** repeat the Add Principal steps above.
+
+**To remove access:** find their email in the IAP principals list and click **Remove**.
+
+---
+
+### One-time local setup
+
+Before deploying for the first time, run these once on your machine:
+
+```bash
+# Install Docker buildx
+sudo apt-get install -y docker-buildx-plugin   # Ubuntu
+# brew install docker-buildx                   # macOS
+
+# Authenticate Docker with Artifact Registry
+gcloud auth configure-docker europe-west1-docker.pkg.dev
+
+# Create the Artifact Registry repository
+gcloud artifacts repositories create hagush-admin \
+  --repository-format=docker \
+  --location=europe-west1
+```
+
+### Deploying / updating the app
+
+Build locally (uses Docker layer cache) and push to Artifact Registry:
 
 ```bash
 cd admin/
-gcloud run deploy hagush-admin --source . --region europe-west1
+./deploy.sh
 ```
 
-Takes ~2 minutes.
+The script:
+1. Builds the Docker image locally (cached — fast if only `.py` files changed)
+2. Pushes to Artifact Registry at `europe-west1-docker.pkg.dev/hagush-admin/hagush-admin/hagush-admin`
+3. Deploys the new image to Cloud Run
+4. Prints the service URL
+
+First deploy or after `requirements.txt` changes: ~3 minutes.
+Subsequent deploys (only `.py` files changed): ~30 seconds.
+
+> **Tip:** bump `APP_VERSION` in `app_streamlit.py` before deploying so you can
+> confirm the right version is live in the About tab.
 
 ---
 
