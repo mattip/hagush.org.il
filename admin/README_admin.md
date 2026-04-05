@@ -97,6 +97,8 @@ normal usage. In the [GCP Console](https://console.cloud.google.com):
 gcloud services enable run.googleapis.com \
   cloudbuild.googleapis.com \
   iap.googleapis.com \
+  sheets.googleapis.com \
+  drive.googleapis.com \
   secretmanager.googleapis.com
 ```
 
