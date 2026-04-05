@@ -12,6 +12,7 @@ import base64
 import copy
 import json
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -24,7 +25,7 @@ DEV_MODE = "--dev" in sys.argv or os.environ.get("DEV_MODE", "") == "1"
 
 
 # ── Version ──────────────────────────────────────────────────────────────────
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 
 # ── i18n strings ──────────────────────────────────────────────────────────────
 # Add a "lang" key to .streamlit/secrets.toml: lang = "he"  (or "en", default)
@@ -419,7 +420,7 @@ def fetch_drive_image_groups() -> dict[str, list[str]]:
         ext = Path(name).suffix.lower()
         if ext not in (".png", ".jpg", ".jpeg", ".webp"):
             continue
-        stem = re.sub(r"[_-]\d+$", "", Path(name).stem)
+        stem = re.sub(r"[_-][^\d_-]?\d+$", "", Path(name).stem)
         key = stem.lower()
         groups.setdefault(key, []).append(name)
     return {k: sorted(v) for k, v in groups.items()}
@@ -616,15 +617,27 @@ def render_import():
     ):
         with st.spinner("…"):
             all_groups = fetch_drive_image_groups()
-            # Filter to only groups not already in candidates.json
-            new_groups = {k: v for k, v in all_groups.items() if k not in existing_ids}
+            # Filter to only groups not already in candidates.json —
+            # check candidate ID, photo filename prefixes, and first word of Hebrew name
+            existing_photo_prefixes = set()
+            existing_first_names = set()
+            for c in candidates:
+                for photo in c.get("photos", []):
+                    stem = re.sub(r"[_-][^\d_-]?\d+\.[^.]+$", "", photo).lower()
+                    existing_photo_prefixes.add(stem)
+                norm_name = lib.normalize_name(c.get("name", ""))
+                if norm_name:
+                    existing_first_names.add(norm_name.split()[0])
+            new_groups = {
+                k: v for k, v in all_groups.items()
+                if k not in existing_ids
+                and k not in existing_photo_prefixes
+                and k not in existing_first_names
+            }
             st.session_state.image_groups = new_groups
-        st.success(f"{len(new_groups)} / {len(all_groups)}")
+        st.success(f"Found {len(new_groups)} new image group(s) ({len(all_groups)} total in Drive, {len(all_groups) - len(new_groups)} already imported)")
 
     groups = st.session_state.image_groups or {}
-    if groups:
-        for prefix, files in groups.items():
-            st.caption(f"  • `{prefix}` — {', '.join(files)}")
 
     st.divider()
 
@@ -874,6 +887,7 @@ def render_deploy():
     # ── Verify ────────────────────────────────────────────────────────────────
     dup_errors  = lib.verify_duplicates(final_candidates) if has_changes else []
     link_errors = lib.verify_links(final_candidates) if has_changes else []
+    link_warns  = lib.verify_links_warnings(final_candidates) if has_changes else []
     text_warns  = lib.verify_texts(final_candidates) if has_changes else []
     has_errors  = bool(dup_errors or link_errors)
 
@@ -886,6 +900,10 @@ def render_deploy():
         st.error(t("deploy_fix_links"))
         for e in link_errors:
             st.write(f"  • {e}")
+    if link_warns:
+        st.warning("Links with UTM parameters (will not block deploy):")
+        for w in link_warns:
+            st.write(f"  • {w}")
     if text_warns:
         st.warning(t("text_issues"))
         for w in text_warns:

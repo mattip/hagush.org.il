@@ -197,7 +197,7 @@ def scan_image_groups(folder) -> dict[str, list[str]]:
         if f.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
             continue
         # Strip trailing _NN or -NN suffix
-        stem = re.sub(r"[_-]\d+$", "", f.stem)
+        stem = re.sub(r"[_-][^\d_-]?\d+$", "", f.stem)
         key = stem.lower()
         groups.setdefault(key, []).append(f.name)
     return groups
@@ -234,6 +234,17 @@ def convert_images_to_webp(
 
 # ── Link extraction ───────────────────────────────────────────────────────────
 
+def strip_utm(url: str) -> str:
+    """Remove UTM tracking parameters from a URL."""
+    from urllib.parse import urlparse, urlencode, parse_qsl, urlunparse
+    try:
+        p = urlparse(url)
+        qs = [(k, v) for k, v in parse_qsl(p.query) if not k.lower().startswith("utm_")]
+        return urlunparse(p._replace(query=urlencode(qs)))
+    except Exception:
+        return url
+
+
 def csv_to_links(row: dict) -> dict[str, str]:
     links = {}
     for platform, (col, _) in LINK_COLUMNS.items():
@@ -241,7 +252,7 @@ def csv_to_links(row: dict) -> dict[str, str]:
         if val:
             if not re.match(r"https?://", val, re.I):
                 val = "https://" + val
-            links[platform] = val
+            links[platform] = strip_utm(val)
     return links
 
 
@@ -330,16 +341,24 @@ def verify_duplicates(candidates: list[dict]) -> list[str]:
 
 
 def verify_links(candidates: list[dict]) -> list[str]:
-    """Return list of error strings for bad/suspicious links."""
+    """Return list of error strings for bad/suspicious links (hard errors only)."""
     errors = []
     for c in candidates:
         for platform, url in (c.get("links") or {}).items():
             pattern = SOCIAL_PATTERNS.get(platform)
             if pattern and not re.search(pattern, url, re.I):
                 errors.append(f"{c['name']} [{c['id']}]: '{platform}' URL looks wrong → {url}")
-            if "utm_" in url.lower():
-                errors.append(f"{c['name']} [{c['id']}]: '{platform}' has UTM parameters → {url}")
     return errors
+
+
+def verify_links_warnings(candidates: list[dict]) -> list[str]:
+    """Return list of warning strings for links with UTM parameters."""
+    warnings = []
+    for c in candidates:
+        for platform, url in (c.get("links") or {}).items():
+            if "utm_" in url.lower():
+                warnings.append(f"{c['name']} [{c['id']}]: '{platform}' has UTM parameters → {url}")
+    return warnings
 
 
 def _find_bad_chars(text: str) -> list[tuple[str, int, str]]:
