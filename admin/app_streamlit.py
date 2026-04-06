@@ -25,7 +25,7 @@ DEV_MODE = "--dev" in sys.argv or os.environ.get("DEV_MODE", "") == "1"
 
 
 # ── Version ──────────────────────────────────────────────────────────────────
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.0"
 
 # ── i18n strings ──────────────────────────────────────────────────────────────
 # Add a "lang" key to .streamlit/secrets.toml: lang = "he"  (or "en", default)
@@ -53,7 +53,7 @@ _STRINGS = {
         "fill_explainer":    (
             "Form responses are retrieved and used to fill only empty text fields "
             "(activities, rationale, recommendation, minister) for candidates already "
-            "in candidates.json. Existing text is never overwritten."
+            "in candidates.json. Existing text is not overwritten."
         ),
         "fill_no_api_hint":  (
             "Google Sheets API key not configured. "
@@ -111,12 +111,12 @@ _STRINGS = {
         'text_issues': 'Text field issues:',
         'all_texts_ok': 'All text fields look clean.',
         'no_cands_loaded': 'No candidates loaded.',
-        'step1_header': 'Step 1 — Download portraits',
+        'step1_header': 'Step 1 — Download portraits from Google Drive',
         'step1_caption': 'Download new portrait images from Google Drive.',
         'step1_btn': 'Download',
         'step1_btn_dev': 'Scan local images',
         'step1_no_creds': 'Google Drive credentials not configured.',
-        'step2_header': 'Step 2 — Scan responses',
+        'step2_header': 'Step 2 — Scan form responses',
         'step2_caption': 'Retrieve new form responses not yet in candidates.json.',
         'step2_btn': 'Scan responses',
         'step2_btn_dev': 'Load local CSV',
@@ -124,62 +124,62 @@ _STRINGS = {
         'step2_new': '**{n} new** (not yet in candidates.json):',
         'step2_none_new': 'No new responses — all already in candidates.json.',
         'step2_no_images': 'No image groups found yet — run Step 1 first.',
-        'step3_header': 'Step 3 — Scan images',
+        'step3_header': 'Step 3 — Preview images (optional)',
         'step3_available': '**{n} image group(s)** available:',
-        'step4_header': 'Step 4 — Match',
+        'step4_header': 'Step 4 — Match images to candidates',
         'step4_caption': 'Select the matching form response for each image group and confirm the JSON id.',
         'step4_minimal': 'Minimal mode (skip text fields for now)',
-        'step4_response': 'Form response',
+        'step4_response': 'Who is this in the responses?',
         'step4_id': 'JSON id',
         'step4_convert_btn': 'Convert images to WebP & stage',
     },
     "he": {
-        "app_title":         "\u05e0\u05d9\u05d4\u05d5\u05dc \u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd",
-        "dev_warning":       "\u05de\u05e6\u05d1 \u05e4\u05d9\u05ea\u05d5\u05d7 - \u05d0\u05d9\u05df \u05e7\u05e8\u05d9\u05d0\u05d5\u05ea API \u05d0\u05de\u05d9\u05ea\u05d9\u05d5\u05ea",
+        "app_title":         "ניהול מועמדים",
+        "dev_warning":       "מצב פיתוח - אין קריאות API אמיתיות",
         "tab_dashboard":     "מועמדים",
-        "tab_import":        "\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d7\u05d3\u05e9\u05d9\u05dd",
-        "tab_fill":          "\u05de\u05d9\u05dc\u05d5\u05d9 \u05e9\u05d3\u05d5\u05ea",
-        "tab_edit":          "\u05e2\u05e8\u05d9\u05db\u05d4",
-        "tab_deploy":        "\u05e4\u05e8\u05e1\u05d5\u05dd",
-        "dashboard_header":  "\u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd \u05e0\u05d5\u05db\u05d7\u05d9\u05d9\u05dd",
-        "btn_refresh":       "\u05e8\u05e2\u05e0\u05d5\u05df \u05de-GitHub",
-        "btn_refresh_dev":   "\u05d8\u05e2\u05d9\u05e0\u05d4 \u05de\u05e7\u05d5\u05de\u05d9\u05ea",
-        "btn_verify":        "\u05d1\u05d3\u05d9\u05e7\u05ea \u05ea\u05e7\u05d9\u05e0\u05d5\u05ea",
-        "col_name":          "\u05e9\u05dd",
-        "col_id":            "\u05de\u05d6\u05d4\u05d4",
-        "col_photos":        "\u05ea\u05de\u05d5\u05e0\u05d5\u05ea",
-        "col_links":         "\u05e7\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd",
-        "staged_notice":     "{n} \u05de\u05d5\u05e2\u05de\u05d3/\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd - \u05e2\u05d1\u05d5\u05e8/\u05d9 \u05dc\u05e4\u05e8\u05e1\u05d5\u05dd",
-        "no_candidates":     "\u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d5 \u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd.",
-        "fill_header":       "\u05de\u05d9\u05dc\u05d5\u05d9 \u05e9\u05d3\u05d5\u05ea \u05e8\u05d9\u05e7\u05d9\u05dd \u05dc\u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd \u05e7\u05d9\u05d9\u05de\u05d9\u05dd",
+        "tab_import":        "ייבוא חדשים",
+        "tab_fill":          "מילוי שדות",
+        "tab_edit":          "עריכה",
+        "tab_deploy":        "פרסום",
+        "dashboard_header":  "מועמדים נוכחיים",
+        "btn_refresh":       "רענון מ-GitHub",
+        "btn_refresh_dev":   "טעינה מקומית",
+        "btn_verify":        "בדיקת תקינות",
+        "col_name":          "שם",
+        "col_id":            "מזהה",
+        "col_photos":        "תמונות",
+        "col_links":         "קישורים",
+        "staged_notice":     "{n} מועמד/ים ממתינים - עבור/י לפרסום",
+        "no_candidates":     "לא נטענו מועמדים.",
+        "fill_header":       "מילוי שדות ריקים למועמדים קיימים",
         "fill_explainer":    (
-            "\u05ea\u05d2\u05d5\u05d1\u05d5\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05e0\u05e9\u05dc\u05e4\u05d5\u05ea \u05d5\u05de\u05e9\u05de\u05e9\u05d5\u05ea \u05dc\u05de\u05d9\u05dc\u05d5\u05d9 \u05e9\u05d3\u05d5\u05ea \u05e8\u05d9\u05e7\u05d9\u05dd \u05d1\u05dc\u05d1\u05d3 "
-            "(\u05e4\u05e2\u05d9\u05dc\u05d5\u05d9\u05d5\u05ea, \u05e0\u05d9\u05de\u05d5\u05e7, \u05d4\u05de\u05dc\u05e6\u05d4, \u05e9\u05e8/\u05d4) \u05e2\u05d1\u05d5\u05e8 \u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd \u05e7\u05d9\u05d9\u05de\u05d9\u05dd. "
-            "\u05ea\u05d5\u05db\u05df \u05e7\u05d9\u05d9\u05dd \u05dc\u05d0 \u05d9\u05d5\u05d7\u05dc\u05e3 \u05dc\u05e2\u05d5\u05dc\u05dd."
+            "תגובות הטופס נשלפות ומשמשות למילוי שדות ריקים בלבד "
+            "(פעילויות, נימוק, המלצה, שר/ה) עבור מועמדים קיימים. "
+            "תוכן קיים לא יוחלף."
         ),
-        "fill_no_api_hint":  "\u05de\u05e4\u05ea\u05d7 Google Sheets \u05d0\u05d9\u05e0\u05d5 \u05de\u05d5\u05d2\u05d3\u05e8. \u05d4\u05d5\u05e1\u05e3 sheet_id \u05d5-google_service_account \u05dc-secrets.toml \u05db\u05d3\u05d9 \u05dc\u05d0\u05e4\u05e9\u05e8 \u05d0\u05d7\u05d6\u05d5\u05e8.",
-        "fill_upload_label": "\u05d4\u05e2\u05dc\u05d0\u05ea \u05e7\u05d5\u05d1\u05e5 CSV",
-        "fill_btn_retrieve": "\u05d0\u05d7\u05d6\u05d5\u05e8",
-        "fill_loaded":       "\u05e0\u05d8\u05e2\u05e0\u05d5 {n} \u05e9\u05d5\u05e8\u05d5\u05ea.",
-        "fill_btn_preview":  "\u05ea\u05e6\u05d5\u05d2\u05d4 \u05de\u05e7\u05d3\u05d9\u05de\u05d9\u05ea",
-        "fill_would_fill":   "\u05d9\u05de\u05d5\u05dc\u05d0\u05d5:",
-        "field_activities":  "\u05e4\u05e2\u05d9\u05dc\u05d5\u05d9\u05d5\u05ea",
-        "field_rationale":   "\u05e0\u05d9\u05de\u05d5\u05e7",
-        "field_recommendation": "\u05d4\u05de\u05dc\u05e6\u05d4",
-        "field_minister":    "\u05e9\u05e8/\u05d4",
+        "fill_no_api_hint":  "מפתח Google Sheets אינו מוגדר. הוסף sheet_id ו-google_service_account ל-secrets.toml כדי לאפשר אחזור.",
+        "fill_upload_label": "העלאת קובץ CSV",
+        "fill_btn_retrieve": "אחזור",
+        "fill_loaded":       "נטענו {n} שורות.",
+        "fill_btn_preview":  "תצוגה מקדימית",
+        "fill_would_fill":   "ימולאו:",
+        "field_activities":  "פעילויות",
+        "field_rationale":   "נימוק",
+        "field_recommendation": "המלצה",
+        "field_minister":    "שר/ה",
 
-        "fill_nothing":      "\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05de\u05dc\u05d0 - \u05db\u05dc \u05d4\u05e9\u05d3\u05d5\u05ea \u05de\u05d0\u05d5\u05db\u05dc\u05e1\u05d9\u05dd.",
-        "fill_btn_apply":    "\u05d4\u05d7\u05dc",
-        "fill_apply_note":   "\u05d4\u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05d9\u05d5\u05d7\u05dc\u05d5 \u05dc\u05e1\u05e9\u05e0\u05d4 \u05d4\u05e0\u05d5\u05db\u05d7\u05d9\u05ea. \u05e0\u05d9\u05ea\u05df \u05dc\u05e1\u05e7\u05d5\u05e8 \u05d1\u05e2\u05e8\u05d9\u05db\u05d4 \u05dc\u05e4\u05e0\u05d9 \u05e4\u05e8\u05e1\u05d5\u05dd.",
-        "fill_applied":      "\u05d4\u05d5\u05d7\u05dc. \u05e2\u05d1\u05d5\u05e8/\u05d9 \u05dc\u05e4\u05e8\u05e1\u05d5\u05dd.",
-        "import_explainer":  "\u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05de\u05d9\u05d5\u05d1\u05d0\u05d9\u05dd \u05de\u05ea\u05d2\u05d5\u05d1\u05d5\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05ea\u05d5\u05d0\u05de\u05d5\u05ea \u05dc\u05ea\u05de\u05d5\u05e0\u05d5\u05ea. \u05db\u05dc \u05d0\u05d3\u05dd \u05d3\u05d5\u05e8\u05e9 \u05de\u05d6\u05d4\u05d4 \u05d9\u05d9\u05d7\u05d5\u05d3\u05d9 \u05d5\u05dc\u05e4\u05d7\u05d5\u05ea \u05ea\u05de\u05d5\u05e0\u05d4 \u05d0\u05d7\u05ea. \u05d0\u05d9\u05df \u05e4\u05e8\u05e1\u05d5\u05dd \u05e2\u05d3 \u05d8\u05d0\u05d1 \u05e4\u05e8\u05e1\u05d5\u05dd.",
-        "edit_header":       "\u05e2\u05e8\u05d9\u05db\u05ea \u05d8\u05e7\u05e1\u05d8\u05d9\u05dd",
-        "edit_select":       "\u05d1\u05d7\u05e8/\u05d9 \u05de\u05d5\u05e2\u05de\u05d3/\u05ea",
-        "edit_no_changes":   "\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05e9\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d5.",
-        "edit_btn_save":     "\u05e9\u05de\u05d5\u05e8 \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd",
-        "edit_btn_revert":   "\u05d1\u05d8\u05dc \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd",
-        "edit_saved":        "\u05e0\u05e9\u05de\u05e8. \u05e2\u05d1\u05d5\u05e8/\u05d9 \u05dc\u05e4\u05e8\u05e1\u05d5\u05dd.",
-        "deploy_header":     "\u05e4\u05e8\u05e1\u05d5\u05dd",
+        "fill_nothing":      "אין מה למלא - כל השדות מאוכלסים.",
+        "fill_btn_apply":    "החל",
+        "fill_apply_note":   "השינויים יוחלו לסשנה הנוכחית. ניתן לסקור בעריכה לפני פרסום.",
+        "fill_applied":      "הוחל. עבור/י לפרסום.",
+        "import_explainer":  "מועמדים חדשים מיובאים מתגובות הטופס התואמות לתמונות. כל אדם דורש מזהה ייחודי ולפחות תמונה אחת. אין פרסום עד טאב פרסום.",
+        "edit_header":       "עריכת טקסטים",
+        "edit_select":       "בחר/י מועמד/ת",
+        "edit_no_changes":   "אין שינויים שלא נשמרו.",
+        "edit_btn_save":     "שמור שינויים",
+        "edit_btn_revert":   "בטל שינויים",
+        "edit_saved":        "נשמר. עבור/י לפרסום.",
+        "deploy_header":     "פרסום",
         "deploy_new":        "{n} מועמד.ים חדש.ים להוספה:",
         "deploy_modified":   "{n} מועמד.ים שונ.ה:",
         "deploy_diff":       "הצג הבדלים ב-candidates.json",
@@ -201,12 +201,12 @@ _STRINGS = {
         'text_issues': 'בעיות בשדות הטקסט:',
         'all_texts_ok': 'כל שדות הטקסט תקינים.',
         'no_cands_loaded': 'לא נטענו מועמדים.',
-        'step1_header': 'שלב 1',
+        'step1_header': 'שלב 1 — הורדת תמונות מ-Google Drive',
         'step1_caption': 'הורדת תמונות מ-Google Drive.',
         'step1_btn': 'הורדה',
         'step1_btn_dev': 'סריקת תמונות מקומיות',
         'step1_no_creds': 'פרטי גישה ל-Google Drive אינם מוגדרים.',
-        'step2_header': 'שלב 2',
+        'step2_header': 'שלב 2 — סריקת תגובות הטופס',
         'step2_caption': 'אחזור תגובות חדשות.',
         'step2_btn': 'סרוק תגובות',
         'step2_btn_dev': 'טעינת CSV מקומית',
@@ -214,12 +214,12 @@ _STRINGS = {
         'step2_new': '**{n} חדשים**:',
         'step2_none_new': 'אין תגובות חדשות.',
         'step2_no_images': 'לא נמצאו תמונות.',
-        'step3_header': 'שלב 3',
+        'step3_header': 'שלב 3 — תצוגת תמונות (אופציונלי)',
         'step3_available': '**{n} קבוצי תמונות**:',
-        'step4_header': 'שלב 4',
+        'step4_header': 'שלב 4 — התאמת תמונות למועמדים',
         'step4_caption': 'בחר/י תגובת טופס מתאימה לכל קבוץ ואשר/י את המזהה.',
         'step4_minimal': 'מצב מינימלי',
-        'step4_response': 'תגובת טופס',
+        'step4_response': 'מי זה בטופס?',
         'step4_id': 'מזהה JSON',
         'step4_convert_btn': 'המר ל-WebP ושמור',
     },
@@ -354,6 +354,7 @@ def create_pr(branch: str, title: str, body: str, commits: list[dict]) -> str:
 # ── Google Drive helpers ──────────────────────────────────────────────────────
 
 @st.cache_resource
+@st.cache_resource
 def get_drive_service():
     """Build Google Drive service from service account credentials."""
     if DEV_MODE:
@@ -384,21 +385,29 @@ def get_sheets_service():
 
 
 def fetch_sheet_rows() -> list[dict]:
-    """Fetch form responses from Google Sheet. In dev mode, reads local CSV."""
+    """Fetch form responses from Google Sheet. In dev mode, reads local CSV.
+    Merges duplicate submissions by email."""
     if DEV_MODE:
         if DEV_CSV_PATH.exists():
-            return lib.parse_csv_path(DEV_CSV_PATH)
-        st.warning(f"Dev mode: CSV not found at {DEV_CSV_PATH}")
-        return []
-    svc = get_sheets_service()
-    result = svc.spreadsheets().values().get(
-        spreadsheetId=SHEET_ID, range="A:Z"
-    ).execute()
-    values = result.get("values", [])
-    if not values:
-        return []
-    headers = values[0]
-    return [dict(zip(headers, row)) for row in values[1:]]
+            rows = lib.parse_csv_path(DEV_CSV_PATH)
+        else:
+            st.warning(f"Dev mode: CSV not found at {DEV_CSV_PATH}")
+            return []
+    else:
+        svc = get_sheets_service()
+        result = svc.spreadsheets().values().get(
+            spreadsheetId=SHEET_ID, range="A:Z"
+        ).execute()
+        values = result.get("values", [])
+        if not values:
+            return []
+        headers = values[0]
+        rows = [dict(zip(headers, row)) for row in values[1:]]
+
+    merged, warnings = lib.merge_duplicate_rows(rows)
+    for w in warnings:
+        st.warning(f"⚠️ Duplicate name with different emails: {w}")
+    return merged
 
 
 def fetch_drive_image_groups() -> dict[str, list[str]]:
@@ -406,11 +415,20 @@ def fetch_drive_image_groups() -> dict[str, list[str]]:
     if DEV_MODE:
         return lib.scan_image_groups(DEV_IMAGES_PATH)
     svc = get_drive_service()
-    results = svc.files().list(
-        q=f"'{DRIVE_FOLDER_ID}' in parents and trashed=false",
-        fields="files(id, name, mimeType)",
-        pageSize=200,
-    ).execute()
+    for attempt in range(2):
+        try:
+            results = svc.files().list(
+                q=f"'{DRIVE_FOLDER_ID}' in parents and trashed=false",
+                fields="files(id, name, mimeType)",
+                pageSize=200,
+            ).execute()
+            break
+        except BrokenPipeError:
+            if attempt == 0:
+                st.cache_resource.clear()
+                svc = get_drive_service()
+            else:
+                raise
     files = results.get("files", [])
     # Group by prefix same as scan_image_groups
     import re
@@ -475,6 +493,7 @@ def init_state():
         "_fill_rows":      None,   # retrieved rows for fill tab
         "_fill_preview":   None,   # (updated, filled, warnings) preview
         "image_groups":    None,   # dict[str, list[str]]
+        "raw_previews":    {},     # prefix → list of (filename, bytes)
         "converted_images": {},    # prefix → list of local webp Paths
         "inline_edit":     None,   # id of candidate whose expander is open
         "lang":            get_secret("lang", "he") or "he",  # runtime language override
@@ -521,12 +540,13 @@ def _render_inline_edit(c, idx, candidates):
                     st.image(str(img_path), width=120)
 
     st.caption(f"ID: `{cid}` | {c.get('age','')} | {c.get('home','')}")
-    st.caption(f"Links: {', '.join(c.get('links', {}).keys()) or '—'}")
 
     st.divider()
 
     edited = copy.deepcopy(c)
     changed = False
+
+    # ── Text fields ───────────────────────────────────────────────────────────
     for field in lib.TEXT_FIELDS:
         current = c.get(field, "") or ""
         new_val = st.text_area(
@@ -537,6 +557,29 @@ def _render_inline_edit(c, idx, candidates):
         if new_val != current:
             edited[field] = new_val
             changed = True
+
+    st.divider()
+
+    # ── Links ─────────────────────────────────────────────────────────────────
+    st.markdown("**Links**")
+    current_links = edited.get("links", {})
+    all_platforms = list(lib.LINK_COLUMNS.keys()) + ["telegram", "youtube"]
+    new_links = {}
+    for platform in all_platforms:
+        current_url = current_links.get(platform, "")
+        new_url = st.text_input(
+            platform, value=current_url,
+            key=f"link_{cid}_{platform}",
+            placeholder="https://...",
+        )
+        new_url = new_url.strip()
+        if new_url:
+            if not re.match(r"https?://", new_url, re.I):
+                new_url = "https://" + new_url
+            new_links[platform] = lib.strip_utm(new_url)
+        if new_url != current_url:
+            changed = True
+    edited["links"] = new_links
 
     if changed:
         for e in lib.verify_links([edited]):
@@ -668,14 +711,48 @@ def render_import():
         else:
             st.info(t("step2_none_new"))
 
+        # Warn about candidates who submitted a response but have no edited images yet
+        if groups is not None and new_rows:
+            new_row_names = {lib.normalize_name(r.get(lib.COL_NAME, "")) for r in new_rows}
+            edited_first_names = {prefix.split("_")[0] for prefix in groups}
+            stuck = [
+                r.get(lib.COL_NAME, "?") for r in new_rows
+                if lib.normalize_name(r.get(lib.COL_NAME, ""))
+                and not any(
+                    lib.normalize_name(r.get(lib.COL_NAME, "")).startswith(p) or p in lib.normalize_name(r.get(lib.COL_NAME, ""))
+                    for p in edited_first_names
+                )
+            ]
+            if stuck:
+                st.warning(
+                    f"⏳ {len(stuck)} candidate(s) have submitted responses but no edited images yet "
+                    f"(waiting for Nina):\n" + "\n".join(f"  • {n}" for n in stuck)
+                )
+
     st.divider()
 
-    # ── Step 3: Scan images ───────────────────────────────────────────────────
+    # ── Step 3: Preview images (optional) ────────────────────────────────────
     st.subheader(t("step3_header"))
     if groups:
         st.write(t("step3_available", n=len(groups)))
         for prefix, files in groups.items():
-            st.caption(f"  • `{prefix}` — {len(files)} file(s): {', '.join(files)}")
+            st.caption(f"  • `{prefix}` — {', '.join(files)}")
+        if st.button("🖼️ Preview images", key="btn_preview_images"):
+            with st.spinner("Downloading images…"):
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    all_files = [f for files in groups.values() for f in files]
+                    downloaded = download_drive_images(all_files, Path(tmpdir) / "raw")
+                    name_to_bytes = {p.name: p.read_bytes() for p in downloaded}
+            st.session_state.raw_previews = {
+                prefix: [(f, name_to_bytes[f]) for f in files if f in name_to_bytes]
+                for prefix, files in groups.items()
+            }
+        for prefix, previews in st.session_state.raw_previews.items():
+            if previews:
+                st.markdown(f"**`{prefix}`**")
+                cols = st.columns(len(previews))
+                for col, (name, img_bytes) in zip(cols, previews):
+                    col.image(img_bytes, caption=name, width='stretch')
     elif st.session_state.image_groups is not None:
         st.info(t("step2_no_images"))
 
@@ -691,47 +768,53 @@ def render_import():
         return
 
     st.caption(t("step4_caption"))
-    minimal = st.checkbox(t("step4_minimal"), value=False)
 
     response_options = ["(skip)"] + [r.get(lib.COL_NAME, "?") for r in new_rows]
     matches = []
 
+    st.markdown("<div style='max-width:420px'>", unsafe_allow_html=True)
     for prefix, files in groups.items():
         st.markdown(f"**`{prefix}`** — {', '.join(files)}")
-        c1, c2 = st.columns([3, 2])
-        with c1:
-            default_idx = 0
-            for i, r in enumerate(new_rows, 1):
-                name = lib.normalize_name(r.get(lib.COL_NAME, ""))
-                ratio = __import__("difflib").SequenceMatcher(None, prefix, name).ratio()
-                if ratio > 0.4:
-                    default_idx = i
-                    break
-            selected_name = st.selectbox(
-                t("step4_response"), response_options,
-                index=default_idx,
-                key=f"match_{prefix}",
-            )
-        with c2:
-            cid = st.text_input(
-                t("step4_id"), value=prefix.lower(),
-                key=f"id_{prefix}",
-            )
+        cid = st.text_input(
+            t("step4_id"), value=prefix.lower(),
+            key=f"id_{prefix}",
+        )
+        default_idx = 0
+        for i, r in enumerate(new_rows, 1):
+            name = lib.normalize_name(r.get(lib.COL_NAME, ""))
+            ratio = __import__("difflib").SequenceMatcher(None, prefix, name).ratio()
+            if ratio > 0.4:
+                default_idx = i
+                break
+        selected_name = st.selectbox(
+            t("step4_response"), response_options,
+            index=default_idx,
+            key=f"match_{prefix}",
+        )
         if selected_name != "(skip)" and cid:
             row = next((r for r in new_rows if r.get(lib.COL_NAME) == selected_name), None)
             if row:
                 matches.append((cid, row, files))
+        st.divider()
+    st.markdown("</div>", unsafe_allow_html=True)
 
     staged_previews = []
     for cid, row, files in matches:
-        entry = lib.row_to_candidate(row, cid, [], minimal)
+        entry = lib.row_to_candidate(row, cid, [], False)
         with st.expander(f"📋 {entry['name']} (`{cid}`)"):
+            # Show already-converted photos if available from a previous run
+            already_converted = st.session_state.converted_images.get(cid, [])
+            if already_converted:
+                photo_cols = st.columns(len(already_converted))
+                for col, (name, img_bytes) in zip(photo_cols, already_converted):
+                    col.image(img_bytes, caption=name, width='stretch')
+            else:
+                st.caption(f"📁 {len(files)} image(s): {', '.join(files)}")
             c1, c2 = st.columns(2)
             with c1:
                 st.write(f"**Age:** {entry['age']}")
                 st.write(f"**Home:** {entry['home']}")
                 st.write(f"**Links:** {list(entry['links'].keys())}")
-                st.write(f"**Images:** {files}")
             with c2:
                 for field in lib.TEXT_FIELDS:
                     entry[field] = st.text_area(
@@ -780,6 +863,14 @@ def render_import():
             if not any(s["id"] == cid for s in st.session_state.staged):
                 st.session_state.staged.append(entry)
         st.success(f"Staged {len(staged_previews)} candidate(s). Go to Deploy tab.")
+        # Show photo previews after conversion
+        for cid, entry, _ in staged_previews:
+            converted = st.session_state.converted_images.get(cid, [])
+            if converted:
+                st.markdown(f"**{entry['name']}**")
+                photo_cols = st.columns(len(converted))
+                for col, (name, img_bytes) in zip(photo_cols, converted):
+                    col.image(img_bytes, caption=name, width='stretch')
 
 
 def render_fill():
@@ -799,6 +890,9 @@ def render_fill():
         # Dev mode: retrieve button reads local CSV
         if st.button(t("fill_btn_retrieve"), help="Dev mode: reads local CSV"):
             rows = lib.parse_csv_path(DEV_CSV_PATH)
+            rows, warnings = lib.merge_duplicate_rows(rows)
+            for w in warnings:
+                st.warning(f"⚠️ Duplicate name with different emails: {w}")
             st.session_state["_fill_rows"] = rows
             st.caption(f"Dev: loaded from {DEV_CSV_PATH}")
     else:
@@ -880,7 +974,9 @@ def render_deploy():
     diff = lib.json_diff(original or candidates, final_candidates)
     with st.expander(t("deploy_diff"), expanded=False):
         if diff:
+            st.markdown("<div dir='ltr'>", unsafe_allow_html=True)
             st.code(diff, language="diff")
+            st.markdown("</div>", unsafe_allow_html=True)
         else:
             st.caption(t("nothing_staged"))
 
@@ -1074,17 +1170,37 @@ button {{ direction: {dir_val}; }}
 [data-testid="stSelectbox"],
 [data-testid="stTextInput"],
 [data-testid="stTextArea"] {{ direction: {dir_val}; }}
+
+/* Link inputs always LTR — Streamlit reflects the key as st-key-{{key}} on the container */
+[class*="st-key-link_"] input {{
+    direction: ltr !important;
+    text-align: left !important;
+}}
+
+/* Step 4 ID inputs and dropdowns — narrow */
+[class*="st-key-id_"],
+[class*="st-key-match_"] {{
+    max-width: 420px;
+}}
 </style>
 """, unsafe_allow_html=True)
 
-    # Language toggle in top-right
-    lang_col, title_col = st.columns([1, 8])
+    # Language toggle + back-to-site link in top row
+    lang_col, link_col, title_col = st.columns([1, 2, 6])
     with lang_col:
         current_lang = st.session_state.get("lang", "he")
         other_lang   = "he" if current_lang == "en" else "en"
         if st.button(f"🌐 {other_lang.upper()}"):
             st.session_state["lang"] = other_lang
             st.rerun()
+    with link_col:
+        st.markdown(
+            "<div style='padding-top:6px'>"
+            "<a href='https://hagush.org.il' target='_blank' "
+            "style='text-decoration:none; color:#888; font-size:0.9em;'>"
+            "🌐 hagush.org.il ↗</a></div>",
+            unsafe_allow_html=True,
+        )
     with title_col:
         st.title(t("app_title"))
 
