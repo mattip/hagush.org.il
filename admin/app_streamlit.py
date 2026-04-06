@@ -810,19 +810,35 @@ def render_import():
                     col.image(img_bytes, caption=name, width='stretch')
             else:
                 st.caption(f"📁 {len(files)} image(s): {', '.join(files)}")
-            c1, c2 = st.columns(2)
-            with c1:
-                st.write(f"**Age:** {entry['age']}")
-                st.write(f"**Home:** {entry['home']}")
-                st.write(f"**Links:** {list(entry['links'].keys())}")
-            with c2:
-                for field in lib.TEXT_FIELDS:
-                    entry[field] = st.text_area(
-                        field, value=entry[field],
-                        key=f"text_{cid}_{field}", height=80
-                    )
+            st.write(f"**Age:** {entry['age']}  |  **Home:** {entry['home']}")
+            st.divider()
+            for field in lib.TEXT_FIELDS:
+                entry[field] = st.text_area(
+                    field, value=entry[field],
+                    key=f"text_{cid}_{field}", height=80
+                )
+            st.divider()
+            st.markdown("**Links**")
+            current_links = entry.get("links", {})
+            all_platforms = list(lib.LINK_COLUMNS.keys()) + ["telegram", "youtube"]
+            new_links = {}
+            for platform in all_platforms:
+                current_url = current_links.get(platform, "")
+                new_url = st.text_input(
+                    platform, value=current_url,
+                    key=f"newlink_{cid}_{platform}",
+                    placeholder="https://...",
+                )
+                new_url = new_url.strip()
+                if new_url:
+                    if not re.match(r"https?://", new_url, re.I):
+                        new_url = "https://" + new_url
+                    new_links[platform] = lib.strip_utm(new_url)
+            entry["links"] = new_links
             for e in lib.verify_links([entry]):
                 st.error(f"⚠️ {e}")
+            for w in lib.verify_links_warnings([entry]):
+                st.warning(f"⚠️ {w}")
             for w in lib.verify_texts([entry]):
                 st.warning(f"⚠️ {w}")
         staged_previews.append((cid, entry, files))
@@ -1172,7 +1188,8 @@ button {{ direction: {dir_val}; }}
 [data-testid="stTextArea"] {{ direction: {dir_val}; }}
 
 /* Link inputs always LTR — Streamlit reflects the key as st-key-{{key}} on the container */
-[class*="st-key-link_"] input {{
+[class*="st-key-link_"] input,
+[class*="st-key-newlink_"] input {{
     direction: ltr !important;
     text-align: left !important;
 }}
