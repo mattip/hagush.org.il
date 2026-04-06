@@ -2,8 +2,8 @@ const PORTRAITS_DIR = "portraits/";
 const CYCLE_MIN_MS = 1000;
 const CYCLE_MAX_MS = 2000;
 const CYCLE_JITTER_MS = 1000; // max random start delay
-const PINNED_IDS = ["gilad_k", "efrat_r"];  // always appear in first PINNED_WINDOW slots
-const PINNED_WINDOW = 5;        // how many leading slots the pinned ids are spread across
+const PINNED_IDS = ["gilad_k", "efrat_r", "naama_l"];  // always appear in first PINNED_WINDOW slots
+const PINNED_WINDOW = 6;        // how many leading slots the pinned ids are spread across
 
 const timers = {};
 const popup = document.getElementById("popup");

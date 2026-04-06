@@ -25,6 +25,7 @@ from pathlib import Path
 # ── CSV column constants ──────────────────────────────────────────────────────
 
 COL_NAME        = "שם"
+COL_EMAIL       = "Email address"
 COL_AGE         = "גיל"
 COL_HOME        = "עיר/ישוב"
 COL_ACTIVITIES  = "תאור/תואר"
@@ -167,6 +168,47 @@ def parse_csv_path(path) -> list[dict]:
     if not p.exists():
         raise FileNotFoundError(f"CSV not found: {path}")
     return parse_csv_bytes(p.read_bytes())
+
+
+def merge_duplicate_rows(rows: list[dict]) -> tuple[list[dict], list[str]]:
+    """Merge duplicate submissions by email. Later non-empty values override earlier ones.
+
+    Returns (merged_rows, warning_messages).
+    Warns if the same name appears with different emails.
+    """
+    warnings = []
+    # Pass 1: merge by email (later rows override earlier for non-empty fields)
+    by_email: dict[str, dict] = {}
+    no_email: list[dict] = []
+    for row in rows:
+        email = clean(row.get(COL_EMAIL, "")).lower()
+        if not email:
+            no_email.append(row)
+            continue
+        if email not in by_email:
+            by_email[email] = dict(row)
+        else:
+            # Override with non-empty values from the later row
+            for k, v in row.items():
+                if clean(v):
+                    by_email[email][k] = v
+
+    merged = list(by_email.values()) + no_email
+
+    # Pass 2: warn on same name, different emails
+    name_to_emails: dict[str, set] = {}
+    for row in merged:
+        name = normalize_name(row.get(COL_NAME, ""))
+        email = clean(row.get(COL_EMAIL, "")).lower()
+        if name:
+            name_to_emails.setdefault(name, set()).add(email or "(no email)")
+    for name, emails in name_to_emails.items():
+        if len(emails) > 1:
+            warnings.append(
+                f"'{name}' appears with multiple emails: {', '.join(sorted(emails))}"
+            )
+
+    return merged, warnings
 
 
 # ── Photo discovery ───────────────────────────────────────────────────────────
