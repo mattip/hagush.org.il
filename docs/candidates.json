@@ -511,5 +511,26 @@
       "Ayelet_s_01.webp",
       "Ayelet_s_03.webp"
     ]
+  },
+  {
+    "id": "yair_r",
+    "name": "יאיר רובינשטיין",
+    "age": "52",
+    "home": "בנימינה גבעת עדה",
+    "activities": "מנהל / אזרח",
+    "rationale": "ירושלמי במקור, נכד לרב מצד אחד ולכומר מצד שני, אוהב יהדות ושונא רבנות, מהנדס, מנהל בכיר בתחום האנרגיה, בעל נטייה טבעית לנתח בעיות ולנסות לפתור, אסטרטג, מנהל קשוב, מנוסה בהובלת שינויים, בחדשנות, בייזום והקמת פעילויות מאפס. מנהל מטה דת ומדינה בדמוקרטים, שונא כל ביטוי של כפיה, הדרה, אפליה וגזענות.",
+    "recommendation": "אחת השאלות הקשות, באמת חבורה מופלאה, כל מתמודד שאני מכיר נראה לי מעולה, לא כאמירה בעלמא.",
+    "minister": "אנרגיה",
+    "links": {
+      "facebook": "https://www.facebook.com/YairRubinstein26/",
+      "instagram": "https://www.instagram.com/yair.rubinstein/",
+      "x": "https://x.com/yairrubinstein",
+      "homepage": "https://www.yairrubinstein.org"
+    },
+    "photos": [
+      "Yair_r_01.webp",
+      "Yair_r_02.webp",
+      "Yair_r_03.webp"
+    ]
   }
 ]
