@@ -532,5 +532,25 @@
       "Yair_r_02.webp",
       "Yair_r_03.webp"
     ]
+  },
+  {
+    "id": "malek_b",
+    "name": "מאלק בדר",
+    "age": "65",
+    "home": "חורפיש",
+    "activities": "עו\"ד",
+    "rationale": "שימשתי ראש מועצת חורפיש ויו\"ר פורם הרשויות הדרוזיות בארץ",
+    "recommendation": "ענבר בזק . צפונית חרוצה איכפתית",
+    "minister": "חולם על הפנים",
+    "links": {
+      "facebook": "https://www.facebook.com/share/v/18PzcZ6g4B/",
+      "tiktok": "https://www.tiktok.com/@malekbader31",
+      "homepage": "https://www.malek-bader.com"
+    },
+    "photos": [
+      "Malek_b_01.webp",
+      "Malek_b_02.webp",
+      "Malek_b_03.webp"
+    ]
   }
 ]
