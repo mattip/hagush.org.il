@@ -237,6 +237,8 @@ body {
   overflow-y: auto;
   flex: 1;
   min-height: 0; /* Safari: allow flex child to shrink below content size */
+  -webkit-overflow-scrolling: touch; /* iOS: enable momentum scrolling after pinch-zoom */
+  touch-action: pan-y;
 }
 
 .pi-row {
