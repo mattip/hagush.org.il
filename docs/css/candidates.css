@@ -273,6 +273,10 @@ body {
   white-space: nowrap;
 }
 
+.piRationale {
+  white-space: pre-line;
+}
+
 /* Social icon links */
 .pi-link-icons {
   display: flex;
