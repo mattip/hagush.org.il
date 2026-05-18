@@ -19,6 +19,7 @@ let popupHistory = []; // stack of {person, card} for back navigation
 // ── Bootstrap ────────────────────────────────────────────────────
 fetch("candidates.json")
   .then((r) => r.json())
+  .then((people) => people.filter((p) => !p.hidden))
   .then(shuffle)
   .then((people) => {
     allPeople = people;
