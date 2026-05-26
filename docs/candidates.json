@@ -680,5 +680,65 @@
       "Moran_Z_02.webp",
       "Moran_Z_03.webp"
     ]
+  },
+  {
+    "id": "emily_m",
+    "name": "אמילי מואטי",
+    "age": "45",
+    "home": "תל אביב - יפו",
+    "activities": "חכ\"ל וסופרת",
+    "rationale": "סגניות יו\"ר הכנסת ויו\"ר ועד\"מ חוץ בועדת חוץ וביטחון.\nסופרת וזוכת פרס ביכורים על הספר \"סימנים כחולים\"",
+    "recommendation": "יש לנו את האנשים הכי טובים במפלגה ובואו פשוט נביס אותם.",
+    "minister": "שרת התרבות והספורט או שרת שלום אזורי",
+    "links": {
+      "facebook": "https://www.facebook.com/share/1DjrvuhJ5V/",
+      "instagram": "https://www.instagram.com/emiliemoatti?igsh=MXBoNGt1NDBuczNkZA%3D%3D",
+      "x": "https://x.com/EmilieMoatti",
+      "tiktok": "https://www.tiktok.com/@emilie_moatti?_r=1&_t=ZS-96JhGg0W7mC",
+      "homepage": "https://www.emiliemoatti.co.il/?fbclid=IwVERDUARw001leHRuA2FlbQIxMABzcnRjBmFwcF9pZAwzNTA2ODU1MzE3MjgAAR7AgLJsMYUAxTBtDmCIj1Qwb2hl_6aTGfG8xSOymFeAS0mCw-Uot8apz4A_Tg_aem_ZmFrZWR1bW15MTZieXRlcw"
+    },
+    "photos": [
+      "Emily_M_01.webp",
+      "Emily_M_02.webp",
+      "Emily_M_03.webp"
+    ]
+  },
+  {
+    "id": "binyamin_m",
+    "name": "בנימין מיניץ'",
+    "age": "39",
+    "home": "כפר סבא",
+    "activities": "הרב",
+    "rationale": "פעיל חברתי, רב רפורמי, יו״ר מועצת הרבנות הרפורמית בישראל, נשוי ואבא לשני מתוקים ומתוקה",
+    "recommendation": "זה קל! אני מכיר את מורי וידידי גלעד קריב כבר קרוב לשני עשורים. ראיתי את הדרך שהוא עשה ואני באמת באמת תופס ממנו כמנהיג אמיתי ואדם כן.",
+    "minister": "קליטת עליה ותפוצות (לאחד משרדים דחוף!)",
+    "links": {
+      "facebook": "https://www.facebook.com/rabbibenny",
+      "instagram": "https://Instagram.com/bennyminich/",
+      "x": "https://X.com/bennyminich/"
+    },
+    "photos": [
+      "Binyamin_m_01.webp",
+      "Binyamin_m_02.webp",
+      "Binyamin_m_03.webp"
+    ]
+  },
+  {
+    "id": "hanan",
+    "name": "חנן זיסו",
+    "age": "55",
+    "home": "קרית טבעון",
+    "activities": "",
+    "rationale": "יועץ תקשורת ואסטרטג, פעיל חברתי ציבורי פעיל מחאה. חבר מועצת קרית טבעון לשעבר, פעיל במטה החטופים. מחנך מורה ומרצה לתקשורת",
+    "recommendation": "מפרגן לענבר בזק פושרית חכית לשעבר אשת ביצוע ותוצאות וגם תומר אביטל מועמד ראוי ומקצועי",
+    "minister": "שר החינוך",
+    "links": {
+      "facebook": "https://www.facebook.com/hanan.ziso"
+    },
+    "photos": [
+      "hanan_01.webp",
+      "hanan_02.webp",
+      "hanan_03.webp"
+    ]
   }
 ]
