@@ -45,6 +45,13 @@ a {
   color: inherit;
   text-decoration: none;
 }
+a.link {
+  color: var(--blue, #1a6aff);
+  text-decoration: underline;
+}
+a.link:hover {
+  opacity: 0.75;
+}
 
 body.no-scroll,
 html.no-scroll {
@@ -332,10 +339,11 @@ main.no-padding-bottom {
 }
 
 .f-submit {
+  display: block;
   width: 100%;
   background: var(--blue);
   color: #fff;
-  text-align: center;
+  text-align: center !important;
   border: none;
   padding: 11px;
   font-family: var(--font);
@@ -347,15 +355,23 @@ main.no-padding-bottom {
 
 .f-wa {
   margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   text-align: center;
 }
 .f-wa > p {
   font-size: 1rem;
   color: var(--soft);
-  margin-bottom: 6px;
+  margin: 0;
   font-weight: 400;
 }
-.f-wa a {
+.f-wa a.f-submit {
+  width: 100%;
+  max-width: 400px;
+}
+.f-wa a:not(.f-submit) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
