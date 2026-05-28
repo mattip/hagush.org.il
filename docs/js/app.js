@@ -25,6 +25,16 @@ fetch("candidates.json")
     allPeople = people;
     buildGrid(people);
     restoreFromCookies();
+    // Open popup from URL query param: ?id=gilad_k or ?name=גבי לסקי
+    const params = new URLSearchParams(window.location.search);
+    const idParam   = params.get("id");
+    const nameParam = params.get("name");
+    if (idParam || nameParam) {
+      const match = allPeople.find((p) =>
+        idParam ? p.id === idParam : p.name === nameParam
+      );
+      if (match) openPopup(match, document.body, false);
+    }
   });
 
 // Fisher-Yates shuffle, with pinned IDs guaranteed in first PINNED_WINDOW slots
@@ -176,6 +186,23 @@ function startCycle(idx, card, firstPhoto) {
 // popup.addEventListener("mouseleave", scheduleClose);
 document.getElementById("popupClose").addEventListener("click", closePopup);
 document.getElementById("popupBack").addEventListener("click", popupGoBack);
+
+// Pin button — copies permalink to clipboard
+(function () {
+  const pinBtn   = document.getElementById("popupPin");
+  const pinToast = document.getElementById("popupPinToast");
+  let toastTimer;
+  pinBtn.addEventListener("click", () => {
+    const id = popup.dataset.personId;
+    if (!id) return;
+    const url = `${location.origin}${location.pathname}?id=${encodeURIComponent(id)}`;
+    navigator.clipboard.writeText(url).then(() => {
+      clearTimeout(toastTimer);
+      pinToast.classList.add("show");
+      toastTimer = setTimeout(() => pinToast.classList.remove("show"), 2000);
+    });
+  });
+})();
 
 function set(id, txt) {
   const el = document.getElementById(id);
