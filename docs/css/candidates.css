@@ -198,13 +198,13 @@ body {
   background: rgba(0, 0, 0, 0.3);
 }
 .popup-close { left: 8px; }
-.popup-back  { right: 8px; }
+.popup-back  { right: 42px; }
 
 .popup-pin {
   position: absolute;
   top: 8px;
-  right: 42px;
-  background: rgba(0, 0, 0, 0.35);
+  right: 8px;
+  background: var(--blue);
   border: none;
   color: #fff;
   width: 26px;
@@ -218,7 +218,7 @@ body {
   z-index: 10;
   transition: background 0.15s;
 }
-.popup-pin:hover { background: rgba(0, 0, 0, 0.55); }
+.popup-pin:hover { background: rgba(0, 0, 0, 0.3); }
 
 .popup-pin-toast {
   position: absolute;
