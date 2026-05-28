@@ -200,6 +200,44 @@ body {
 .popup-close { left: 8px; }
 .popup-back  { right: 8px; }
 
+.popup-pin {
+  position: absolute;
+  top: 8px;
+  right: 42px;
+  background: rgba(0, 0, 0, 0.35);
+  border: none;
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.popup-pin:hover { background: rgba(0, 0, 0, 0.55); }
+
+.popup-pin-toast {
+  position: absolute;
+  top: 40px;
+  right: 8px;
+  background: var(--nav, #09366d);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+  z-index: 10;
+}
+.popup-pin-toast.show { opacity: 1; }
+
 
 /* ── 5. Popup image block ───────────────────────────────────────── */
 .popup-img-wrap {
