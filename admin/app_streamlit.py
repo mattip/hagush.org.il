@@ -549,8 +549,9 @@ def _render_inline_edit(c, idx, candidates):
     # ── Text fields ───────────────────────────────────────────────────────────
     for field in lib.TEXT_FIELDS:
         current = c.get(field, "") or ""
+        field_height = 200 if field == "rationale" else 100
         new_val = st.text_area(
-            field, value=current, height=100,
+            field, value=current, height=field_height,
             key=f"inline_{cid}_{field}",
             help=f"{len(current)} chars",
         )
@@ -620,6 +621,14 @@ def render_dashboard():
 
     if st.session_state.staged:
         st.info(t("staged_notice", n=len(st.session_state.staged)))
+
+    # Show notice if Overview edits are pending deploy
+    original = st.session_state.get("_original_candidates") or []
+    orig_by_id = {c["id"]: c for c in original}
+    modified = [c for c in candidates if c["id"] in orig_by_id and c != orig_by_id[c["id"]]]
+    if modified:
+        st.warning(f"⚠️ {len(modified)} candidate(s) have unsaved edits — go to the Deploy tab to create a PR: " +
+                   ", ".join(f"**{c['name']}**" for c in modified))
 
     st.divider()
 
@@ -810,35 +819,19 @@ def render_import():
                     col.image(img_bytes, caption=name, width='stretch')
             else:
                 st.caption(f"📁 {len(files)} image(s): {', '.join(files)}")
-            st.write(f"**Age:** {entry['age']}  |  **Home:** {entry['home']}")
-            st.divider()
-            for field in lib.TEXT_FIELDS:
-                entry[field] = st.text_area(
-                    field, value=entry[field],
-                    key=f"text_{cid}_{field}", height=80
-                )
-            st.divider()
-            st.markdown("**Links**")
-            current_links = entry.get("links", {})
-            all_platforms = list(lib.LINK_COLUMNS.keys()) + ["telegram", "youtube"]
-            new_links = {}
-            for platform in all_platforms:
-                current_url = current_links.get(platform, "")
-                new_url = st.text_input(
-                    platform, value=current_url,
-                    key=f"newlink_{cid}_{platform}",
-                    placeholder="https://...",
-                )
-                new_url = new_url.strip()
-                if new_url:
-                    if not re.match(r"https?://", new_url, re.I):
-                        new_url = "https://" + new_url
-                    new_links[platform] = lib.strip_utm(new_url)
-            entry["links"] = new_links
+            c1, c2 = st.columns(2)
+            with c1:
+                st.write(f"**Age:** {entry['age']}")
+                st.write(f"**Home:** {entry['home']}")
+                st.write(f"**Links:** {list(entry['links'].keys())}")
+            with c2:
+                for field in lib.TEXT_FIELDS:
+                    entry[field] = st.text_area(
+                        field, value=entry[field],
+                        key=f"text_{cid}_{field}", height=80
+                    )
             for e in lib.verify_links([entry]):
                 st.error(f"⚠️ {e}")
-            for w in lib.verify_links_warnings([entry]):
-                st.warning(f"⚠️ {w}")
             for w in lib.verify_texts([entry]):
                 st.warning(f"⚠️ {w}")
         staged_previews.append((cid, entry, files))
@@ -1026,13 +1019,16 @@ def render_deploy():
     # ── PR details ────────────────────────────────────────────────────────────
     import re
     import datetime
-    names = ", ".join(c["name"] for c in staged) if staged else t("fill_header")
-    default_title = (f"Add candidates: {names}" if staged else t("fill_header"))
+    parts = []
+    if staged:   parts.append(f"Add: {', '.join(c['name'] for c in staged)}")
+    if modified: parts.append(f"Edit: {', '.join(c['name'] for c in modified)}")
+    default_title = " | ".join(parts) if parts else t("fill_header")
     pr_title = st.text_input("PR title", value=default_title, disabled=not has_changes)
-    pr_body  = st.text_area("PR description", disabled=not has_changes, value=(
-        "Automated PR from candidates admin app.\n\n"
-        + "\n".join(f"- Add {c['name']}" for c in staged)
-    ))
+    body_lines = ["Automated PR from candidates admin app.", ""]
+    for c in staged:   body_lines.append(f"- Add {c['name']}")
+    for c in modified: body_lines.append(f"- Edit {c['name']}")
+    pr_body  = st.text_area("PR description", disabled=not has_changes,
+                             value="\n".join(body_lines))
     branch_name = "candidates/" + re.sub(r"[^a-z0-9]+", "-",
                   datetime.datetime.now().strftime("%Y%m%d-%H%M"))
 
@@ -1186,10 +1182,10 @@ button {{ direction: {dir_val}; }}
 [data-testid="stSelectbox"],
 [data-testid="stTextInput"],
 [data-testid="stTextArea"] {{ direction: {dir_val}; }}
+[data-testid="stTextArea"] textarea {{ resize: vertical; }}
 
 /* Link inputs always LTR — Streamlit reflects the key as st-key-{{key}} on the container */
-[class*="st-key-link_"] input,
-[class*="st-key-newlink_"] input {{
+[class*="st-key-link_"] input {{
     direction: ltr !important;
     text-align: left !important;
 }}
