@@ -15,6 +15,7 @@ let selectMode = false;
 let selectedIds = new Set();
 let allPeople = [];
 let popupHistory = []; // stack of {person, card} for back navigation
+let justOpened = false;
 
 // ── Bootstrap ────────────────────────────────────────────────────
 fetch("candidates.json")
@@ -401,7 +402,6 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Prevent the same click/tap that opens the popup from immediately closing it
-let justOpened = false;
 document.addEventListener("click", (e) => {
   if (justOpened) {
     justOpened = false;
