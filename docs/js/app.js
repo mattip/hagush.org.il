@@ -1,4 +1,9 @@
 const PORTRAITS_DIR = "portraits/";
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 const CYCLE_MIN_MS = 1000;
 const CYCLE_MAX_MS = 2000;
 const CYCLE_JITTER_MS = 1000; // max random start delay
@@ -162,6 +167,7 @@ function createCard(person, i) {
 // ── Photo cycling ─────────────────────────────────────────────────
 function startCycle(idx, card, firstPhoto) {
   if (timers[idx]) return;
+  if (prefersReducedMotion()) return;
   const imgs = card.querySelectorAll(".photo-stage img");
   const dir = Math.random() < 0.5 ? 1 : -1;
   let current = firstPhoto;
