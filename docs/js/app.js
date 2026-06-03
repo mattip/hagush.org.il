@@ -177,6 +177,24 @@ function startCycle(idx, card, firstPhoto) {
 document.getElementById("popupClose").addEventListener("click", closePopup);
 document.getElementById("popupBack").addEventListener("click", popupGoBack);
 
+// Pin button — copies permalink to clipboard
+(function () {
+  const pinBtn   = document.getElementById("popupPin");
+  const pinToast = document.getElementById("popupPinToast");
+  if (!pinBtn) return;
+  let toastTimer;
+  pinBtn.addEventListener("click", () => {
+    const id = popup.dataset.personId;
+    if (!id) return;
+    const url = `${location.origin}${location.pathname}?id=${encodeURIComponent(id)}`;
+    copyToClipboard(url).then(() => {
+      clearTimeout(toastTimer);
+      pinToast.classList.add("show");
+      toastTimer = setTimeout(() => pinToast.classList.remove("show"), 2000);
+    });
+  });
+})();
+
 function set(id, txt) {
   const el = document.getElementById(id);
   if (el) el.textContent = txt ?? "";
