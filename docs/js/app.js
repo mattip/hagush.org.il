@@ -1,9 +1,4 @@
 const PORTRAITS_DIR = "portraits/";
-
-function prefersReducedMotion() {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 const CYCLE_MIN_MS = 1000;
 const CYCLE_MAX_MS = 2000;
 const CYCLE_JITTER_MS = 1000; // max random start delay
@@ -20,7 +15,6 @@ let selectMode = false;
 let selectedIds = new Set();
 let allPeople = [];
 let popupHistory = []; // stack of {person, card} for back navigation
-let justOpened = false;
 
 // ── Bootstrap ────────────────────────────────────────────────────
 fetch("candidates.json")
@@ -31,16 +25,6 @@ fetch("candidates.json")
     allPeople = people;
     buildGrid(people);
     restoreFromCookies();
-    // Open popup from URL query param: ?id=gilad_k or ?name=גבי לסקי
-    const params = new URLSearchParams(window.location.search);
-    const idParam   = params.get("id");
-    const nameParam = params.get("name");
-    if (idParam || nameParam) {
-      const match = allPeople.find((p) =>
-        idParam ? p.id === idParam : p.name === nameParam
-      );
-      if (match) openPopup(match, document.body, false);
-    }
   });
 
 // Fisher-Yates shuffle, with pinned IDs guaranteed in first PINNED_WINDOW slots
@@ -167,7 +151,6 @@ function createCard(person, i) {
 // ── Photo cycling ─────────────────────────────────────────────────
 function startCycle(idx, card, firstPhoto) {
   if (timers[idx]) return;
-  if (prefersReducedMotion()) return;
   const imgs = card.querySelectorAll(".photo-stage img");
   const dir = Math.random() < 0.5 ? 1 : -1;
   let current = firstPhoto;
@@ -193,23 +176,6 @@ function startCycle(idx, card, firstPhoto) {
 // popup.addEventListener("mouseleave", scheduleClose);
 document.getElementById("popupClose").addEventListener("click", closePopup);
 document.getElementById("popupBack").addEventListener("click", popupGoBack);
-
-// Pin button — copies permalink to clipboard
-(function () {
-  const pinBtn   = document.getElementById("popupPin");
-  const pinToast = document.getElementById("popupPinToast");
-  let toastTimer;
-  pinBtn.addEventListener("click", () => {
-    const id = popup.dataset.personId;
-    if (!id) return;
-    const url = `${location.origin}${location.pathname}?id=${encodeURIComponent(id)}`;
-    navigator.clipboard.writeText(url).then(() => {
-      clearTimeout(toastTimer);
-      pinToast.classList.add("show");
-      toastTimer = setTimeout(() => pinToast.classList.remove("show"), 2000);
-    });
-  });
-})();
 
 function set(id, txt) {
   const el = document.getElementById(id);
@@ -310,14 +276,24 @@ function escapeHTML(str) {
     .replace(/"/g, "&quot;");
 }
 
+function stripHonorific(name) {
+  return name.replace(/^(ד"ר|פרופ'?|ח"כ|עו"ד|רב\s+|ד"ר\s+)\s*/u, "").trim();
+}
+
 function linkRecommendation(text) {
   let result = escapeHTML(text);
   for (const person of allPeople) {
-    const escapedName = escapeHTML(person.name);
-    result = result.replace(
-      new RegExp(escapedName, "g"),
-      `<a href="#" class="pi-rec-link" data-person-id="${person.id}">${escapedName} <span class="pi-rec-show">הצג</span></a>`,
-    );
+    const fullName     = escapeHTML(person.name);
+    const shortName    = escapeHTML(stripHonorific(person.name));
+    // Build list of name variants to try, longest first to avoid partial replacements
+    const variants = [...new Set([fullName, shortName])].sort((a, b) => b.length - a.length);
+    for (const variant of variants) {
+      if (!variant) continue;
+      result = result.replace(
+        new RegExp(variant, "g"),
+        `<a href="#" class="pi-rec-link" data-person-id="${person.id}">${variant} <span class="pi-rec-show">הצג</span></a>`,
+      );
+    }
   }
   return result;
 }
@@ -408,6 +384,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Prevent the same click/tap that opens the popup from immediately closing it
+let justOpened = false;
 document.addEventListener("click", (e) => {
   if (justOpened) {
     justOpened = false;

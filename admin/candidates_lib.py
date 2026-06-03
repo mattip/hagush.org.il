@@ -306,7 +306,7 @@ def row_to_candidate(row: dict, cid: str, photos: list[str], minimal: bool) -> d
     """Build a candidate dict from a CSV row."""
     return {
         "id":   cid,
-        "name": normalize_name(row.get(COL_NAME, "")),
+        "name": clean(row.get(COL_NAME, "")),
         "age":  clean(row.get(COL_AGE, "")),
         "home": clean(row.get(COL_HOME, "")),
         "activities":     "" if minimal else clean(row.get(COL_ACTIVITIES, "")),
