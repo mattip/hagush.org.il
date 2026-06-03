@@ -811,7 +811,6 @@ def render_import():
     for cid, row, files in matches:
         entry = lib.row_to_candidate(row, cid, [], False)
         with st.expander(f"📋 {entry['name']} (`{cid}`)"):
-            # Show already-converted photos if available from a previous run
             already_converted = st.session_state.converted_images.get(cid, [])
             if already_converted:
                 photo_cols = st.columns(len(already_converted))
@@ -819,19 +818,35 @@ def render_import():
                     col.image(img_bytes, caption=name, width='stretch')
             else:
                 st.caption(f"📁 {len(files)} image(s): {', '.join(files)}")
-            c1, c2 = st.columns(2)
-            with c1:
-                st.write(f"**Age:** {entry['age']}")
-                st.write(f"**Home:** {entry['home']}")
-                st.write(f"**Links:** {list(entry['links'].keys())}")
-            with c2:
-                for field in lib.TEXT_FIELDS:
-                    entry[field] = st.text_area(
-                        field, value=entry[field],
-                        key=f"text_{cid}_{field}", height=80
-                    )
+            st.write(f"**Age:** {entry['age']}  |  **Home:** {entry['home']}")
+            st.divider()
+            for field in lib.TEXT_FIELDS:
+                entry[field] = st.text_area(
+                    field, value=entry[field],
+                    key=f"text_{cid}_{field}", height=80
+                )
+            st.divider()
+            st.markdown("**Links**")
+            current_links = entry.get("links", {})
+            all_platforms = list(lib.LINK_COLUMNS.keys()) + ["telegram", "youtube"]
+            new_links = {}
+            for platform in all_platforms:
+                current_url = current_links.get(platform, "")
+                new_url = st.text_input(
+                    platform, value=current_url,
+                    key=f"newlink_{cid}_{platform}",
+                    placeholder="https://...",
+                )
+                new_url = new_url.strip()
+                if new_url:
+                    if not re.match(r"https?://", new_url, re.I):
+                        new_url = "https://" + new_url
+                    new_links[platform] = lib.strip_utm(new_url)
+            entry["links"] = new_links
             for e in lib.verify_links([entry]):
                 st.error(f"⚠️ {e}")
+            for w in lib.verify_links_warnings([entry]):
+                st.warning(f"⚠️ {w}")
             for w in lib.verify_texts([entry]):
                 st.warning(f"⚠️ {w}")
         staged_previews.append((cid, entry, files))
@@ -1033,7 +1048,7 @@ def render_deploy():
                   datetime.datetime.now().strftime("%Y%m%d-%H%M"))
 
     # ── Action button ─────────────────────────────────────────────────────────
-    can_deploy = has_changes and not has_errors
+    can_deploy = has_changes and (not has_errors or st.checkbox("Deploy anyway (ignore link errors)", value=False))
     if DEV_MODE:
         st.caption(f"Dev mode: branch `{branch_name}`")
         if st.button("💾 Save locally (dev)", disabled=not can_deploy):
