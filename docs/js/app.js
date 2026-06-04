@@ -25,6 +25,16 @@ fetch("candidates.json")
     allPeople = people;
     buildGrid(people);
     restoreFromCookies();
+    // Open popup from URL: ?id=emily_m or ?name=אמיר
+    const params    = new URLSearchParams(window.location.search);
+    const idParam   = params.get("id");
+    const nameParam = params.get("name");
+    if (idParam || nameParam) {
+      const match = allPeople.find((p) =>
+        idParam ? p.id === idParam : p.name === nameParam
+      );
+      if (match) openPopup(match, document.body, false);
+    }
   });
 
 // Fisher-Yates shuffle, with pinned IDs guaranteed in first PINNED_WINDOW slots
