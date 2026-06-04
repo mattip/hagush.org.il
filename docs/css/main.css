@@ -354,10 +354,10 @@ main.no-padding-bottom {
 }
 
 .f-wa {
-  margin-top: 28px;
+  margin-top: 24px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
   text-align: center;
 }
@@ -366,14 +366,16 @@ main.no-padding-bottom {
   color: var(--soft);
   margin: 0;
   font-weight: 400;
+  text-align: center;
 }
 .f-wa a.f-submit {
   width: 100%;
-  max-width: 400px;
+  text-align: center !important;
 }
 .f-wa a:not(.f-submit) {
   display: inline-flex;
   align-items: center;
+  align-self: center;
   gap: 6px;
   font-size: 1rem;
   font-weight: 700;
@@ -629,6 +631,7 @@ main.no-padding-bottom {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
 }
 .sh2-form {
   padding: 7% 8%;
@@ -980,3 +983,105 @@ footer {
 .gform-frame {
   display: none;
 }
+
+.join-form {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px 20px 20px;
+  margin-top: 24px;
+  box-shadow: 0 4px 24px rgba(26,39,68,0.10);
+  max-width: 420px;
+  width: 100%;
+}
+.jf-title {
+  color: var(--nav, #09366d);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0 0 18px;
+  text-align: center;
+}
+.jf-field { margin-bottom: 14px; }
+.jf-row { display: flex; gap: 10px; }
+.jf-row .jf-field { flex: 1; }
+.jf-label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--nav, #09366d);
+  margin-bottom: 4px;
+}
+.jf-req { color: #c00; }
+.jf-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1.5px solid #ccd3e0;
+  border-radius: 6px;
+  font-family: var(--font, "Assistant", sans-serif);
+  font-size: 0.95rem;
+  color: var(--text, #1a2744);
+  background: #f8f9fc;
+  transition: border-color 0.15s;
+}
+.jf-input:focus {
+  outline: none;
+  border-color: var(--blue, #1a6aff);
+  background: #fff;
+}
+.jf-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+.jf-note {
+  font-size: 0.82rem;
+  color: #555;
+  margin: 4px 0 10px 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #f0f4ff;
+}
+.jf-note a { color: var(--blue, #1a6aff); text-decoration: underline; }
+.jf-note-urgent {
+  background: #fff3cd;
+  color: #7a5800;
+  font-weight: 700;
+}
+.jf-note-urgent a { color: #7a5800; }
+.jf-error {
+  color: #c00;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.jf-submit {
+  display: block;
+  width: 100%;
+  background: var(--blue, #1a6aff);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: var(--font, "Assistant", sans-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 4px;
+}
+.jf-submit:hover { background: #155fe6; }
+.jf-submit:disabled { background: #aaa; cursor: not-allowed; }
+.jf-success {
+  text-align: center;
+  color: #1a7a3a;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-top: 14px;
+  padding: 10px;
+  background: #eafaf0;
+  border-radius: 6px;
+}
+
