@@ -478,11 +478,13 @@ const cookieNo = document.getElementById("cookieNo");
 const choicesOverlay = document.getElementById("choicesOverlay");
 const choicesClose = document.getElementById("choicesClose");
 const choicesCopy = document.getElementById("choicesCopy");
+const isTouch = () => navigator.maxTouchPoints > 0;
 
 btnSelect.addEventListener("click", () => {
   if (selectMode) {
     exitSelectMode();
-  } else if (getCookie(COOKIE_CONSENT_KEY) === "1") {
+  } else if (isTouch() || getCookie(COOKIE_CONSENT_KEY) === "1") {
+    setCookie(COOKIE_CONSENT_KEY, "1", COOKIE_MAX_AGE);
     enterSelectMode();
   } else {
     cookieOverlay.style.display = "flex";
