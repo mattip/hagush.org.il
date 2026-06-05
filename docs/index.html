@@ -91,12 +91,150 @@
 
       <section class="sh2">
         <div class="sh2-form-col">
+          <!-- ══ Join form — self-contained, move this div wherever needed ══ -->
+          <div class="join-form" id="signup">
+            <h3 class="jf-title">הצטרפות לעכשיו באות!</h3>
+            <form id="joinForm" novalidate>
+
+              <div class="jf-row">
+                <div class="jf-field">
+                  <label class="jf-label" for="jf-first">שם פרטי <span class="jf-req">*</span></label>
+                  <input class="jf-input" id="jf-first" name="firstName" type="text" required autocomplete="given-name" />
+                </div>
+                <div class="jf-field">
+                  <label class="jf-label" for="jf-last">שם משפחה <span class="jf-req">*</span></label>
+                  <input class="jf-input" id="jf-last" name="lastName" type="text" required autocomplete="family-name" />
+                </div>
+              </div>
+
+              <div class="jf-field">
+                <label class="jf-label" for="jf-phone">טלפון נייד <span class="jf-req">*</span></label>
+                <input class="jf-input" id="jf-phone" name="phone" type="tel" required autocomplete="tel" dir="ltr" placeholder="05X-XXXXXXX" />
+              </div>
+
+              <div class="jf-field">
+                <p class="jf-label">התפקדות לדמוקרטים <span class="jf-req">*</span></p>
+                <label class="jf-radio">
+                  <input type="radio" name="registered" value="yes" required />
+                  התפקדתי לדמוקרטים
+                </label>
+                <div class="jf-note" id="jf-note-yes" style="display:none">
+                  ממליצות לבדוק <a href="https://l.democrats.org.il/baot" target="_blank" rel="noreferrer">בלינק שלנו</a> שאתם אכן רשומים.
+                </div>
+                <label class="jf-radio">
+                  <input type="radio" name="registered" value="no" />
+                  עוד לא התפקדתי
+                </label>
+                <div class="jf-note jf-note-urgent" id="jf-note-no" style="display:none">
+                  על מנת להיות חלק מעכשיו באות ולהשפיע בפריימריז, יש להתפקד לדמוקרטים:
+                  <a href="https://l.democrats.org.il/baot" target="_blank" rel="noreferrer">להתפקדות</a>
+                </div>
+              </div>
+
+              <div class="jf-field">
+                <label class="jf-label" for="jf-city">שם יישוב</label>
+                <input class="jf-input" id="jf-city" name="city" type="text" autocomplete="address-level2" />
+              </div>
+
+              <div class="jf-field">
+                <label class="jf-label" for="jf-id">תעודת זהות</label>
+                <input class="jf-input" id="jf-id" name="idNumber" type="text" inputmode="numeric" dir="ltr" maxlength="9" />
+              </div>
+              <div class="jf-field">
+                <label class="jf-label" for="jf-source">שמעתי על <b>עכשיו באות!</b> דרך:</label>
+                <input class="jf-input" id="jf-source" name="source" type="text"/>
+              </div>
+
+
+              <div class="jf-error" id="jf-error" style="display:none"></div>
+
+              <button class="jf-submit" type="submit">שליחה</button>
+
+              <div class="jf-success" id="jf-success" style="display:none">
+                ✓ תודה! הפרטים התקבלו. נהיה בקשר!
+              </div>
+            </form>
+          </div>
+
+          <script>
+          (function () {
+            // ── Replace with your deployed Apps Script URL ──────────────────
+            const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
+            const TOKEN      = "NachshavBaot2026";
+            // ────────────────────────────────────────────────────────────────
+
+            const form    = document.getElementById("joinForm");
+            const noteYes = document.getElementById("jf-note-yes");
+            const noteNo  = document.getElementById("jf-note-no");
+            const errBox  = document.getElementById("jf-error");
+            const success = document.getElementById("jf-success");
+
+            // Show/hide registration notes on radio change
+            form.querySelectorAll("input[name='registered']").forEach(r => {
+              r.addEventListener("change", () => {
+                noteYes.style.display = r.value === "yes" ? "block" : "none";
+                noteNo.style.display  = r.value === "no"  ? "block" : "none";
+              });
+            });
+
+            form.addEventListener("submit", async (e) => {
+              e.preventDefault();
+              errBox.style.display = "none";
+
+              if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+              }
+
+              const btn = form.querySelector(".jf-submit");
+              btn.disabled = true;
+              btn.textContent = "שולח/ת...";
+
+              const data = {
+                _token:     TOKEN,
+                website:    '',            // honeypot — must stay empty
+                source:     form.source.value,
+                firstName:  form["firstName"].value.trim(),
+                lastName:   form["lastName"].value.trim(),
+                phone:      form.phone.value.trim(),
+                registered: form.registered.value,
+                city:       form.city.value.trim(),
+                idNumber:   form.idNumber.value.trim(),
+              };
+
+              // With mode: no-cors the browser can't read the response,
+              // but the request goes through. A thrown error means a real
+              // network failure (offline, wrong URL, DNS). We treat a
+              // completed fetch as success since Apps Script errors are rare.
+              let networkOk = false;
+              try {
+                await fetch(SUBMIT_URL, {
+                  method: "POST",
+                  mode: "no-cors",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(data),
+                });
+                networkOk = true;
+              } catch (err) {
+                // Network-level failure — offline, bad URL, etc.
+                const isOffline = !navigator.onLine;
+                errBox.textContent = isOffline
+                  ? "נראה שאין חיבור לאינטרנט. בדקי/י את החיבור ונסי/נסה שוב."
+                  : "שגיאה בשליחה. נסי/נסה שוב מאוחר יותר.";
+                errBox.style.display = "block";
+                btn.disabled = false;
+                btn.textContent = "שליחה";
+              }
+
+              if (networkOk) {
+                form.style.display = "none";
+                success.style.display = "block";
+              }
+            });
+          })();
+          </script>
+          <!-- ══ End join form ══ -->
           <div class="f-wa">
-            <a class="f-submit" href="https://l.democrats.org.il/baot">להתפקדות והצטרפות</a>
-            <p>הצטרפו לפעילות ובואו לקחת חלק!</p>
-            
-            
-            
             <a
               href="https://chat.whatsapp.com/D9FmoaRDlnnJab6suRWVmH"
               target="_blank"
@@ -107,13 +245,11 @@
               </div>
                קבוצת וואטסאפ לעדכונים
             </a>
-            
-            
-            
             <p>להיכרות עם המתמודדות.ים בפריימריז הציצו בעמוד מועמדים</p>
             <a class="f-submit" href="candidates.html">מועמדים
             </a>
           </div>
+
         </div>
 
         <div class="sh2-text text">
