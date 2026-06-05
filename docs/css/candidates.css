@@ -509,6 +509,7 @@ html.no-scroll {
   padding: 9px 20px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 .cookie-yes       { background: var(--blue, #1a6aff); color: #fff; }
 .cookie-yes:hover { background: #155fe6; }
@@ -552,6 +553,7 @@ html.no-scroll {
   align-items: center;
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 .choices-close:hover { background: rgba(255, 255, 255, 0.3); }
 
