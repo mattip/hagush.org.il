@@ -16,7 +16,7 @@
     <header>
       <input type="checkbox" id="nav-toggle" />
       <nav>
-        <span class="nav-logo">עכשיו באות!</span>
+        <span class="nav-logo"><img src="images/logo_white.svg" alt="עכשיו באות!" /></span>
         <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
           <span></span><span></span><span></span>
         </label>
@@ -96,6 +96,16 @@
             <h3 class="jf-title">הצטרפות לעכשיו באות!</h3>
             <form id="joinForm" novalidate>
 
+              <!-- honeypot — hidden from humans, bots fill it; must stay empty -->
+              <input
+                type="text"
+                name="website"
+                tabindex="-1"
+                autocomplete="off"
+                style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0"
+                aria-hidden="true"
+              />
+
               <div class="jf-row">
                 <div class="jf-field">
                   <label class="jf-label" for="jf-first">שם פרטי <span class="jf-req">*</span></label>
@@ -149,11 +159,11 @@
               <div class="jf-error" id="jf-error" style="display:none"></div>
 
               <button class="jf-submit" type="submit">שליחה</button>
-
-              <div class="jf-success" id="jf-success" style="display:none">
-                ✓ תודה! הפרטים התקבלו. נהיה בקשר!
-              </div>
             </form>
+
+            <div class="jf-success" id="jf-success" style="display:none">
+              ✓ תודה! הפרטים התקבלו. נהיה בקשר!
+            </div>
           </div>
 
           <script>
@@ -192,7 +202,7 @@
 
               const data = {
                 _token:     TOKEN,
-                website:    '',            // honeypot — must stay empty
+                website:    form.website.value,   // honeypot — must stay empty
                 source:     form.source.value,
                 firstName:  form["firstName"].value.trim(),
                 lastName:   form["lastName"].value.trim(),
@@ -319,6 +329,9 @@
         </div>
       </section>
     </main>
-    <footer>עכשיו באות!<br />כל הזכויות שמורות לעכשיו באות! 2026</footer>
+    <footer>
+      <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
+      כל הזכויות שמורות לעכשיו באות! 2026
+    </footer>
   </body>
 </html>

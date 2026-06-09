@@ -1,8 +1,27 @@
+// To update: go to https://script.google.com/home/project
+//
 // ── Configuration ────────────────────────────────────────────────
 const SECRET_TOKEN    = 'NachshavBaot2026';   // change if you like
-const SHEET_ID        = '1aqY3Mi045S0oD6cCuPaPhto5kWWZd_MM6mnCb6lvwbQ';
 const RATE_LIMIT_MAX  = 20;   // max submissions per window
 const RATE_LIMIT_SECS = 3600; // 1 hour
+
+// Join form 
+const JOIN_SHEET_ID      = '1aqY3Mi045S0oD6cCuPaPhto5kWWZd_MM6mnCb6lvwbQ';
+// Questions form 
+const QUESTIONS_SHEET_ID = '1USJ73gtWzgZm5tXczp0S-EFn34mbxIoS8AfbKd7XX6k';
+
+// (Alternative: to use one spreadsheet with two tabs instead of two
+//  spreadsheets, set QUESTIONS_SHEET_ID = JOIN_SHEET_ID and change
+//  getActiveSheet() below to getSheetByName('שאלות') for the questions.)
+
+// ── Column headers ────────────────────────────────────────────────
+const JOIN_COLUMNS = [
+  'Timestamp', 'איך הגעת', 'שם פרטי', 'שם משפחה',
+  'טלפון', 'התפקדות', 'יישוב', 'תעודת זהות',
+];
+const QUESTION_COLUMNS = [
+  'Timestamp', 'מועמד.ת', 'שם', 'טלפון', 'יישוב', 'התפקדות', 'שאלה',
+];
 
 // ── Rate limiting via PropertiesService ──────────────────────────
 function checkRateLimit() {
@@ -23,11 +42,15 @@ function checkRateLimit() {
   return count <= RATE_LIMIT_MAX;
 }
 
-// ── Column headers ────────────────────────────────────────────────
-const COLUMNS = [
-  'Timestamp', 'איך הגעת', 'שם פרטי', 'שם משפחה',
-  'טלפון', 'התפקדות', 'יישוב', 'תעודת זהות',
-];
+// ── Helper: append a row, creating a bold header row if empty ─────
+function appendRow(sheetId, columns, values) {
+  const sheet = SpreadsheetApp.openById(sheetId).getActiveSheet();
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(columns);
+    sheet.getRange(1, 1, 1, columns.length).setFontWeight('bold');
+  }
+  sheet.appendRow(values);
+}
 
 // ── Main POST handler ─────────────────────────────────────────────
 function doPost(e) {
@@ -62,7 +85,21 @@ function doPost(e) {
     return respond(false, 'too many requests');
   }
 
-  // 4. Required field validation
+  // 4. Route by form type
+  const type = data.formType || 'join';
+  try {
+    if (type === 'question') {
+      return handleQuestion(data, respond);
+    }
+    return handleJoin(data, respond);
+  } catch (err) {
+    Logger.log('Sheet error: ' + err.toString());
+    return respond(false, 'sheet error');
+  }
+}
+
+// ── Join form (first spreadsheet) ─────────────────────────────────
+function handleJoin(data, respond) {
   const required = ['firstName', 'lastName', 'phone', 'registered', 'source'];
   for (const field of required) {
     if (!data[field] || String(data[field]).trim() === '') {
@@ -70,58 +107,64 @@ function doPost(e) {
     }
   }
 
-  // 5. Write to sheet
-  try {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
-
-    // Add header row if sheet is empty
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(COLUMNS);
-      sheet.getRange(1, 1, 1, COLUMNS.length).setFontWeight('bold');
-    }
-
-    sheet.appendRow([
-      new Date(),
-      data.source      || '',
-      data.firstName   || '',
-      data.lastName    || '',
-      data.phone       || '',
-      data.registered === 'yes' ? 'התפקד/ה' : 'לא התפקד/ה',
-      data.city        || '',
-      data.idNumber    || '',
-    ]);
-  } catch (err) {
-    Logger.log('Sheet error: ' + err.toString());
-    return respond(false, 'sheet error');
-  }
+  appendRow(JOIN_SHEET_ID, JOIN_COLUMNS, [
+    new Date(),
+    data.source      || '',
+    data.firstName   || '',
+    data.lastName    || '',
+    data.phone       || '',
+    data.registered === 'yes' ? 'התפקד/ה' : 'לא התפקד/ה',
+    data.city        || '',
+    data.idNumber    || '',
+  ]);
 
   return respond(true, 'תודה! הפרטים התקבלו בהצלחה');
+}
+
+// ── Questions form (second spreadsheet) ───────────────────────────
+function handleQuestion(data, respond) {
+  const required = ['name', 'phone', 'question'];
+  for (const field of required) {
+    if (!data[field] || String(data[field]).trim() === '') {
+      return respond(false, `missing field: ${field}`);
+    }
+  }
+
+  appendRow(QUESTIONS_SHEET_ID, QUESTION_COLUMNS, [
+    new Date(),
+    data.candidate   || '',
+    data.name        || '',
+    data.phone       || '',
+    data.city        || '',
+    data.registered === 'yes' ? 'התפקד/ה' : 'לא התפקד/ה',
+    data.question    || '',
+  ]);
+
+  return respond(true, 'תודה! השאלה התקבלה');
 }
 
 // ── Verify endpoint is live ───────────────────────────────────────
 function doGet() {
   return ContentService
-    .createTextOutput('Join form endpoint is live.')
+    .createTextOutput('Form endpoint is live.')
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
-// ── Manual test ───────────────────────────────────────────────────
-function test_post() {
-  const fakeEvent = {
-    postData: {
-      contents: JSON.stringify({
-        _token:     'NachshavBaot2026',
-        website:    '',
-        source:     'whatsapp',
-        firstName:  'ישראל',
-        lastName:   'ישראלי',
-        phone:      '050-0000000',
-        registered: 'yes',
-        city:       'תל אביב',
-        idNumber:   '',
-      })
-    }
-  };
-  const result = doPost(fakeEvent);
-  Logger.log(result.getContent());
+// ── Manual tests ──────────────────────────────────────────────────
+function test_join() {
+  const fakeEvent = { postData: { contents: JSON.stringify({
+    _token: SECRET_TOKEN, website: '', source: 'whatsapp',
+    firstName: 'ישראל', lastName: 'ישראלי', phone: '050-0000000',
+    registered: 'yes', city: 'תל אביב', idNumber: '',
+  }) } };
+  Logger.log(doPost(fakeEvent).getContent());
+}
+
+function test_question() {
+  const fakeEvent = { postData: { contents: JSON.stringify({
+    _token: SECRET_TOKEN, formType: 'question', website: '',
+    candidate: 'נעמה לזימי', name: 'ישראל ישראלי', phone: '050-0000000',
+    city: 'תל אביב', registered: 'no', question: 'מה עמדתך בנושא הדיור?',
+  }) } };
+  Logger.log(doPost(fakeEvent).getContent());
 }
