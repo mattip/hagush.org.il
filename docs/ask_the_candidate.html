@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>המועמד.ת השבועי.ת | עכשיו באות!</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/main.css" />
+    <link rel="canonical" href="https://hagush.org.il/ask_the_candidate.html" />
+  </head>
+  <body>
+    <header>
+      <input type="checkbox" id="nav-toggle" />
+      <nav>
+        <span class="nav-logo"><img src="images/logo_white.svg" alt="עכשיו באות!" /></span>
+        <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
+          <span></span><span></span><span></span>
+        </label>
+        <ul>
+          <li><a href="index.html">דף בית</a></li>
+          <li><a href="about.html">אודות</a></li>
+          <li><a href="candidates.html">בחירות בדמוקרטים!</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ═══════════ Hero image ═══════════ -->
+      <section class="atc-hero">
+        <img src="images/hagush_protest.avif" alt="הפגנה — עכשיו באות!" />
+      </section>
+
+      <!-- ═══════════ Titles (on gray) + form (white box) ═══════════ -->
+      <section class="atc">
+        <h1 class="atc-title">המועמד.ת השבועי.ת</h1>
+        <p class="atc-sub">
+          כל שבוע נאסוף שאלות עבור מועמד.ת אחר.ת. השבוע
+          <b id="atc-week-name">___</b>
+        </p>
+
+        <!-- ══ Ask-the-candidate form — self-contained ══ -->
+        <div class="join-form atc-form" id="askbox">
+          <form id="askForm" novalidate>
+            <!-- honeypot — must stay empty -->
+            <input
+              type="text"
+              name="website"
+              tabindex="-1"
+              autocomplete="off"
+              style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0"
+              aria-hidden="true"
+            />
+
+            <!-- ── Edit the weekly candidate name here (one place) ── -->
+            <input type="hidden" id="atc-candidate" name="candidate" value="___" />
+
+            <div class="jf-field">
+              <label class="jf-label" for="atc-name">שם <span class="jf-req">*</span></label>
+              <input class="jf-input" id="atc-name" name="name" type="text" required autocomplete="name" />
+            </div>
+
+            <div class="jf-field">
+              <label class="jf-label" for="atc-phone">טלפון <span class="jf-req">*</span></label>
+              <input class="jf-input" id="atc-phone" name="phone" type="tel" required autocomplete="tel" dir="ltr" placeholder="05X-XXXXXXX" />
+            </div>
+
+            <div class="jf-field">
+              <label class="jf-label" for="atc-city">יישוב</label>
+              <input class="jf-input" id="atc-city" name="city" type="text" autocomplete="address-level2" />
+            </div>
+
+            <div class="jf-field">
+              <p class="jf-label">התפקדות לדמוקרטים <span class="jf-req">*</span></p>
+              <label class="jf-radio">
+                <input type="radio" name="registered" value="yes" required />
+                התפקדתי לדמוקרטים
+              </label>
+              <div class="jf-note" id="jf-note-yes" style="display:none">
+                ממליצות לבדוק <a href="https://l.democrats.org.il/baot" target="_blank" rel="noreferrer">בלינק שלנו</a> שאתם אכן רשומים.
+              </div>
+              <label class="jf-radio">
+                <input type="radio" name="registered" value="no" />
+                עוד לא התפקדתי
+              </label>
+              <div class="jf-note jf-note-urgent" id="jf-note-no" style="display:none">
+                על מנת להיות חלק מעכשיו באות ולהשפיע בפריימריז, יש להתפקד לדמוקרטים:
+                <a href="https://l.democrats.org.il/baot" target="_blank" rel="noreferrer">להתפקדות</a>
+              </div>
+            </div>
+
+            <div class="jf-field">
+              <label class="jf-label" for="atc-question">השאלה שלי ל<span id="atc-q-name">___</span> <span class="jf-req">*</span></label>
+              <textarea class="jf-input atc-textarea" id="atc-question" name="question" rows="4" required></textarea>
+            </div>
+
+            <div class="jf-error" id="atc-error" style="display:none"></div>
+
+            <button class="jf-submit atc-submit" type="submit">שליחת השאלה</button>
+          </form>
+
+          <div class="jf-success" id="atc-success" style="display:none">
+            ✓ תודה! השאלה התקבלה.
+          </div>
+        </div>
+        <!-- ══ End form ══ -->
+      </section>
+    </main>
+
+    <footer>
+      <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
+      כל הזכויות שמורות לעכשיו באות! 2026
+    </footer>
+
+    <script>
+      (function () {
+        // ── Config ──────────────────────────────────────────────────
+        // Same endpoint as the join form. The formType field tells the
+        // Apps Script to store this in the questions spreadsheet.
+        const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
+        const TOKEN      = "NachshavBaot2026";
+
+        const form    = document.getElementById("askForm");
+        const noteYes = document.getElementById("jf-note-yes");
+        const noteNo  = document.getElementById("jf-note-no");
+        const errBox  = document.getElementById("atc-error");
+        const success = document.getElementById("atc-success");
+
+        // Show the matching note when a registration option is picked.
+        form.querySelectorAll("input[name='registered']").forEach(r => {
+          r.addEventListener("change", () => {
+            noteYes.style.display = r.value === "yes" ? "block" : "none";
+            noteNo.style.display  = r.value === "no"  ? "block" : "none";
+          });
+        });
+
+        // Weekly candidate comes from the hidden field (edit its value
+        // in the HTML). The subtitle and question label reflect it.
+        const candidateName = form.candidate.value;
+        document.getElementById("atc-week-name").textContent = candidateName;
+        document.getElementById("atc-q-name").textContent = candidateName;
+
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          errBox.style.display = "none";
+
+          if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+          }
+
+          const btn = form.querySelector(".atc-submit");
+          btn.disabled = true;
+          btn.textContent = "שולח/ת...";
+
+          const data = {
+            _token:     TOKEN,
+            formType:   "question",          // <-- routes to the questions sheet
+            website:    form.website.value,  // honeypot
+            candidate:  form.candidate.value,
+            name:       form.name.value.trim(),
+            phone:      form.phone.value.trim(),
+            city:       form.city.value.trim(),
+            registered: form.registered.value,
+            question:   form.question.value.trim(),
+          };
+
+          let networkOk = false;
+          try {
+            await fetch(SUBMIT_URL, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+            networkOk = true;
+          } catch (err) {
+            const isOffline = !navigator.onLine;
+            errBox.textContent = isOffline
+              ? "נראה שאין חיבור לאינטרנט. בדקי/י את החיבור ונסי/נסה שוב."
+              : "שגיאה בשליחה. נסי/נסה שוב מאוחר יותר.";
+            errBox.style.display = "block";
+            btn.disabled = false;
+            btn.textContent = "שליחת השאלה";
+          }
+
+          if (networkOk) {
+            form.style.display = "none";
+            success.style.display = "block";
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
