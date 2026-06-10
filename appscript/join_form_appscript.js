@@ -47,12 +47,33 @@ const REFERRERS = [
   'הילה גולן',            // 25
 ];
 
-function referrerName(idx) {
+function editDistance(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m + 1}, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1]
+                 : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function referrerName(idx, source) {
   const n = parseInt(idx, 10);
-  if (!n || n < 1 || n > REFERRERS.length) {
-    return idx ? String(idx) : '';   // unknown/blank: keep the raw value so nothing is lost
+  if (n >= 1 && n <= REFERRERS.length) return REFERRERS[n - 1];
+
+  // idx is invalid — try fuzzy-matching source against the REFERRERS list
+  const candidate = (source || idx || '').trim();
+  if (candidate) {
+    let best = null, bestDist = 3;   // accept only ≤ 2 edits
+    for (const name of REFERRERS) {
+      const d = editDistance(candidate, name);
+      if (d < bestDist) { bestDist = d; best = name; }
+    }
+    if (best) return best;
   }
-  return REFERRERS[n - 1];
+
+  return candidate;   // no close match: keep raw value so nothing is lost
 }
 const QUESTION_COLUMNS = [
   'Timestamp', 'מועמד.ת', 'שם', 'טלפון', 'יישוב', 'התפקדות', 'שאלה',
@@ -133,7 +154,7 @@ function doPost(e) {
   }
 }
 
-// ── Join form (first spreadsheet) ─────────────────────────────────
+// ── Join form 
 function handleJoin(data, respond) {
   const required = ['firstName', 'lastName', 'phone', 'registered', 'source'];
   for (const field of required) {
@@ -151,13 +172,13 @@ function handleJoin(data, respond) {
     data.registered === 'yes' ? 'התפקד/ה' : 'לא התפקד/ה',
     data.city        || '',
     data.idNumber    || '',
-    referrerName(data.referrer),
+    referrerName(data.referrer, data.source),
   ]);
 
   return respond(true, 'תודה! הפרטים התקבלו בהצלחה');
 }
 
-// ── Questions form (second spreadsheet) ───────────────────────────
+// ── Questions form 
 function handleQuestion(data, respond) {
   const required = ['name', 'phone', 'question'];
   for (const field of required) {
