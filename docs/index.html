@@ -184,7 +184,10 @@
 
             // Capture the referral index from the URL (?referrer=N)
             const refParam = new URLSearchParams(location.search).get("referrer");
-            if (refParam) form.referrer.value = refParam;
+            if (refParam) {
+              form.referrer.value = refParam;
+              document.getElementById("signup").scrollIntoView({ behavior: "smooth" });
+            }
 
             // Show/hide registration notes on radio change
             form.querySelectorAll("input[name='registered']").forEach(r => {
