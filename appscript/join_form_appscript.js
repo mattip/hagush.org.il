@@ -1,24 +1,59 @@
 // To update: go to https://script.google.com/home/project
 //
+
 // ── Configuration ────────────────────────────────────────────────
 const SECRET_TOKEN    = 'NachshavBaot2026';   // change if you like
 const RATE_LIMIT_MAX  = 20;   // max submissions per window
 const RATE_LIMIT_SECS = 3600; // 1 hour
 
-// Join form 
+// Join form
 const JOIN_SHEET_ID      = '1aqY3Mi045S0oD6cCuPaPhto5kWWZd_MM6mnCb6lvwbQ';
-// Questions form 
+// Questions form
 const QUESTIONS_SHEET_ID = '1USJ73gtWzgZm5tXczp0S-EFn34mbxIoS8AfbKd7XX6k';
 
-// (Alternative: to use one spreadsheet with two tabs instead of two
-//  spreadsheets, set QUESTIONS_SHEET_ID = JOIN_SHEET_ID and change
-//  getActiveSheet() below to getSheetByName('שאלות') for the questions.)
 
 // ── Column headers ────────────────────────────────────────────────
 const JOIN_COLUMNS = [
-  'Timestamp', 'איך הגעת', 'שם פרטי', 'שם משפחה',
-  'טלפון', 'התפקדות', 'יישוב', 'תעודת זהות',
+  'Timestamp', 'איך הגעת', 'first_name', 'family_name',
+  'tel', 'registered', 'home', 'id_num', 'referrer',
 ];
+
+// referrer index (?referrer=N, 1-based) -> name. Edit/extend this list as needed.
+const REFERRERS = [
+  'נופר בן צור',          //  1
+  'פולה קויש',            //  2
+  'דורית זמיר',           //  3
+  'ציון רקנטי',           //  4
+  'אורלי באר שגב',        //  5
+  'צור משעל',             //  6
+  'רותי בן יקר',          //  7
+  'אילון ורטהיים',        //  8
+  'עידית אלכסנדרוביץ',    //  9
+  'עמוס דורון',           // 10
+  'צפי שומר',             // 11
+  'דורי סלע',             // 12
+  'שבתאי גבאי',           // 13
+  'ראובן קוסט',           // 14
+  'נגה בר-און',           // 15
+  'אוסנת נויה פריש',      // 16
+  'טל קורנט',             // 17
+  'ליאור צ’רבינסקי',      // 18
+  'לילך אברמוביץ',        // 19
+  'יפתח שטיין',           // 20
+  'גיא אדוט',             // 21
+  'בשמת אילת בן יעקב',    // 22
+  'דפנה מילר',            // 23
+  'נורית מלניק',          // 24
+  'הילה גולן',            // 25
+];
+
+function referrerName(idx) {
+  const n = parseInt(idx, 10);
+  if (!n || n < 1 || n > REFERRERS.length) {
+    return idx ? String(idx) : '';   // unknown/blank: keep the raw value so nothing is lost
+  }
+  return REFERRERS[n - 1];
+}
 const QUESTION_COLUMNS = [
   'Timestamp', 'מועמד.ת', 'שם', 'טלפון', 'יישוב', 'התפקדות', 'שאלה',
 ];
@@ -116,6 +151,7 @@ function handleJoin(data, respond) {
     data.registered === 'yes' ? 'התפקד/ה' : 'לא התפקד/ה',
     data.city        || '',
     data.idNumber    || '',
+    referrerName(data.referrer),
   ]);
 
   return respond(true, 'תודה! הפרטים התקבלו בהצלחה');

@@ -28,35 +28,35 @@
       </nav>
     </header>
 
-    <main>
-      <!-- ═══════════ Hero image ═══════════ -->
-      <section class="atc-hero">
-        <img src="images/hagush_protest.avif" alt="הפגנה — עכשיו באות!" />
-      </section>
+    <!-- ╔══════════════════════════════════════════════╗
+         ║  CONFIGURE WEEKLY CANDIDATE — edit id here  ║
+         ╚══════════════════════════════════════════════╝ -->
+    <main data-candidate-id="___">
 
-      <!-- ═══════════ Titles (on gray) + form (white box) ═══════════ -->
+      <!-- ═══════════ Candidate photo (left) + title/form (right) ═══════════ -->
       <section class="atc">
-        <h1 class="atc-title">המועמד.ת השבועי.ת</h1>
-        <p class="atc-sub">
-          כל שבוע נאסוף שאלות עבור מועמד.ת אחר.ת. השבוע
-          <b id="atc-week-name">___</b>
-        </p>
+        <!-- text + form column -->
+        <div class="atc-text-col">
+          <h1 class="atc-title">המועמד.ת השבועי.ת</h1>
+          <p class="atc-sub">
+            כל שבוע נאסוף שאלות עבור מועמד.ת אחר.ת. השבוע
+            <b id="atc-week-name">טוען…</b>
+          </p>
 
-        <!-- ══ Ask-the-candidate form — self-contained ══ -->
-        <div class="join-form atc-form" id="askbox">
-          <form id="askForm" novalidate>
-            <!-- honeypot — must stay empty -->
-            <input
-              type="text"
-              name="website"
-              tabindex="-1"
-              autocomplete="off"
-              style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0"
-              aria-hidden="true"
-            />
+          <!-- ══ Ask-the-candidate form — self-contained ══ -->
+          <div class="join-form atc-form" id="askbox">
+            <form id="askForm" novalidate>
+              <!-- honeypot — must stay empty -->
+              <input
+                type="text"
+                name="website"
+                tabindex="-1"
+                autocomplete="off"
+                style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0"
+                aria-hidden="true"
+              />
 
-            <!-- ── Edit the weekly candidate name here (one place) ── -->
-            <input type="hidden" id="atc-candidate" name="candidate" value="___" />
+              <input type="hidden" id="atc-candidate" name="candidate" value="" />
 
             <div class="jf-field">
               <label class="jf-label" for="atc-name">שם <span class="jf-req">*</span></label>
@@ -102,11 +102,18 @@
             <button class="jf-submit atc-submit" type="submit">שליחת השאלה</button>
           </form>
 
-          <div class="jf-success" id="atc-success" style="display:none">
-            ✓ תודה! השאלה התקבלה.
-          </div>
+              <div class="jf-success" id="atc-success" style="display:none">
+                ✓ תודה! השאלה התקבלה.
+              </div>
+            </div>
+            <!-- ══ End form ══ -->
+          <!-- /atc-text-col -->
         </div>
-        <!-- ══ End form ══ -->
+
+        <!-- photo column -->
+        <div class="atc-photo-col">
+          <img id="atc-photo" class="atc-candidate-photo" src="" alt="" />
+        </div>
       </section>
     </main>
 
@@ -117,17 +124,35 @@
 
     <script>
       (function () {
-        // ── Config ──────────────────────────────────────────────────
-        // Same endpoint as the join form. The formType field tells the
-        // Apps Script to store this in the questions spreadsheet.
         const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
         const TOKEN      = "NachshavBaot2026";
 
+        const candidateId = new URLSearchParams(location.search).get("id")
+                         || document.querySelector("main").dataset.candidateId;
         const form    = document.getElementById("askForm");
         const noteYes = document.getElementById("jf-note-yes");
         const noteNo  = document.getElementById("jf-note-no");
         const errBox  = document.getElementById("atc-error");
         const success = document.getElementById("atc-success");
+
+        // Load candidate name + photo from candidates.json
+        fetch("candidates.json")
+          .then(r => r.json())
+          .then(list => {
+            const c = list.find(x => x.id === candidateId);
+            if (!c) { document.getElementById("atc-week-name").textContent = "⚠ מזהה מועמד לא נמצא: " + candidateId; return; }
+            document.getElementById("atc-week-name").textContent = c.name;
+            document.getElementById("atc-q-name").textContent    = c.name;
+            form.candidate.value = c.name;
+            const photo = document.getElementById("atc-photo");
+            const src   = c.photos && c.photos[2];
+            if (src) {
+              photo.src = "portraits/" + src;
+              photo.alt = c.name;
+            } else {
+              photo.closest(".atc-photo-col").style.display = "none";
+            }
+          });
 
         // Show the matching note when a registration option is picked.
         form.querySelectorAll("input[name='registered']").forEach(r => {
@@ -136,12 +161,6 @@
             noteNo.style.display  = r.value === "no"  ? "block" : "none";
           });
         });
-
-        // Weekly candidate comes from the hidden field (edit its value
-        // in the HTML). The subtitle and question label reflect it.
-        const candidateName = form.candidate.value;
-        document.getElementById("atc-week-name").textContent = candidateName;
-        document.getElementById("atc-q-name").textContent = candidateName;
 
         form.addEventListener("submit", async (e) => {
           e.preventDefault();
