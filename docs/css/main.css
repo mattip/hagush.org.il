@@ -1109,19 +1109,19 @@ footer {
 /* Mobile: single column, photo above form */
 .atc {
   background: var(--light);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr;
   text-align: center;
 }
 .atc-text-col {
   width: 100%;
   max-width: 480px;
   padding: 2rem 1.5rem 3rem;
+  margin: 0 auto;
 }
 .atc-photo-col {
   order: -1; /* photo above text on mobile */
-  padding: 2rem 1.5rem 0;
+  padding: 0;
 }
 .atc-candidate-photo {
   width: 100%;
@@ -1161,26 +1161,29 @@ footer {
   .atc-sub   { font-size: 1rem; }
 }
 
-/* Desktop: two-column grid. In RTL, col-1 = visual right, col-2 = visual left.
-   HTML order is [text-col, photo-col] so text sits right, photo sits left. */
+/* Desktop: two-column grid. Explicit grid-column placement so order never matters.
+   In RTL: col 1 = visual right (form), col 2 = visual left (photo). */
 @media (min-width: 768px) {
   .atc {
-    display: grid;
     grid-template-columns: 1fr 1fr;
     text-align: right;
     min-height: 70vh;
     align-items: stretch;
   }
   .atc-text-col {
+    grid-column: 1;
+    grid-row: 1;
     max-width: none;
+    margin: 0;
     padding: 3.5rem 3rem 3.5rem 2rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
   }
   .atc-photo-col {
+    grid-column: 2;
+    grid-row: 1;
     order: 0;
-    padding: 0;
     background: var(--steel, #e8ecf4);
     display: flex;
     align-items: center;
