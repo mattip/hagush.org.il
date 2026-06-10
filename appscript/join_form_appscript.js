@@ -1,24 +1,80 @@
 // To update: go to https://script.google.com/home/project
 //
+
 // ── Configuration ────────────────────────────────────────────────
 const SECRET_TOKEN    = 'NachshavBaot2026';   // change if you like
 const RATE_LIMIT_MAX  = 20;   // max submissions per window
 const RATE_LIMIT_SECS = 3600; // 1 hour
 
-// Join form 
+// Join form
 const JOIN_SHEET_ID      = '1aqY3Mi045S0oD6cCuPaPhto5kWWZd_MM6mnCb6lvwbQ';
-// Questions form 
+// Questions form
 const QUESTIONS_SHEET_ID = '1USJ73gtWzgZm5tXczp0S-EFn34mbxIoS8AfbKd7XX6k';
 
-// (Alternative: to use one spreadsheet with two tabs instead of two
-//  spreadsheets, set QUESTIONS_SHEET_ID = JOIN_SHEET_ID and change
-//  getActiveSheet() below to getSheetByName('שאלות') for the questions.)
 
 // ── Column headers ────────────────────────────────────────────────
 const JOIN_COLUMNS = [
-  'Timestamp', 'איך הגעת', 'שם פרטי', 'שם משפחה',
-  'טלפון', 'התפקדות', 'יישוב', 'תעודת זהות',
+  'Timestamp', 'איך הגעת', 'first_name', 'family_name',
+  'tel', 'registered', 'home', 'id_num', 'referrer',
 ];
+
+// referrer index (?referrer=N, 1-based) -> name. Edit/extend this list as needed.
+const REFERRERS = [
+  'נופר בן צור',          //  1
+  'פולה קויש',            //  2
+  'דורית זמיר',           //  3
+  'ציון רקנטי',           //  4
+  'אורלי באר שגב',        //  5
+  'צור משעל',             //  6
+  'רותי בן יקר',          //  7
+  'אילון ורטהיים',        //  8
+  'עידית אלכסנדרוביץ',    //  9
+  'עמוס דורון',           // 10
+  'צפי שומר',             // 11
+  'דורי סלע',             // 12
+  'שבתאי גבאי',           // 13
+  'ראובן קוסט',           // 14
+  'נגה בר-און',           // 15
+  'אוסנת נויה פריש',      // 16
+  'טל קורנט',             // 17
+  'ליאור צ’רבינסקי',      // 18
+  'לילך אברמוביץ',        // 19
+  'יפתח שטיין',           // 20
+  'גיא אדוט',             // 21
+  'בשמת אילת בן יעקב',    // 22
+  'דפנה מילר',            // 23
+  'נורית מלניק',          // 24
+  'הילה גולן',            // 25
+];
+
+function editDistance(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m + 1}, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1]
+                 : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function referrerName(idx, source) {
+  const n = parseInt(idx, 10);
+  if (n >= 1 && n <= REFERRERS.length) return REFERRERS[n - 1];
+
+  // idx is invalid — try fuzzy-matching source against the REFERRERS list
+  const candidate = (source || idx || '').trim();
+  if (candidate) {
+    let best = null, bestDist = 3;   // accept only ≤ 2 edits
+    for (const name of REFERRERS) {
+      const d = editDistance(candidate, name);
+      if (d < bestDist) { bestDist = d; best = name; }
+    }
+    if (best) return best;
+  }
+
+  return candidate;   // no close match: keep raw value so nothing is lost
+}
 const QUESTION_COLUMNS = [
   'Timestamp', 'מועמד.ת', 'שם', 'טלפון', 'יישוב', 'התפקדות', 'שאלה',
 ];
@@ -98,7 +154,7 @@ function doPost(e) {
   }
 }
 
-// ── Join form (first spreadsheet) ─────────────────────────────────
+// ── Join form 
 function handleJoin(data, respond) {
   const required = ['firstName', 'lastName', 'phone', 'registered', 'source'];
   for (const field of required) {
@@ -116,12 +172,13 @@ function handleJoin(data, respond) {
     data.registered === 'yes' ? 'התפקד/ה' : 'לא התפקד/ה',
     data.city        || '',
     data.idNumber    || '',
+    referrerName(data.referrer, data.source),
   ]);
 
   return respond(true, 'תודה! הפרטים התקבלו בהצלחה');
 }
 
-// ── Questions form (second spreadsheet) ───────────────────────────
+// ── Questions form 
 function handleQuestion(data, respond) {
   const required = ['name', 'phone', 'question'];
   for (const field of required) {

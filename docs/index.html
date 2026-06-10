@@ -106,6 +106,9 @@
                 aria-hidden="true"
               />
 
+              <!-- referral index from ?referrer=N in the URL; mapped to a name in Apps Script -->
+              <input type="hidden" name="referrer" id="jf-referrer" value="" />
+
               <div class="jf-row">
                 <div class="jf-field">
                   <label class="jf-label" for="jf-first">שם פרטי <span class="jf-req">*</span></label>
@@ -179,6 +182,13 @@
             const errBox  = document.getElementById("jf-error");
             const success = document.getElementById("jf-success");
 
+            // Capture the referral index from the URL (?referrer=N)
+            const refParam = new URLSearchParams(location.search).get("referrer");
+            if (refParam) {
+              form.referrer.value = refParam;
+              document.getElementById("signup").scrollIntoView({ behavior: "smooth" });
+            }
+
             // Show/hide registration notes on radio change
             form.querySelectorAll("input[name='registered']").forEach(r => {
               r.addEventListener("change", () => {
@@ -210,6 +220,7 @@
                 registered: form.registered.value,
                 city:       form.city.value.trim(),
                 idNumber:   form.idNumber.value.trim(),
+                referrer:   form.referrer.value,
               };
 
               // With mode: no-cors the browser can't read the response,

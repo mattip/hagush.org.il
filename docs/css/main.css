@@ -83,12 +83,12 @@ nav {
   white-space: nowrap;
 }
 .nav-logo img {
-  height: 30px;
+  height: 26px;
   width: auto;
   display: block;
 }
 .footer-logo {
-  height: 34px;
+  height: 29px;
   width: auto;
   display: block;
   margin: 0 auto;
@@ -1106,30 +1106,29 @@ footer {
 /* ── ask_the_candidate page ──────────────────────────────────────
    Page-specific rules. Reuses .join-form / .jf-* defined above. */
 
-/* Hero image banner (full width, like the home page hero) */
-.atc-hero {
-  width: 100%;
-  height: 38vh;
-  min-height: 220px;
-  max-height: 460px;
-  overflow: hidden;
-  background: var(--light);
-}
-.atc-hero img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 30%;
-}
-
-/* Titles + form sit on the grey background */
+/* Mobile: single column, photo above form */
 .atc {
   background: var(--light);
-  padding: 2.5rem 1.5rem 3rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+}
+.atc-text-col {
+  width: 100%;
+  max-width: 480px;
+  padding: 2rem 1.5rem 3rem;
+}
+.atc-photo-col {
+  order: -1; /* photo above text on mobile */
+  padding: 2rem 1.5rem 0;
+}
+.atc-candidate-photo {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
 }
 .atc-title {
   color: var(--nav, #09366d);
@@ -1140,7 +1139,6 @@ footer {
 .atc-sub {
   color: var(--muted, #5a6380);
   font-size: 1.1rem;
-  max-width: 540px;
   margin: 0 0 0.5em;
   line-height: 1.6;
 }
@@ -1148,15 +1146,10 @@ footer {
   color: var(--blue, #1a6aff);
   font-weight: 800;
 }
-
-/* White form box — inherits .join-form, just widen a touch + center */
 .atc-form {
   width: 100%;
-  max-width: 480px;
   margin-top: 1.5rem;
 }
-
-/* Textarea sizing (form colours inherit index.html's blue .jf-* styles) */
 .atc-textarea {
   resize: vertical;
   min-height: 96px;
@@ -1164,25 +1157,43 @@ footer {
 }
 
 @media (max-width: 480px) {
-  .atc-hero { height: 32vh; }
   .atc-title { font-size: 1.6rem; }
-  .atc-sub { font-size: 1rem; }
-  .atc { padding: 2rem 1rem 2.5rem; }
+  .atc-sub   { font-size: 1rem; }
 }
 
-/* Desktop: show a full-width horizontal strip of the (portrait) hero,
-   with the top edge locked at exactly 25% of the image height.
-   translateY(-25%) shifts the image up by 25% of its OWN height, so the
-   crop always starts at 25% regardless of viewport width. Height in vw
-   keeps the strip proportional. Edit 34vw to make the strip taller/shorter. */
+/* Desktop: two-column grid. In RTL, col-1 = visual right, col-2 = visual left.
+   HTML order is [text-col, photo-col] so text sits right, photo sits left. */
 @media (min-width: 768px) {
-  .atc-hero {
-    height: 34vw;
-    min-height: 0;
-    max-height: none;
+  .atc {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    text-align: right;
+    min-height: 70vh;
+    align-items: stretch;
   }
-  .atc-hero img {
-    height: auto;            /* natural height at full width */
-    transform: translateY(-25%);
+  .atc-text-col {
+    max-width: none;
+    padding: 3.5rem 3rem 3.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .atc-photo-col {
+    order: 0;
+    padding: 0;
+    background: var(--steel, #e8ecf4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .atc-candidate-photo {
+    width: 100%;
+    max-width: 340px;
+    height: auto;
+    aspect-ratio: 3 / 4;
+    border-radius: 0;
+    box-shadow: none;
+    object-fit: cover;
+    object-position: center top;
   }
 }
