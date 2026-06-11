@@ -37,10 +37,15 @@
       <section class="atc">
         <!-- text + form column -->
         <div class="atc-text-col">
-          <h1 class="atc-title">המועמד.ת השבועי.ת</h1>
+          <p class="atc-label">עכשיו באות שואלות!</p>
+          <h1 class="atc-title" id="atc-week-name">טוען…</h1>
+          <p class="atc-sub" id="atc-time-line" style="display:none">
+            <span class="atc-first-name"></span> יצטרף אלינו לקבוצה ביום <b id="atc-day"></b><br>בשעה <b id="atc-time"></b> ויענה על כל השאלות.
+          </p>
           <p class="atc-sub">
-            כל שבוע נאסוף שאלות עבור מועמד.ת אחר.ת. השבוע
-            <b id="atc-week-name">טוען…</b>
+            יש לך שאלה ל<span class="atc-first-name"></span>? מלא.י את הטופס.</p>
+          <p class="atc-sub">
+            <a class=link href="https://chat.whatsapp.com/KYjojL9gh7g5fTQxEzB1HA?s=cl&p=i&ilr=0" target="_blank" rel="noreferrer">קישור לקבוצה בה יתקיים הראיון</a>
           </p>
 
           <!-- ══ Ask-the-candidate form — self-contained ══ -->
@@ -66,6 +71,11 @@
             <div class="jf-field">
               <label class="jf-label" for="atc-phone">טלפון <span class="jf-req">*</span></label>
               <input class="jf-input" id="atc-phone" name="phone" type="tel" required autocomplete="tel" dir="ltr" placeholder="05X-XXXXXXX" />
+            </div>
+
+            <div class="jf-field">
+              <label class="jf-label" for="atc-email">אימייל</label>
+              <input class="jf-input" id="atc-email" name="email" type="email" autocomplete="email" dir="ltr" />
             </div>
 
             <div class="jf-field">
@@ -141,9 +151,16 @@
           .then(list => {
             const c = list.find(x => x.id === candidateId);
             if (!c) { document.getElementById("atc-week-name").textContent = "⚠ מזהה מועמד לא נמצא: " + candidateId; return; }
+            const firstName = c.first_name || c.name.split(/\s+/)[0];
             document.getElementById("atc-week-name").textContent = c.name;
             document.getElementById("atc-q-name").textContent    = c.name;
+            document.querySelectorAll(".atc-first-name").forEach(el => { el.textContent = firstName; });
             form.candidate.value = c.name;
+            if (c.interview_day && c.interview_time) {
+              document.getElementById("atc-day").textContent  = c.interview_day;
+              document.getElementById("atc-time").textContent = c.interview_time;
+              document.getElementById("atc-time-line").style.display = "";
+            }
             const photo = document.getElementById("atc-photo");
             const src   = c.photos && c.photos[2];
             if (src) {
@@ -182,6 +199,7 @@
             candidate:  form.candidate.value,
             name:       form.name.value.trim(),
             phone:      form.phone.value.trim(),
+            email:      form.email.value.trim(),
             city:       form.city.value.trim(),
             registered: form.registered.value,
             question:   form.question.value.trim(),
