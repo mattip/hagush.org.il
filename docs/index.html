@@ -126,6 +126,11 @@
               </div>
 
               <div class="jf-field">
+                <label class="jf-label" for="jf-email">אימייל <span class="jf-req">*</span></label>
+                <input class="jf-input" id="jf-email" name="email" type="email" required autocomplete="email" dir="ltr" placeholder="name@example.com" />
+              </div>
+
+              <div class="jf-field">
                 <p class="jf-label">התפקדות לדמוקרטים <span class="jf-req">*</span></p>
                 <label class="jf-radio">
                   <input type="radio" name="registered" value="yes" required />
@@ -217,6 +222,7 @@
                 firstName:  form["firstName"].value.trim(),
                 lastName:   form["lastName"].value.trim(),
                 phone:      form.phone.value.trim(),
+                email:      form.email.value.trim(),
                 registered: form.registered.value,
                 city:       form.city.value.trim(),
                 idNumber:   form.idNumber.value.trim(),

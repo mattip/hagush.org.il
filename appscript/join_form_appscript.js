@@ -15,7 +15,7 @@ const QUESTIONS_SHEET_ID = '1USJ73gtWzgZm5tXczp0S-EFn34mbxIoS8AfbKd7XX6k';
 // ── Column headers ────────────────────────────────────────────────
 const JOIN_COLUMNS = [
   'Timestamp', 'איך הגעת', 'first_name', 'family_name',
-  'tel', 'registered', 'home', 'id_num', 'referrer',
+  'tel', 'registered', 'home', 'id_num', 'referrer', 'email',
 ];
 
 // referrer index (?referrer=N, 1-based) -> name. Edit/extend this list as needed.
@@ -173,6 +173,7 @@ function handleJoin(data, respond) {
     data.city        || '',
     data.idNumber    || '',
     referrerName(data.referrer, data.source),
+    data.email       || '',
   ]);
 
   return respond(true, 'תודה! הפרטים התקבלו בהצלחה');
@@ -212,7 +213,7 @@ function test_join() {
   const fakeEvent = { postData: { contents: JSON.stringify({
     _token: SECRET_TOKEN, website: '', source: 'whatsapp',
     firstName: 'ישראל', lastName: 'ישראלי', phone: '050-0000000',
-    registered: 'yes', city: 'תל אביב', idNumber: '',
+    registered: 'yes', city: 'תל אביב', idNumber: '', email: 'test@example.com',
   }) } };
   Logger.log(doPost(fakeEvent).getContent());
 }
