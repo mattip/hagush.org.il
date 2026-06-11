@@ -1132,23 +1132,33 @@ footer {
 }
 .atc-title {
   color: var(--nav, #09366d);
-  font-size: 2rem;
+  font-size: 1.3rem;
   font-weight: 800;
   margin: 0 0 0.4em;
+  text-align: center;
 }
 .atc-sub {
   color: var(--muted, #5a6380);
   font-size: 1.1rem;
   margin: 0 0 0.5em;
   line-height: 1.6;
+  text-align: center;
+}
+.atc-label {
+  color: var(--muted, #5a6380);
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0 0 0.25em;
+  letter-spacing: 0.02em;
+  text-align: center;
 }
 .atc-sub b {
-  color: var(--blue, #1a6aff);
+  color: var(--nav, #09366d);
   font-weight: 800;
 }
 .atc-form {
   width: 100%;
-  margin-top: 1.5rem;
+  margin: 1.5rem auto 0;
 }
 .atc-textarea {
   resize: vertical;
@@ -1157,8 +1167,7 @@ footer {
 }
 
 @media (max-width: 480px) {
-  .atc-title { font-size: 1.6rem; }
-  .atc-sub   { font-size: 1rem; }
+  .atc-sub { font-size: 1rem; }
 }
 
 /* Desktop: two-column grid. Explicit grid-column placement so order never matters.

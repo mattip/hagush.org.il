@@ -76,7 +76,7 @@ function referrerName(idx, source) {
   return candidate;   // no close match: keep raw value so nothing is lost
 }
 const QUESTION_COLUMNS = [
-  'Timestamp', 'מועמד.ת', 'שם', 'טלפון', 'יישוב', 'התפקדות', 'שאלה',
+  'Timestamp', 'מועמד.ת', 'שם', 'טלפון', 'אימייל', 'יישוב', 'התפקדות', 'שאלה',
 ];
 
 // ── Rate limiting via PropertiesService ──────────────────────────
@@ -193,6 +193,7 @@ function handleQuestion(data, respond) {
     data.candidate   || '',
     data.name        || '',
     data.phone       || '',
+    data.email       || '',
     data.city        || '',
     data.registered === 'yes' ? 'התפקד/ה' : 'לא התפקד/ה',
     data.question    || '',
@@ -222,7 +223,7 @@ function test_question() {
   const fakeEvent = { postData: { contents: JSON.stringify({
     _token: SECRET_TOKEN, formType: 'question', website: '',
     candidate: 'נעמה לזימי', name: 'ישראל ישראלי', phone: '050-0000000',
-    city: 'תל אביב', registered: 'no', question: 'מה עמדתך בנושא הדיור?',
+    email: 'test@example.com', city: 'תל אביב', registered: 'no', question: 'מה עמדתך בנושא הדיור?',
   }) } };
   Logger.log(doPost(fakeEvent).getContent());
 }
