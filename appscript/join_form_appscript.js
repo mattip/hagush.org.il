@@ -6,6 +6,15 @@ const SECRET_TOKEN    = 'NachshavBaot2026';   // change if you like
 const RATE_LIMIT_MAX  = 20;   // max submissions per window
 const RATE_LIMIT_SECS = 3600; // 1 hour
 
+// Popup-open analytics (anonymous). Separate sheet + separate cap so a
+// traffic spike on the candidates page can never block real signups.
+const EVENTS_SHEET_ID = '1RCPQfE7ZPG6_rAmwBfn6qV2sFzvcZx9Rr2ZudkA9M2s';
+const EVENT_RATE_MAX  = 4000;   // safety valve: stop logging past this many / window
+const EVENT_RATE_SECS = 3600;   // 1 hour
+const EVENT_COLUMNS = [
+  'server_time', 'client_ts', 'candidateId', 'candidateName', 'via',
+];
+
 // Join form
 const JOIN_SHEET_ID      = '1aqY3Mi045S0oD6cCuPaPhto5kWWZd_MM6mnCb6lvwbQ';
 // Questions form
@@ -98,6 +107,26 @@ function checkRateLimit() {
   return count <= RATE_LIMIT_MAX;
 }
 
+// Separate rolling cap for analytics events — keeps event volume off the
+// form limiter and gives a hard ceiling so we never blow Apps Script quotas.
+function checkEventCap() {
+  const props = PropertiesService.getScriptProperties();
+  const now   = Math.floor(Date.now() / 1000);
+
+  let window = parseInt(props.getProperty('ev_window') || '0');
+  let count  = parseInt(props.getProperty('ev_count')  || '0');
+
+  if (now - window > EVENT_RATE_SECS) {
+    window = now;
+    count  = 0;
+  }
+
+  count++;
+  props.setProperties({ ev_window: String(window), ev_count: String(count) });
+
+  return count <= EVENT_RATE_MAX;
+}
+
 // ── Helper: append a row, creating a bold header row if empty ─────
 function appendRow(sheetId, columns, values) {
   const sheet = SpreadsheetApp.openById(sheetId).getActiveSheet();
@@ -136,7 +165,14 @@ function doPost(e) {
     return respond(true, 'received');  // silently accept
   }
 
-  // 3. Rate limit
+  // 2.5 Analytics events — handled BEFORE the form rate limit so popup pings
+  //     never consume the signup budget. Anonymous; own cap; failures ignored.
+  if ((data.formType || '') === 'event') {
+    try { handleEvent(data); } catch (err) { Logger.log('event error: ' + err); }
+    return respond(true, 'ok');
+  }
+
+  // 3. Rate limit (forms only)
   if (!checkRateLimit()) {
     return respond(false, 'too many requests');
   }
@@ -179,7 +215,28 @@ function handleJoin(data, respond) {
   return respond(true, 'תודה! הפרטים התקבלו בהצלחה');
 }
 
-// ── Questions form 
+// ── Analytics event (anonymous popup opens) 
+function handleEvent(data) {
+  if (data.event !== 'candidate_open') return;   // only known events
+  if (!EVENTS_SHEET_ID) return;                   // not configured yet
+  if (!checkEventCap()) return;                   // safety valve hit → drop
+
+  // Bursts of concurrent opens can collide on append; a short lock serializes
+  // writes. If we can't get it quickly, drop the ping (analytics, not critical).
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(500)) return;
+  try {
+    appendRow(EVENTS_SHEET_ID, EVENT_COLUMNS, [
+      new Date(),                 // server arrival time
+      data.ts           || '',    // client time-of-click (ISO, with offset)
+      data.candidateId  || '',
+      data.candidateName|| '',
+      data.via          || '',
+    ]);
+  } finally {
+    lock.releaseLock();
+  }
+}
 function handleQuestion(data, respond) {
   const required = ['name', 'phone', 'question'];
   for (const field of required) {
@@ -226,4 +283,13 @@ function test_question() {
     email: 'test@example.com', city: 'תל אביב', registered: 'no', question: 'מה עמדתך בנושא הדיור?',
   }) } };
   Logger.log(doPost(fakeEvent).getContent());
+}
+
+function test_event() {
+  const fakeEvent = { postData: { contents: JSON.stringify({
+    _token: SECRET_TOKEN, formType: 'event', event: 'candidate_open',
+    candidateId: 'naama_l', candidateName: 'נעמה לזימי', via: 'card',
+    ts: new Date().toISOString(),
+  }) } };
+  Logger.log(doPost(fakeEvent).getContent());  // needs EVENTS_SHEET_ID set
 }

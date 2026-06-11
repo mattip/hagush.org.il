@@ -16,6 +16,40 @@ let selectedIds = new Set();
 let allPeople = [];
 let popupHistory = []; // stack of {person, card} for back navigation
 
+// ── Anonymous popup-open analytics ────────────────────────────────
+// Fire-and-forget ping to the same Apps Script /exec the forms use.
+// No cookie, no visitor id — only candidate + trigger + click time.
+const EVENT_URL   = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
+const EVENT_TOKEN = "NachshavBaot2026";
+const _evLast = {}; // de-dupe accidental double-fires (per candidate+trigger)
+
+function logCandidateOpen(person, via) {
+  if (!person || !person.id) return;
+  const key = person.id + "|" + (via || "card");
+  const now = Date.now();
+  if (_evLast[key] && now - _evLast[key] < 1000) return; // coalesce <1s repeats
+  _evLast[key] = now;
+  try {
+    fetch(EVENT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      keepalive: true, // survive if the click also navigates the page
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        _token: EVENT_TOKEN,
+        formType: "event",
+        event: "candidate_open",
+        candidateId: person.id,
+        candidateName: person.name || "",
+        via: via || "card",
+        ts: new Date().toISOString(), // time-of-click, with the visitor's UTC offset
+      }),
+    });
+  } catch (e) {
+    /* analytics must never break the popup */
+  }
+}
+
 // ── Bootstrap ────────────────────────────────────────────────────
 fetch("candidates.json")
   .then((r) => r.json())
@@ -33,7 +67,7 @@ fetch("candidates.json")
       const match = allPeople.find((p) =>
         idParam ? p.id === idParam : p.name === nameParam
       );
-      if (match) openPopup(match, document.body, false);
+      if (match) openPopup(match, document.body, false, "deeplink");
     }
   });
 
@@ -152,7 +186,7 @@ function createCard(person, i) {
     }
   });
   card.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") openPopup(person, card);
+    if (e.key === "Enter" || e.key === " ") openPopup(person, card, true, "keyboard");
   });
 
   return { card, firstPhoto };
@@ -218,9 +252,10 @@ function rowShow(id, show) {
   if (el) el.style.display = show ? "" : "none";
 }
 
-function openPopup(person, card, pushHistory = true) {
+function openPopup(person, card, pushHistory = true, via = "card") {
   const photos = person.photos || [];
   if (!photos.length) return;
+  logCandidateOpen(person, via);
   const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
   document.body.style.paddingRight = `${scrollbarWidth}px`;
 
@@ -340,9 +375,9 @@ document.getElementById("popup").addEventListener("click", (e) => {
   );
   if (targetCard) {
     targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
-    setTimeout(() => openPopup(targetPerson, targetCard), 350);
+    setTimeout(() => openPopup(targetPerson, targetCard, true, "recommendation"), 350);
   } else {
-    openPopup(targetPerson, document.body);
+    openPopup(targetPerson, document.body, true, "recommendation");
   }
 });
 
@@ -404,7 +439,7 @@ function closePopup() {
 function popupGoBack() {
   const prev = popupHistory.pop();
   if (!prev) return;
-  openPopup(prev.person, prev.card, false);
+  openPopup(prev.person, prev.card, false, "back");
 }
 
 document.addEventListener("keydown", (e) => {
