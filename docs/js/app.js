@@ -110,17 +110,58 @@ function shuffle(arr) {
 // ── Grid ─────────────────────────────────────────────────────────
 function buildGrid(people) {
   const grid = document.getElementById("grid");
+  const PROMO_SLOT = 11; // insert promo card before 0-based index 11 → 12th visual slot
+  let visualIdx = 0;
 
   people.forEach((person, i) => {
+    if (i === PROMO_SLOT) {
+      const promoCard = createPromoCard();
+      promoCard.style.setProperty("--i", visualIdx++);
+      grid.appendChild(promoCard);
+    }
     const { card, firstPhoto } = createCard(person, i);
+    card.style.setProperty("--i", visualIdx++);
     grid.appendChild(card);
-    // Staggered CSS entrance animation via custom property
-    card.style.setProperty("--i", i);
-    // Start photo cycling after a random initial delay
     setTimeout(() => startCycle(i, card, firstPhoto), Math.random() * CYCLE_JITTER_MS);
   });
+}
 
-  // "Add person" placeholder
+function createPromoCard() {
+  const card = document.createElement("div");
+  card.className = "card promo-card";
+
+  // Badge (right side in RTL — first child in flex-row)
+  const imgSection = document.createElement("div");
+  imgSection.className = "promo-card-image";
+
+  const badge = document.createElement("img");
+  badge.src = "images/badge_ask.png";
+  badge.alt = "עכשיו שואלות!";
+  badge.loading = "lazy";
+
+  imgSection.append(badge);
+
+  // Text (left side in RTL — second child)
+  const textSection = document.createElement("div");
+  textSection.className = "text";
+
+  const title = document.createElement("h3");
+  title.textContent = "עכשיו שואלות!";
+
+  const body = document.createElement("p");
+  body.className = "muted";
+  body.textContent = "זה הזמן ללמוד על המועמדים.ות, להכיר אותם ולשאול אותם.ן את השאלות הקשות!";
+
+  const linkPara = document.createElement("p");
+  const link = document.createElement("a");
+  link.href = "ask_moshe_r.html";
+  link.className = "link";
+  link.textContent = 'הצטרפו לקבוצת הוואטסאפ "עכשיו שואלות"';
+  linkPara.append(link);
+
+  textSection.append(title, body, linkPara);
+  card.append(imgSection, textSection);
+  return card;
 }
 
 function createCard(person, i) {
