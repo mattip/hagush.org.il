@@ -1,4 +1,4 @@
-const PORTRAITS_DIR = "portraits/";
+candidates.htmcandidates.htmllconst PORTRAITS_DIR = "portraits/";
 const CYCLE_MIN_MS = 1000;
 const CYCLE_MAX_MS = 2000;
 const CYCLE_JITTER_MS = 1000; // max random start delay
@@ -202,7 +202,7 @@ function createPromoCard() {
 
   const linkPara = document.createElement("p");
   const link = document.createElement("a");
-  link.href = "ask_moshe_r.html";
+  link.href = "https://chat.whatsapp.com/KYjojL9gh7g5fTQxEzB1HA";
   link.className = "link";
   link.textContent = 'הצטרפו לקבוצת הוואטסאפ "עכשיו שואלות"';
   linkPara.append(link);
