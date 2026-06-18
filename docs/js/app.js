@@ -1,4 +1,4 @@
-candidates.htmcandidates.htmllconst PORTRAITS_DIR = "portraits/";
+const PORTRAITS_DIR = "portraits/";
 const CYCLE_MIN_MS = 1000;
 const CYCLE_MAX_MS = 2000;
 const CYCLE_JITTER_MS = 1000; // max random start delay
