@@ -15,6 +15,7 @@ Provides:
 
 import csv
 import difflib
+import html
 import io
 import json
 import re
@@ -451,3 +452,98 @@ def verify_texts(candidates: list[dict]) -> list[str]:
                     f"(should be a real newline)"
                 )
     return warnings
+
+
+# ── OG / social-preview stubs ────────────────────────────────────────────────
+#
+# Per-candidate stub HTML files at  docs/candidates/<id>.html  carry OG/Twitter
+# meta tags so when someone pastes the link into WhatsApp/Telegram/Slack/etc.
+# the preview shows the candidate's name + role + photo. A real browser opening
+# the stub is immediately redirected to  candidates.html?id=<id>  so the
+# existing single-page UI handles the actual rendering.
+
+STUB_SITE_URL      = "https://hagush.org.il"
+STUB_SITE_NAME     = "עכשיו באות!"
+STUB_PORTRAITS_DIR = "portraits"          # matches PORTRAITS_DIR in app.js
+STUB_OUT_DIRNAME   = "candidates"         # generated stubs live here
+
+
+def _stub_trim(s: str, limit: int = 200) -> str:
+    """Compact whitespace and cap length for meta-description sanity."""
+    s = " ".join((s or "").split())
+    if len(s) <= limit:
+        return s
+    cut = s.rfind(" ", 0, limit - 1)
+    return (s[:cut] if cut > 0 else s[:limit - 1]) + "…"
+
+
+def _stub_description(c: dict) -> str:
+    """Short factual line: prefer activities; fall back to first rationale sentence."""
+    act = _stub_trim(c.get("activities") or "")
+    if act:
+        return act
+    rat = c.get("rationale") or ""
+    for sep in ("\n", ". ", "."):
+        if sep in rat:
+            rat = rat.split(sep, 1)[0]
+            break
+    return _stub_trim(rat)
+
+
+def build_stub_html(c: dict) -> str:
+    """Build the OG-tagged stub HTML for one candidate.
+
+    Uses the LAST photo in `c['photos']` as og:image (later photos tend to be
+    the more polished, posed shots). Returns a string (UTF-8); encode to bytes
+    when handing to the GitHub Contents API.
+    """
+    cid    = c["id"]
+    name   = c.get("name") or cid
+    desc   = _stub_description(c)
+    photos = c.get("photos") or []
+    photo  = photos[-1] if photos else ""
+
+    page_url  = f"{STUB_SITE_URL}/{STUB_OUT_DIRNAME}/{cid}.html"
+    image_url = f"{STUB_SITE_URL}/{STUB_PORTRAITS_DIR}/{photo}" if photo else ""
+    target    = f"../candidates.html?id={cid}"   # relative; works on any host
+
+    e = lambda s: html.escape(s or "", quote=True)
+
+    og_image = (
+        f'    <meta property="og:image" content="{e(image_url)}" />\n'
+        f'    <meta property="twitter:image" content="{e(image_url)}" />\n'
+        f'    <meta name="twitter:card" content="summary_large_image" />\n'
+        if image_url else
+        '    <meta name="twitter:card" content="summary" />\n'
+    )
+
+    return f"""<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{e(name)} | {e(STUB_SITE_NAME)}</title>
+    <link rel="canonical" href="{e(page_url)}" />
+
+    <!-- Open Graph (WhatsApp, Telegram, Slack, Discord, LinkedIn, Facebook) -->
+    <meta property="og:type" content="profile" />
+    <meta property="og:site_name" content="{e(STUB_SITE_NAME)}" />
+    <meta property="og:title" content="{e(name)}" />
+    <meta property="og:description" content="{e(desc)}" />
+    <meta property="og:url" content="{e(page_url)}" />
+    <meta property="og:locale" content="he_IL" />
+{og_image}
+    <!-- Plain meta for search engines and older scrapers -->
+    <meta name="description" content="{e(desc)}" />
+
+    <!-- Send real browsers to the app; scrapers read the meta above and stop. -->
+    <meta http-equiv="refresh" content="0; url={e(target)}" />
+    <script>window.location.replace({json.dumps(target)});</script>
+  </head>
+  <body>
+    <p style="font-family:sans-serif;text-align:center;margin-top:3em">
+      מעבר לעמוד של <a href="{e(target)}">{e(name)}</a>…
+    </p>
+  </body>
+</html>
+"""
