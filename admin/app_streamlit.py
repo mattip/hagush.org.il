@@ -1056,7 +1056,23 @@ def render_deploy():
             for prefix, files in st.session_state.converted_images.items():
                 for name, img_bytes in files:
                     (DEV_PORTRAITS_PATH / name).write_bytes(img_bytes)
-            st.success(f"Saved to {DEV_JSON_PATH} and {DEV_PORTRAITS_PATH}")
+            # OG-preview stubs for new candidates (DEV mirror of the GitHub path).
+            stub_dir = DEV_JSON_PATH.parent / lib.STUB_OUT_DIRNAME
+            stub_dir.mkdir(parents=True, exist_ok=True)
+            new_stubs = 0
+            for c in staged:
+                cid = c.get("id")
+                if not cid:
+                    continue
+                target = stub_dir / f"{cid}.html"
+                if target.exists():
+                    continue  # do not recreate existing stubs
+                target.write_text(lib.build_stub_html(c), encoding="utf-8")
+                new_stubs += 1
+            st.success(
+                f"Saved to {DEV_JSON_PATH} and {DEV_PORTRAITS_PATH}"
+                + (f"; wrote {new_stubs} new stub(s) to {stub_dir}" if new_stubs else "")
+            )
     else:
         if not GITHUB_TOKEN:
             st.error("GitHub token not configured.")
@@ -1074,6 +1090,20 @@ def render_deploy():
                         "content": img_bytes,
                         "message": f"Add portrait {name}",
                     })
+            # OG-preview stubs: NEW candidates only. Never regenerate stubs for
+            # modified candidates — once a stub exists it's left alone so any
+            # hand-tuning in the static-site repo survives. To rebuild stubs
+            # for edited candidates, run build_candidate_stubs.py --force
+            # locally in the static-site repo.
+            for c in staged:
+                cid = c.get("id")
+                if not cid:
+                    continue
+                commits.append({
+                    "path":    f"docs/{lib.STUB_OUT_DIRNAME}/{cid}.html",
+                    "content": lib.build_stub_html(c).encode("utf-8"),
+                    "message": f"Add OG stub for {c.get('name', cid)}",
+                })
             with st.spinner("Opening PR…"):
                 pr_url = create_pr(branch_name, pr_title, pr_body, commits)
             st.success(f"PR opened: [{pr_url}]({pr_url})")
