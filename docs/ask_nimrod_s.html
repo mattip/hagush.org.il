@@ -3,14 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>המועמד.ת השבועי.ת | עכשיו באות!</title>
+    <title>נמרוד שפר | עכשיו באות! שואלות</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="canonical" href="https://hagush.org.il/ask_nimrod_s.html" />
+
+    <!-- Open Graph (WhatsApp, Telegram, Slack, etc.) -->
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="עכשיו באות!" />
+    <meta property="og:title" content="עכשיו באות שואלות! — נמרוד שפר" />
+    <meta property="og:description" content="נמרוד יצטרף אלינו לקבוצה ביום שני, 22.6 בשעה 17:00 ויענה על כל השאלות." />
+    <meta property="og:url" content="https://hagush.org.il/ask_nimrod_s.html" />
+    <meta property="og:locale" content="he_IL" />
+    <meta property="og:image" content="https://hagush.org.il/portraits/Nimrod_s_03.webp" />
+    <meta property="twitter:image" content="https://hagush.org.il/portraits/Nimrod_s_03.webp" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <meta name="description" content="נמרוד יצטרף אלינו לקבוצה ביום שני, 22.6 בשעה 17:00 ויענה על כל השאלות." />
+
     <link
       href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./css/main.css?v=2" />
-    <link rel="canonical" href="https://hagush.org.il/ask_the_candidate.html" />
   </head>
   <body>
     <header>
@@ -28,150 +42,113 @@
       </nav>
     </header>
 
-    <!-- ╔══════════════════════════════════════════════╗
-         ║  CONFIGURE WEEKLY CANDIDATE — edit id here  ║
-         ╚══════════════════════════════════════════════╝ -->
-    <main data-candidate-id="nimrod_s">
-
-      <!-- ═══════════ Candidate photo (left) + title/form (right) ═══════════ -->
+    <main>
       <section class="atc">
-        <!-- text + form column -->
         <div class="atc-text-col">
           <p class="atc-label">עכשיו באות שואלות!</p>
-          <h1 class="atc-title" id="atc-week-name">טוען…</h1>
-          <p class="atc-sub" id="atc-time-line" style="display:none">
-            <span class="atc-first-name"></span> יצטרף אלינו לקבוצה ביום <b id="atc-day"></b><br>בשעה <b id="atc-time"></b> ויענה על כל השאלות.
+          <h1 class="atc-title">נמרוד שפר</h1>
+          <p class="atc-sub">
+            נמרוד יצטרף אלינו לקבוצה ביום <b>שני, 22.6</b><br>בשעה <b>17:00</b> ויענה על כל השאלות.
           </p>
           <p class="atc-sub">
-            יש לך שאלה ל<span class="atc-first-name"></span>? מלא.י את הטופס.</p>
+            יש לך שאלה לנמרוד? מלא.י את הטופס.
+          </p>
           <p class="atc-sub">
-            <a class=link href="https://chat.whatsapp.com/KYjojL9gh7g5fTQxEzB1HA?s=cl&p=i&ilr=0" target="_blank" rel="noreferrer">קישור לקבוצה בה יתקיים הראיון</a>
+            <a class="link" href="https://chat.whatsapp.com/KYjojL9gh7g5fTQxEzB1HA"
+               target="_blank" rel="noreferrer">קישור לקבוצה בה יתקיים הראיון</a>
           </p>
 
-          <!-- ══ Ask-the-candidate form — self-contained ══ -->
           <div class="join-form atc-form" id="askbox">
             <form id="askForm" novalidate>
               <!-- honeypot — must stay empty -->
               <input
-                type="text"
-                name="website"
-                tabindex="-1"
-                autocomplete="off"
+                type="text" name="website" tabindex="-1" autocomplete="off"
                 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0"
                 aria-hidden="true"
               />
 
-              <input type="hidden" id="atc-candidate" name="candidate" value="" />
+              <input type="hidden" name="candidate" value="נמרוד שפר" />
 
-            <div class="jf-field">
-              <label class="jf-label" for="atc-name">שם <span class="jf-req">*</span></label>
-              <input class="jf-input" id="atc-name" name="name" type="text" required autocomplete="name" />
-            </div>
-
-            <div class="jf-field">
-              <label class="jf-label" for="atc-phone">טלפון <span class="jf-req">*</span></label>
-              <input class="jf-input" id="atc-phone" name="phone" type="tel" required autocomplete="tel" dir="ltr" placeholder="05X-XXXXXXX" />
-            </div>
-
-            <div class="jf-field">
-              <label class="jf-label" for="atc-email">אימייל</label>
-              <input class="jf-input" id="atc-email" name="email" type="email" autocomplete="email" dir="ltr" />
-            </div>
-
-            <div class="jf-field">
-              <label class="jf-label" for="atc-city">יישוב</label>
-              <input class="jf-input" id="atc-city" name="city" type="text" autocomplete="address-level2" />
-            </div>
-
-            <div class="jf-field">
-              <p class="jf-label">התפקדות לדמוקרטים <span class="jf-req">*</span></p>
-              <label class="jf-radio">
-                <input type="radio" name="registered" value="yes" required />
-                התפקדתי לדמוקרטים
-              </label>
-              <div class="jf-note" id="jf-note-yes" style="display:none">
-                ממליצות לבדוק <a href="https://l.democrats.org.il/baot" target="_blank" rel="noreferrer">בלינק שלנו</a> שאתם אכן רשומים.
+              <div class="jf-field">
+                <label class="jf-label" for="atc-name">שם <span class="jf-req">*</span></label>
+                <input class="jf-input" id="atc-name" name="name" type="text" required autocomplete="name" />
               </div>
-              <label class="jf-radio">
-                <input type="radio" name="registered" value="no" />
-                עוד לא התפקדתי
-              </label>
-              <div class="jf-note jf-note-urgent" id="jf-note-no" style="display:none">
-                על מנת להיות חלק מעכשיו באות ולהשפיע בפריימריז, יש להתפקד לדמוקרטים:
-                <a href="https://l.democrats.org.il/baot" target="_blank" rel="noreferrer">להתפקדות</a>
+
+              <div class="jf-field">
+                <label class="jf-label" for="atc-phone">טלפון <span class="jf-req">*</span></label>
+                <input class="jf-input" id="atc-phone" name="phone" type="tel" required autocomplete="tel" dir="ltr" placeholder="05X-XXXXXXX" />
               </div>
-            </div>
 
-            <div class="jf-field">
-              <label class="jf-label" for="atc-question">השאלה שלי ל<span id="atc-q-name">___</span> <span class="jf-req">*</span></label>
-              <textarea class="jf-input atc-textarea" id="atc-question" name="question" rows="4" required></textarea>
-            </div>
-
-            <div class="jf-error" id="atc-error" style="display:none"></div>
-
-            <button class="jf-submit atc-submit" type="submit">שליחת השאלה</button>
-          </form>
-
-              <div class="jf-success" id="atc-success" style="display:none">
-                ✓ תודה! השאלה התקבלה.
+              <div class="jf-field">
+                <label class="jf-label" for="atc-email">אימייל</label>
+                <input class="jf-input" id="atc-email" name="email" type="email" autocomplete="email" dir="ltr" />
               </div>
+
+              <div class="jf-field">
+                <label class="jf-label" for="atc-city">יישוב</label>
+                <input class="jf-input" id="atc-city" name="city" type="text" autocomplete="address-level2" />
+              </div>
+
+              <div class="jf-field">
+                <p class="jf-label">התפקדות לדמוקרטים <span class="jf-req">*</span></p>
+                <label class="jf-radio">
+                  <input type="radio" name="registered" value="yes" required />
+                  התפקדתי לדמוקרטים
+                </label>
+                <div class="jf-note" id="jf-note-yes" style="display:none">
+                  ממליצות לבדוק <a href="https://l.democrats.org.il/baot" target="_blank" rel="noreferrer">בלינק שלנו</a> שאתם אכן רשומים.
+                </div>
+                <label class="jf-radio">
+                  <input type="radio" name="registered" value="no" />
+                  עוד לא התפקדתי
+                </label>
+                <div class="jf-note jf-note-urgent" id="jf-note-no" style="display:none">
+                  על מנת להיות חלק מעכשיו באות ולהשפיע בפריימריז, יש להתפקד לדמוקרטים:
+                  <a href="https://l.democrats.org.il/baot" target="_blank" rel="noreferrer">להתפקדות</a>
+                </div>
+              </div>
+
+              <div class="jf-field">
+                <label class="jf-label" for="atc-question">השאלה שלי לנמרוד שפר <span class="jf-req">*</span></label>
+                <textarea class="jf-input atc-textarea" id="atc-question" name="question" rows="4" required></textarea>
+              </div>
+
+              <div class="jf-error" id="atc-error" style="display:none"></div>
+
+              <button class="jf-submit atc-submit" type="submit">שליחת השאלה</button>
+            </form>
+
+            <div class="jf-success" id="atc-success" style="display:none">
+              ✓ תודה! השאלה התקבלה.
             </div>
-            <!-- ══ End form ══ -->
-          <!-- /atc-text-col -->
+          </div>
         </div>
 
-        <!-- photo column -->
         <div class="atc-photo-col">
-          <img id="atc-photo" class="atc-candidate-photo" src="" alt="" />
+          <img class="atc-candidate-photo" src="portraits/Nimrod_s_03.webp" alt="נמרוד שפר" />
         </div>
       </section>
     </main>
 
     <footer>
-      <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
+      <a href="index.html" aria-label="עכשיו באות! — לדף הבית">
+        <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
+      </a>
       כל הזכויות שמורות לעכשיו באות! 2026
     </footer>
 
+    <!-- Minimal JS: form submission + registered-radio toggle. No content loading. -->
     <script>
       (function () {
         const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
         const TOKEN      = "NachshavBaot2026";
 
-        const candidateId = new URLSearchParams(location.search).get("id")
-                         || document.querySelector("main").dataset.candidateId;
         const form    = document.getElementById("askForm");
         const noteYes = document.getElementById("jf-note-yes");
         const noteNo  = document.getElementById("jf-note-no");
         const errBox  = document.getElementById("atc-error");
         const success = document.getElementById("atc-success");
 
-        // Load candidate name + photo from candidates.json
-        fetch("candidates.json")
-          .then(r => r.json())
-          .then(list => {
-            const c = list.find(x => x.id === candidateId);
-            if (!c) { document.getElementById("atc-week-name").textContent = "⚠ מזהה מועמד לא נמצא: " + candidateId; return; }
-            const firstName = c.first_name || c.name.split(/\s+/)[0];
-            document.getElementById("atc-week-name").textContent = c.name;
-            document.getElementById("atc-q-name").textContent    = c.name;
-            document.querySelectorAll(".atc-first-name").forEach(el => { el.textContent = firstName; });
-            form.candidate.value = c.name;
-            if (c.interview_day && c.interview_time) {
-              document.getElementById("atc-day").textContent  = c.interview_day;
-              document.getElementById("atc-time").textContent = c.interview_time;
-              document.getElementById("atc-time-line").style.display = "";
-            }
-            const photo = document.getElementById("atc-photo");
-            const src   = c.photos && c.photos[2];
-            if (src) {
-              photo.src = "portraits/" + src;
-              photo.alt = c.name;
-            } else {
-              photo.closest(".atc-photo-col").style.display = "none";
-            }
-          });
-
-        // Show the matching note when a registration option is picked.
         form.querySelectorAll("input[name='registered']").forEach(r => {
           r.addEventListener("change", () => {
             noteYes.style.display = r.value === "yes" ? "block" : "none";
@@ -194,8 +171,8 @@
 
           const data = {
             _token:     TOKEN,
-            formType:   "question",          // <-- routes to the questions sheet
-            website:    form.website.value,  // honeypot
+            formType:   "question",
+            website:    form.website.value,
             candidate:  form.candidate.value,
             name:       form.name.value.trim(),
             phone:      form.phone.value.trim(),
