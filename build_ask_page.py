@@ -60,10 +60,10 @@ def build_page(c: dict, day: str | None, time: str | None) -> str:
 
     if show_time:
         og_description = (
-            f"{fname} יצטרף אלינו לקבוצה ביום {day} בשעה {time} ויענה על כל השאלות."
+            f"הצטרפו אלינו לשיחה עם {name} ביום {day} בשעה {time} וקבלו תשובות לכל השאלות."
         )
     else:
-        og_description = f"שאלו את {fname} את השאלות שלכם."
+        og_description = f"הצטרפו אלינו לשיחה עם {name} וקבלו תשובות לכל השאלות."
 
     e = lambda s: html.escape(s or "", quote=True)
 
@@ -79,8 +79,8 @@ def build_page(c: dict, day: str | None, time: str | None) -> str:
     if show_time:
         time_line_html = (
             f'<p class="atc-sub">\n'
-            f'            {e(fname)} יצטרף אלינו לקבוצה ביום <b>{e(day)}</b><br>'
-            f'בשעה <b>{e(time)}</b> ויענה על כל השאלות.\n'
+            f'            הצטרפו אלינו לשיחה עם {e(name)} ביום <b>{e(day)}</b><br>'
+            f'בשעה <b>{e(time)}</b> וקבלו תשובות לכל השאלות.\n'
             f'          </p>'
         )
     else:
