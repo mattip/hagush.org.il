@@ -1,53 +1,38 @@
-# Firebase Setup for hagush.org.il Tracking
+# Firebase setup for the hagush.org.il dashboard
 
-## 1. Create a Firebase Project
-- Go to https://console.firebase.google.com
-- Click "Add Project" → name it (e.g. "hagush-tracking")
-- Disable Gemini
-- Disable Google Analytics (you don't need it)
-- Click "Create Project"
+> ⚠️ The old scaffold instructions (a permissive `/events` rule, `tracker.js`,
+> `dashboard.html`) are **obsolete**. The live data model is `registrations`,
+> `questions`, `page_views`, `interactions`, `roles`, `groups`, `influencers`,
+> `aggregates`, `login_events` — and the real, locked-down rules live in
+> [`../firestore.rules`](../firestore.rules). **Do not** paste any rules from
+> memory; paste that file verbatim.
 
-## 2. Enable Firestore
-- In the Firebase console, go to **Database and Storage → Firestore**
-- Click "Create database"
-- Choose **Standard Edition**
-- Pick a location close to your users: `europe-west1` (Belgium) is closest to Israel
-- Choose **Production**
+The full, ordered runbook is **[`STAGE_A_CHECKLIST.md`](./STAGE_A_CHECKLIST.md)**.
+Quick reference:
 
-## 3. Get your Firebase config
-- Go to **Project Settings** (gear icon) → **General**
-- Under "Your apps", click the web icon `</>`
-- Register an app (name: "hagush-web")
-- Copy the `firebaseConfig` object — you'll paste it into `tracker.js` and `dashboard.html`
+## 1. Project & Firestore
+- Project `hagush-org-il`, Firestore location `europe-west1`, Spark (free) tier.
 
-## 4. Enable Email/Password Auth
-- Go to **Security → Authentication → Sign-in method**
-- Enable **Google**
+## 2. Authentication
+- **Authentication → Sign-in method → enable Google.**
+- **Authentication → Settings → Authorized domains:** add `hagush.org.il` (and `localhost` for local testing).
 
-## 5. Set Firestore Security Rules
-Go to **Firestore → Rules** and paste instead of the content:
+## 3. Security Rules
+- **Firestore → Rules →** paste the contents of [`../firestore.rules`](../firestore.rules) and Publish.
+- Re-publish whenever that file changes (it is NOT auto-deployed by a git merge).
 
-```
-rules_version = '2';
+## 4. TTL
+- **Firestore → TTL →** add a policy on `page_views` (field `ts`) and on `interactions` (field `ts`), 30 days.
 
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /events/{event} {
-      allow create: if true;
-      allow read: if request.auth.token.email == '<admin email from step 4>';
-    }
-  }
-}
-```
+## 5. Service account (for the Apps Script mirror + nightly aggregation)
+- **Project Settings → Service accounts → Generate new private key.**
+- Put `client_email` / `private_key` into the Apps Script **Script properties**
+  (`FIRESTORE_CLIENT_EMAIL`, `FIRESTORE_PRIVATE_KEY`, plus `FIRESTORE_PROJECT_ID`,
+  `PHONE_SALT`, `DEFAULT_GROUP_ID`). Never commit the JSON.
 
-This lets anyone write tracking events, but only logged-in users can read (your dashboard).
+## 6. Web config
+- The public `firebaseConfig` is inlined in `docs/dashboard/app.js` (it's safe to
+  expose — security comes from Rules + Auth). Nothing to paste here.
 
-## 6. Deploy
-- Copy `tracker.js` to your GitHub Pages repo
-- Copy `dashboard.html` to your repo
-- Replace the `firebaseConfig` placeholder in BOTH files with your real config
-- Push to GitHub
-
-## Files
-- `tracker.js` → add via `<script>` tag in your index.html (replaces nothing, just adds tracking)
-- `dashboard.html` → your admin dashboard at hagush.org.il/dashboard.html
+See `STAGE_A_CHECKLIST.md` for seeding roles/influencers, running the backfill,
+redeploying the Apps Script web app, and the verification steps.

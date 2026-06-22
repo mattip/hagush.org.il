@@ -213,8 +213,10 @@ function handleJoin(data, respond) {
     }
   }
 
+  const now = new Date();   // one timestamp shared by the Sheet row + the mirror
+
   appendRow(JOIN_SHEET_ID, JOIN_COLUMNS, [
-    new Date(),
+    now,
     data.source      || '',
     data.firstName   || '',
     data.lastName    || '',
@@ -228,7 +230,7 @@ function handleJoin(data, respond) {
 
   // ADDITIVE Firestore mirror. Guarded so a failure can NEVER affect the Sheet
   // write above or the response below. No id_num, no raw phone.
-  try { mirrorRegistration_(data); } catch (err) { Logger.log('mirror join error: ' + err); }
+  try { mirrorRegistration_(data, now); } catch (err) { Logger.log('mirror join error: ' + err); }
 
   return respond(true, 'תודה! הפרטים התקבלו בהצלחה');
 }
@@ -243,9 +245,10 @@ function handleEvent(data) {
   // writes. If we can't get it quickly, drop the ping (analytics, not critical).
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(500)) return;
+  const now = new Date();   // one timestamp shared by the Sheet row + the mirror
   try {
     appendRow(EVENTS_SHEET_ID, EVENT_COLUMNS, [
-      new Date(),                 // server arrival time
+      now,                        // server arrival time
       data.ts           || '',    // client time-of-click (ISO, with offset)
       data.candidateId  || '',
       data.candidateName|| '',
@@ -256,7 +259,7 @@ function handleEvent(data) {
   }
 
   // ADDITIVE Firestore mirror (interactions / candidate_open). Guarded.
-  try { mirrorCandidateOpen_(data); } catch (err) { Logger.log('mirror event error: ' + err); }
+  try { mirrorCandidateOpen_(data, now); } catch (err) { Logger.log('mirror event error: ' + err); }
 }
 function handleQuestion(data, respond) {
   const required = ['name', 'phone', 'question'];
@@ -266,8 +269,10 @@ function handleQuestion(data, respond) {
     }
   }
 
+  const now = new Date();   // one timestamp shared by the Sheet row + the mirror
+
   appendRow(QUESTIONS_SHEET_ID, QUESTION_COLUMNS, [
-    new Date(),
+    now,
     data.candidate   || '',
     data.name        || '',
     data.phone       || '',
@@ -278,7 +283,7 @@ function handleQuestion(data, respond) {
   ]);
 
   // ADDITIVE Firestore mirror (questions). Guarded; no id_num.
-  try { mirrorQuestion_(data); } catch (err) { Logger.log('mirror question error: ' + err); }
+  try { mirrorQuestion_(data, now); } catch (err) { Logger.log('mirror question error: ' + err); }
 
   return respond(true, 'תודה! השאלה התקבלה');
 }

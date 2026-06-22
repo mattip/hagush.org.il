@@ -113,7 +113,8 @@ function regDocId_(tsIso, phoneCanon, source) {
 // Live JOIN submission → registrations  (no id_num, no raw phone)
 function mirrorRegistration_(data, serverDate) {
   const fs    = getFirestore_();
-  const tsIso = (serverDate || new Date()).toISOString();
+  const now   = serverDate || new Date();   // one timestamp for doc id + createdAt
+  const tsIso = now.toISOString();
   const ref   = resolveReferrer_(data.referrer);
   const canon = phoneCanon_(data.phone);
   const docId = regDocId_(tsIso, canon, data.source || '');
@@ -135,7 +136,7 @@ function mirrorRegistration_(data, serverDate) {
     isSuspicious:    false,
     origin:          'appscript-live',
     sourceId:        docId,
-    createdAt:       new Date()
+    createdAt:       now
   };
   // updateDocument with a deterministic id → upsert (idempotent on retry).
   fs.updateDocument('registrations/' + docId, fields);
@@ -144,7 +145,8 @@ function mirrorRegistration_(data, serverDate) {
 // Live QUESTION submission → questions  (no id_num)
 function mirrorQuestion_(data, serverDate) {
   const fs    = getFirestore_();
-  const tsIso = (serverDate || new Date()).toISOString();
+  const now   = serverDate || new Date();   // one timestamp for doc id + createdAt
+  const tsIso = now.toISOString();
   const docId = 'live_' + sha256Hex_([tsIso, phoneCanon_(data.phone), data.question || ''].join('|')).slice(0, 32);
   const fields = {
     candidate:       data.candidate || '',
@@ -157,7 +159,7 @@ function mirrorQuestion_(data, serverDate) {
     question:        data.question || '',
     origin:          'appscript-live',
     sourceId:        docId,
-    createdAt:       new Date()
+    createdAt:       now
   };
   fs.updateDocument('questions/' + docId, fields);
 }
