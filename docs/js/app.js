@@ -274,33 +274,14 @@ function createCard(person, i) {
     stage.appendChild(iBadge);
   }
 
-  // Tooltip "עוד מידע" — shown until the user clicks any card this session
-  const tooltip = document.createElement("span");
-  tooltip.className = "card-tooltip";
-  tooltip.textContent = "עוד מידע";
-  stage.appendChild(tooltip);
-
   card.append(stage);
 
   // Events — hover on desktop, click-to-toggle on touch; all blocked in select mode
   const isTouch = () => window.matchMedia("(hover: none)").matches;
 
-  // card.addEventListener("mouseenter", () => {
-  //   if (selectMode) return;
-  //   if (!isTouch()) openPopup(person, card);
-  // });
-  // card.addEventListener("mouseleave", (e) => {
-  //   if (selectMode) return;
-  //   if (!isTouch() && !e.relatedTarget?.closest("#popup")) scheduleClose();
-  // });
   card.addEventListener("click", () => {
     if (selectMode) return;
     if (!POPUPS_ENABLED) return;
-    // Dismiss all tooltips on first card click
-    if (!hasClickedCard) {
-      hasClickedCard = true;
-      document.querySelectorAll(".card-tooltip").forEach(t => t.remove());
-    }
     if (isTouch()) {
       if (
         popup.classList.contains("open") &&
