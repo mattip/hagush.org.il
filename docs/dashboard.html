@@ -450,7 +450,7 @@
     // ── Daily trend ─────────────────────────────────────────────
     const dayMap = {};
     events.forEach((e) => {
-      const key = e.timestamp.toISOString().slice(0, 10);
+      const key = e.timestamp.getFullYear() + "-" + String(e.timestamp.getMonth() + 1).padStart(2, "0") + "-" + String(e.timestamp.getDate()).padStart(2, "0");
       if (!dayMap[key]) dayMap[key] = { visits: 0, signups: 0 };
       dayMap[key][e.type === "signup" ? "signups" : "visits"]++;
     });
