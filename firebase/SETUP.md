@@ -32,9 +32,20 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "<admin@example.com>";
+    }
+
     match /events/{event} {
-      allow create: if true;
-      allow read: if request.auth.token.email == '<admin email from step 4>';
+      // Allow writes, but restrict the schema to reduce abuse.
+      allow create: if request.resource.data.keys().hasOnly([
+          "type", "referrer", "url", "page", "userAgent", "timestamp",
+          "firstName", "lastName", "phone", "email"
+        ])
+        && request.resource.data.type in ["visit", "signup"];
+
+      allow read: if isAdmin();
     }
   }
 }
