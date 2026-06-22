@@ -43,6 +43,9 @@ function logCandidateOpen(person, via) {
         candidateName: person.name || "",
         via: via || "card",
         ts: new Date().toISOString(), // time-of-click, with the visitor's UTC offset
+        // anonymous visit ids (if the tracker loaded) so the event stitches to the visit
+        sessionId: (window.hagushIds ? window.hagushIds().sessionId : ""),
+        dailyId:   (window.hagushIds ? window.hagushIds().dailyId : ""),
       }),
     });
   } catch (e) {

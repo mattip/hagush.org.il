@@ -228,6 +228,10 @@
                 city:       form.city.value.trim(),
                 idNumber:   form.idNumber.value.trim(),
                 referrer:   form.referrer.value,
+                // anonymous visit ids — let the dashboard stitch signups to traffic.
+                // Guarded: if the tracker didn't load, these are empty and ignored.
+                sessionId:  (window.hagushIds ? window.hagushIds().sessionId : ""),
+                dailyId:    (window.hagushIds ? window.hagushIds().dailyId : ""),
               };
 
               // With mode: no-cors the browser can't read the response,
@@ -351,5 +355,7 @@
       <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
       כל הזכויות שמורות לעכשיו באות! 2026
     </footer>
+    <!-- anonymous, privacy-minimal telemetry (page_views / interactions) -->
+    <script type="module" src="js/tracker.js"></script>
   </body>
 </html>
