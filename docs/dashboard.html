@@ -408,13 +408,17 @@
     const visits  = events.filter((e) => e.type === "visit");
     const signups = events.filter((e) => e.type === "signup");
 
+    // Visits are only logged when a referrer is present, so for conversion/bounce
+    // stats (and per-referrer conversion) only count signups that also have a referrer.
+    const signupsWithReferrer = signups.filter((e) => e.referrer && e.referrer !== "(ישיר)");
+
     // Stats
     const totalVisits  = visits.length;
-    const totalSignups = signups.length;
+    const totalSignups = signupsWithReferrer.length;
     const convRate     = totalVisits > 0 ? ((totalSignups / totalVisits) * 100).toFixed(1) : "0";
-    const bounced      = totalVisits - totalSignups;
+    const bounced      = Math.max(0, totalVisits - totalSignups);
 
-    document.getElementById("stat-visits").textContent  = totalVisits;
+    document.getElementById("stat-visits").textContent   = totalVisits;
     document.getElementById("stat-signups").textContent  = totalSignups;
     document.getElementById("stat-conv").textContent     = convRate + "%";
     document.getElementById("stat-bounce").textContent   = bounced;
@@ -425,7 +429,7 @@
       if (!refMap[e.referrer]) refMap[e.referrer] = { visits: 0, signups: 0 };
       refMap[e.referrer].visits++;
     });
-    signups.forEach((e) => {
+    signupsWithReferrer.forEach((e) => {
       if (!refMap[e.referrer]) refMap[e.referrer] = { visits: 0, signups: 0 };
       refMap[e.referrer].signups++;
     });
