@@ -127,14 +127,15 @@ nav ul a {
   display: flex;
   align-items: center;
   padding: 0 18px;
+  padding-bottom: 6px;
   font-size: 0.92rem;
   color: #fff;
-  height: 100%;
+  height: auto;
+  border-bottom: 2px solid transparent;
 }
 nav ul a.active {
-  background: var(--orange);
   font-weight: 700;
-  height: calc(100% - 14px);
+  border-bottom-color: #fff;
 }
 nav ul a:not(.active):hover {
   background: rgba(255, 255, 255, 0.15);
