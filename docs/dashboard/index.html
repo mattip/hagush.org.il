@@ -63,6 +63,22 @@
     <!-- Collapsible sections -->
     <div id="sections" style="margin-top:24px"></div>
   </div>
+
+  <!-- Admin backoffice (admin-only; toggled by the ניהול button) -->
+  <div id="backoffice" class="hidden">
+    <div class="bo-head">
+      <h2 class="bo-title">ניהול</h2>
+      <button id="bo-back" class="btn">← חזרה ללוח</button>
+    </div>
+    <div class="bo-tabs">
+      <button class="bo-tab" data-tab="influencers">מובילים</button>
+      <button class="bo-tab" data-tab="groups">קבוצות</button>
+      <button class="bo-tab" data-tab="roles">הרשאות</button>
+      <button class="bo-tab" data-tab="flags">סימון הרשמות</button>
+    </div>
+    <div id="bo-msg" class="bo-msg"></div>
+    <div id="bo-body"><div class="empty"><span class="spinner"></span></div></div>
+  </div>
 </div>
 
 <script type="module" src="app.js"></script>

@@ -103,3 +103,25 @@ tbody tr:last-child { border-bottom:none; }
 .banner.warn { color:var(--amber-700); background:var(--amber-50); border:1px solid #fde68a; }
 .spinner { display:inline-block; width:16px; height:16px; border:2px solid var(--brand-200); border-top-color:var(--brand-600); border-radius:50%; animation:spin .8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Backoffice ──────────────────────────────────────────────────── */
+.bo-head { display:flex; align-items:center; justify-content:space-between; margin:8px 0 16px; }
+.bo-title { font-size:22px; font-weight:600; color:var(--brand-900); margin:0; }
+.bo-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.bo-tab { border:1px solid var(--n300); background:#fff; color:var(--n700); border-radius:999px; padding:6px 14px; cursor:pointer; font:inherit; font-size:13px; transition:.15s; }
+.bo-tab:hover { border-color:var(--brand-400); color:var(--brand-700); }
+.bo-tab.active { border-color:var(--brand-300); background:var(--brand-50); color:var(--brand-700); font-weight:500; }
+.bo-msg { min-height:20px; margin-bottom:8px; font-size:13px; }
+.bo-msg.ok { color:var(--emerald-700); }
+.bo-msg.err { color:var(--cta-600); }
+.bo-card { border:1px solid var(--n200); background:#fff; border-radius:var(--radius-xl); overflow:hidden; }
+.bo-input { border:1px solid var(--n300); border-radius:var(--radius-lg); padding:5px 8px; font:inherit; font-size:13px; width:100%; max-width:200px; }
+.bo-input:focus { outline:none; border-color:var(--brand-400); }
+.bo-save { border:1px solid var(--brand-600); background:var(--brand-600); color:#fff; border-radius:var(--radius-lg); padding:5px 12px; cursor:pointer; font:inherit; font-size:13px; transition:.15s; }
+.bo-save:hover { background:var(--brand-700); }
+.bo-save:disabled { opacity:.5; cursor:default; }
+.bo-del { border:1px solid #fecaca; background:var(--cta-50); color:var(--cta-700); border-radius:var(--radius-lg); padding:5px 10px; cursor:pointer; font:inherit; font-size:13px; }
+.bo-del:hover { background:#fee2e2; }
+.bo-addrow td { background:#fafbff; }
+.switch { display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; }
+select.bo-input { max-width:200px; background:#fff; }

@@ -8,6 +8,7 @@ import {
   getFirestore, collection, getDocs, getDoc, doc, query, where, orderBy, limit,
   addDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { openBackoffice } from "./backoffice.js";
 
 // Public client config (safe to expose; security is Rules + Auth).
 const firebaseConfig = {
@@ -96,6 +97,7 @@ function initChrome() {
   $("user-email").textContent = identity.email;
   $("dash-title").textContent = identity.role === "influencer" ? "הדף שלי" : "לוח ניהול כללי";
   if (identity.role === "admin") show($("manage-btn"));
+  $("manage-btn").onclick = (e) => { e.preventDefault(); openBackoffice(db, DEMO); };
   $("filter-btn").onclick = () => loadData();
   const toggle = $("refresh-toggle");
   toggle.onclick = () => {

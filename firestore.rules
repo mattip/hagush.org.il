@@ -76,8 +76,12 @@ service cloud.firestore {
 
     // ───────────────────────── PII / audit (server-only) ─────────────────────────
     match /registrations/{id} {
-      allow read:  if hasRole();
-      allow write: if false;             // Apps Script SA + backfill only
+      allow read:           if hasRole();
+      allow create, delete: if false;    // Apps Script SA + backfill only
+      // Admin backoffice may flag a registration — ONLY moderation flags, never PII.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['isTest','isDuplicate','isSuspicious']);
     }
     match /questions/{id} {
       allow read:  if hasRole();
