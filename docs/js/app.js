@@ -23,6 +23,23 @@ const EVENT_URL   = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaC
 const EVENT_TOKEN = "NachshavBaot2026";
 const _evLast = {}; // de-dupe accidental double-fires (per candidate+trigger)
 
+// ── Interview badge: has the interview date+time passed? ─────────
+function isInterviewPast(person) {
+  if (!person.interview_day || !person.interview_time) return false;
+  // interview_day format: "שני, 22.6" → extract DD.M
+  const dayMatch = person.interview_day.match(/(\d{1,2})\.(\d{1,2})/);
+  if (!dayMatch) return false;
+  const day = parseInt(dayMatch[1], 10);
+  const month = parseInt(dayMatch[2], 10) - 1; // JS months are 0-based
+  const [hh, mm] = person.interview_time.split(":").map(Number);
+  const year = new Date().getFullYear();
+  const interviewDate = new Date(year, month, day, hh, mm);
+  return Date.now() > interviewDate.getTime();
+}
+
+// ── Tooltip: show "עוד מידע" hint until user clicks a card ──────
+let hasClickedCard = false;
+
 function logCandidateOpen(person, via) {
   if (!person || !person.id) return;
   const key = person.id + "|" + (via || "card");
@@ -158,7 +175,11 @@ function shuffle(arr) {
 // ── Grid ─────────────────────────────────────────────────────────
 function buildGrid(people) {
   const grid = document.getElementById("grid");
-  const PROMO_SLOT = 11; // insert promo card before 0-based index 11 → 12th visual slot
+  let PROMO_SLOT = 11; // insert promo card before 0-based index 11
+  // Ensure promo card is never last — at least one candidate after it
+  if (PROMO_SLOT >= people.length) {
+    PROMO_SLOT = Math.max(0, people.length - 2);
+  }
   let visualIdx = 0;
 
   people.forEach((person, i) => {
@@ -245,6 +266,20 @@ function createCard(person, i) {
   badge.textContent = person.name;
   stage.appendChild(badge);
 
+  // Interview badge — round "שואלות" icon for candidates whose interview has passed
+  if (isInterviewPast(person)) {
+    const iBadge = document.createElement("div");
+    iBadge.className = "interview-badge";
+    iBadge.title = "עכשיו שואלות!";
+    stage.appendChild(iBadge);
+  }
+
+  // Tooltip "עוד מידע" — shown until the user clicks any card this session
+  const tooltip = document.createElement("span");
+  tooltip.className = "card-tooltip";
+  tooltip.textContent = "עוד מידע";
+  stage.appendChild(tooltip);
+
   card.append(stage);
 
   // Events — hover on desktop, click-to-toggle on touch; all blocked in select mode
@@ -261,6 +296,11 @@ function createCard(person, i) {
   card.addEventListener("click", () => {
     if (selectMode) return;
     if (!POPUPS_ENABLED) return;
+    // Dismiss all tooltips on first card click
+    if (!hasClickedCard) {
+      hasClickedCard = true;
+      document.querySelectorAll(".card-tooltip").forEach(t => t.remove());
+    }
     if (isTouch()) {
       if (
         popup.classList.contains("open") &&
