@@ -453,6 +453,8 @@ body {
 .btn-select:hover  { background: rgba(9, 54, 109, 0.18); }
 .btn-select.active { background: var(--blue); border-color: var(--blue); }
 
+.btn-select { display: none; } /* REMOVE THIS TO RESTORE THE BUTTON */
+
 .btn-show-choices,
 .btn-reset         { background: var(--orange, #e47f09); color: #fff; }
 .btn-show-choices:hover,
