@@ -213,10 +213,12 @@ async function handle(btn) {
         await setDoc(doc(DB, "groups", id), { name: v.name, referrerCode: v.referrerCode || null, active: v.active }, { merge: true });
         break;
       case "del-grp": await deleteDoc(doc(DB, "groups", id)); break;
-      case "add-role":
+      case "add-role": {
         if (!v.email) throw new Error("אימייל חובה");
-        await setDoc(doc(DB, "roles", v.email), { role: v.role, scope: v.scope, groupId: v.groupId || null, influencerId: v.influencerId || null, active: v.active });
+        const remail = v.email.toLowerCase();   // Google tokens are lowercase — match doc id
+        await setDoc(doc(DB, "roles", remail), { role: v.role, scope: v.scope, groupId: v.groupId || null, influencerId: v.influencerId || null, active: v.active });
         break;
+      }
       case "save-role":
         await setDoc(doc(DB, "roles", id), { role: v.role, scope: v.scope, groupId: v.groupId || null, influencerId: v.influencerId || null, active: v.active }, { merge: true });
         break;
