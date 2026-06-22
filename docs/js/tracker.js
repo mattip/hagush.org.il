@@ -126,16 +126,21 @@ function instrument() {
     }, { threshold: 0.4 });
     io.observe(anchor);
   }
-  // CTA / WhatsApp / status-check clicks (delegated)
+  // CTA / WhatsApp / status-check clicks (delegated).
+  // Explicit data-track="..." wins; otherwise heuristics. status_check is
+  // checked BEFORE cta_party because the "check you're registered" link shares
+  // the democrats.org.il host with the party-registration link.
   document.addEventListener("click", (e) => {
-    const a = e.target.closest && e.target.closest("a,button");
+    const a = e.target.closest && e.target.closest("a,button,[data-track]");
     if (!a) return;
+    const explicit = a.getAttribute("data-track");
+    if (explicit) { track(explicit); return; }
     const href = (a.getAttribute("href") || "").toLowerCase();
     const txt = (a.textContent || "").trim();
     if (href.indexOf("wa.me") >= 0 || href.indexOf("whatsapp") >= 0) track("whatsapp");
-    else if (href.indexOf("#signup") >= 0) track("cta_join");
+    else if (/רשומ|לבדוק|סטטוס|בדיק/.test(txt)) track("status_check");
     else if (href.indexOf("democrats.org.il") >= 0 || /התפקד/.test(txt)) track("cta_party");
-    else if (/בדיק|סטטוס/.test(txt)) track("status_check");
+    else if (href.indexOf("#signup") >= 0) track("cta_join");
   }, { capture: true });
 }
 

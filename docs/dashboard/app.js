@@ -162,7 +162,8 @@ async function loadData() {
 
 // ── Rendering ─────────────────────────────────────────────────────────────
 function render(d) {
-  const { regs, pv, inter, inflName, grpName, influencersActive } = d;
+  const { regs, pv: pvRaw, inter, inflName, grpName, influencersActive } = d;
+  const pv = pvRaw.filter((x) => !x.isBot);   // exclude flagged bot traffic from all views
   const real = regs.filter((x) => !x.isTest);
   const uniques = new Set(pv.map((x) => x.dailyId).filter(Boolean)).size;
   const clicks = pv.filter((x) => x.influencerId).length;
