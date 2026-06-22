@@ -34,6 +34,46 @@ body {
   max-width: 1200px;
   margin: 0 auto;
 }
+
+/* ── Hero text sizing ────────────────────────────────────────────── */
+.hero-h1 {
+  margin-bottom: 0.1em;
+}
+.hero-h2 {
+  margin-top: 0;
+  font-size: clamp(1rem, 3.5vw, 1.4rem);
+}
+.hero-date {
+  margin-bottom: 0.8em;
+  font-size: 0.95rem;
+}
+.hero-body {
+  font-size: 0.9rem;
+}
+.hero-small {
+  font-size: 0.85rem;
+}
+@media (max-width: 480px) {
+  .hero-h1 {
+    font-size: 1.8rem;
+  }
+  .hero-h2 {
+    font-size: 1.05rem;
+  }
+  .hero-date {
+    font-size: 0.85rem;
+  }
+  .hero-body {
+    font-size: 0.82rem;
+  }
+  .hero-small {
+    font-size: 0.78rem;
+  }
+  .cta-pill {
+    padding: 8px 18px;
+    font-size: 0.85rem;
+  }
+}
 .team-top .full-width {
   width: auto;
   margin: 0 -2rem;
@@ -413,6 +453,8 @@ body {
 .btn-select:hover  { background: rgba(9, 54, 109, 0.18); }
 .btn-select.active { background: var(--blue); border-color: var(--blue); }
 
+.btn-select { display: none; } /* REMOVE THIS TO RESTORE THE BUTTON */
+
 .btn-show-choices,
 .btn-reset         { background: var(--orange, #e47f09); color: #fff; }
 .btn-show-choices:hover,
@@ -621,8 +663,6 @@ html.no-scroll {
   align-items: stretch;
   aspect-ratio: 16 / 9;
   cursor: default;
-  border-top: 2px solid var(--blue, #1a6aff);
-  border-bottom: 2px solid var(--blue, #1a6aff);
 }
 .promo-card:hover,
 .promo-card:focus-within {
@@ -664,6 +704,62 @@ html.no-scroll {
   margin: 0;
 }
 
+
+/* ════════════════════
+   Hero CTA pill (candidates page)
+   ════════════════════ */
+
+/* Navy pill CTA used under the date in the hero. */
+.cta-pill {
+  display: inline-block;
+  background: var(--nav);
+  color: #fff;
+  padding: 9px 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  line-height: 1;
+  transition: filter 0.15s;
+}
+.cta-pill:hover {
+  filter: brightness(1.15);
+}
+
+/* ── Interview badge (round "שואלות" icon, bottom-left of card) ── */
+.photo-stage .interview-badge {
+  position: absolute;
+  bottom: 28px;
+  left: 6px;
+  width: 56px;
+  height: 56px;
+  background: url("../images/badge_shoalot.png") center/contain no-repeat;
+  pointer-events: none;
+  z-index: 3;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.25));
+}
+
+/* ── Tooltip "עוד מידע" — fades out after first click ──────────── */
+.card-tooltip {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,.72);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.card:hover .card-tooltip {
+  opacity: 1;
+}
 
 /* ── 11. Responsive overrides ───────────────────────────────────── */
 @media (min-width: 768px) {
