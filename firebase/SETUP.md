@@ -20,10 +20,11 @@
 - Register an app (name: "hagush-web")
 - Copy the `firebaseConfig` object — you'll paste it into `tracker.js` and `dashboard.html`
 
-## 4. Enable Email/Password Auth
+## 4. Enable Google Auth
 - Go to **Security → Authentication → Sign-in method**
 - Enable **Google**
-
+- In **Authentication → Settings → Authorized domains**, add `hagush.org.il` (and/or your GitHub Pages domain)
+- Sign in once with the intended admin account and note its email for step 5
 ## 5. Set Firestore Security Rules
 Go to **Firestore → Rules** and paste instead of the content:
 
