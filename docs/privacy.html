@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>פרטיות — עכשיו באות!</title>
+<style>
+  :root { --brand-900:#172c6e; --brand-700:#1b3fb0; --ink:#16213a; --page:#f2f5fb; --n500:#737575; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--page); color:var(--ink); font-family:system-ui,"Segoe UI",Arial,sans-serif; line-height:1.7; }
+  main { max-width:760px; margin:0 auto; padding:32px 20px 64px; }
+  h1 { color:var(--brand-900); font-size:28px; }
+  h2 { color:var(--brand-700); font-size:18px; margin-top:28px; }
+  a { color:var(--brand-700); }
+  .box { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px 20px; margin-top:16px; }
+  button { font:inherit; font-size:15px; border-radius:8px; padding:10px 16px; cursor:pointer; border:1px solid var(--brand-700); }
+  .out { background:var(--brand-700); color:#fff; }
+  .in  { background:#fff; color:var(--brand-700); }
+  .status { margin-top:10px; font-size:14px; color:var(--n500); }
+  ul { padding-inline-start:22px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>מדיניות פרטיות — איסוף נתונים אנונימי</h1>
+  <p>אנו אוספים מידע אנונימי על השימוש באתר כדי להבין כמה אנשים מבקרים ונרשמים, ומאילו ערוצים. המידע נאסף בצמצום ואינו כולל פרטים מזהים.</p>
+
+  <h2>מה נאסף</h2>
+  <ul>
+    <li><strong>מזהה ביקור (session)</strong> — מזהה אקראי זמני שנמחק עם סגירת הדפדפן.</li>
+    <li><strong>מזהה יומי</strong> — מזהה אקראי שמתחלף כל 24 שעות, לספירת מבקרים ייחודיים ביום. אינו מאפשר מעקב לאורך זמן.</li>
+    <li>עמוד שנצפה, סוג מכשיר (נייד/מחשב), ערוץ ההגעה (לדוגמה: רשת חברתית), וזמן.</li>
+  </ul>
+  <p>לא נאספים: שם, טלפון, אימייל, ת״ז או כל פרט מזהה אחר במידע השימוש. פרטי הרשמה (שנשלחים בטופס ההצטרפות) נשמרים בנפרד ומאובטחים.</p>
+
+  <h2>למה</h2>
+  <p>כדי למדוד תנועה, אחוזי המרה ויעילות ערוצי ההפצה — לשיפור הקמפיין בלבד.</p>
+
+  <h2>שמירה</h2>
+  <p>נתוני השימוש הגולמיים נמחקים אוטומטית לאחר 30 יום. נשמרים רק סיכומים יומיים מצרפיים (ללא מזהים).</p>
+
+  <h2>בחירה שלך</h2>
+  <p>אם הדפדפן שולח אות “Do Not Track”, נספור ברמת ביקור בלבד וללא מזהה יומי. אפשר גם לבטל איסוף לחלוטין:</p>
+  <div class="box">
+    <button id="toggle" class="out">ביטול איסוף נתונים</button>
+    <div id="status" class="status"></div>
+  </div>
+
+  <h2>יצירת קשר ומחיקה</h2>
+  <p>לבקשת עיון או מחיקת נתונים, פנו אלינו ב<a href="mailto:info@hagush.org.il">info@hagush.org.il</a>.</p>
+  <p style="margin-top:28px"><a href="/">← חזרה לאתר</a></p>
+</main>
+<script>
+  (function () {
+    var KEY = "hagush_optout", btn = document.getElementById("toggle"), st = document.getElementById("status");
+    function render() {
+      var off = false;
+      try { off = localStorage.getItem(KEY) === "1"; } catch (e) {}
+      if (off) { btn.textContent = "הפעלת איסוף מחדש"; btn.className = "in"; st.textContent = "האיסוף מבוטל במכשיר זה."; }
+      else { btn.textContent = "ביטול איסוף נתונים"; btn.className = "out"; st.textContent = "האיסוף פעיל (אנונימי)."; }
+    }
+    btn.addEventListener("click", function () {
+      try {
+        if (localStorage.getItem(KEY) === "1") localStorage.removeItem(KEY);
+        else localStorage.setItem(KEY, "1");
+      } catch (e) { st.textContent = "לא ניתן לשמור העדפה (אחסון חסום בדפדפן)."; return; }
+      render();
+    });
+    render();
+  })();
+</script>
+</body>
+</html>
