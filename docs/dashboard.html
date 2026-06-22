@@ -368,21 +368,27 @@
   let dailyChart = null;
 
   async function loadData() {
-    const snap = await db.collection("events")
-      .orderBy("timestamp", "desc")
-      .get();
+    try {
+      const snap = await db.collection("events")
+        .orderBy("timestamp", "desc")
+        .get();
 
-    allEvents = snap.docs.map((d) => {
-      const data = d.data();
-      return {
-        type:      data.type,
-        referrer:  data.referrer || "(ישיר)",
-        timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
-        email:     data.email || null,
-      };
-    });
+      allEvents = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          type:      data.type,
+          referrer:  data.referrer || "(ישיר)",
+          timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
+          email:     data.email || null,
+        };
+      });
 
-    renderAll(allEvents);
+      renderAll(allEvents);
+    } catch (err) {
+      console.error("Failed to load events from Firestore", err);
+      document.getElementById("table-wrap").innerHTML =
+        '<p class="loading-msg">שגיאה בטעינת נתונים. בדקי/י הרשאות ונסי/נסה שוב.</p>';
+    }
   }
 
   // ── Date filter ───────────────────────────────────────────────
