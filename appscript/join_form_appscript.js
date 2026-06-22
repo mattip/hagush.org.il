@@ -56,6 +56,13 @@ const REFERRERS = [
   'הילה גולן',            // 25
 ];
 
+// NEW (additive): explicit string referrer codes, e.g. ?referrer=tzipi
+// Fill this from the mapping you provide. The same code strings become the
+// `referrerCode` field on the influencer/group docs in Firestore, so the
+// Sheet name and the Firestore attribution stay in sync.
+// Example: const REFERRER_CODES = { tzipi: 'צפי שומר' };
+const REFERRER_CODES = {};
+
 function editDistance(a, b) {
   const m = a.length, n = b.length;
   const dp = Array.from({length: m + 1}, (_, i) => [i, ...Array(n).fill(0)]);
@@ -68,6 +75,13 @@ function editDistance(a, b) {
 }
 
 function referrerName(idx, source) {
+  // NEW (additive): explicit string code -> name, checked first. Empty map by
+  // default, so the existing int + fuzzy behavior is unchanged until you fill it.
+  const codeKey = String(idx == null ? '' : idx).trim();
+  if (codeKey && Object.prototype.hasOwnProperty.call(REFERRER_CODES, codeKey)) {
+    return REFERRER_CODES[codeKey];
+  }
+
   const n = parseInt(idx, 10);
   if (n >= 1 && n <= REFERRERS.length) return REFERRERS[n - 1];
 
@@ -212,6 +226,10 @@ function handleJoin(data, respond) {
     data.email       || '',
   ]);
 
+  // ADDITIVE Firestore mirror. Guarded so a failure can NEVER affect the Sheet
+  // write above or the response below. No id_num, no raw phone.
+  try { mirrorRegistration_(data); } catch (err) { Logger.log('mirror join error: ' + err); }
+
   return respond(true, 'תודה! הפרטים התקבלו בהצלחה');
 }
 
@@ -236,6 +254,9 @@ function handleEvent(data) {
   } finally {
     lock.releaseLock();
   }
+
+  // ADDITIVE Firestore mirror (interactions / candidate_open). Guarded.
+  try { mirrorCandidateOpen_(data); } catch (err) { Logger.log('mirror event error: ' + err); }
 }
 function handleQuestion(data, respond) {
   const required = ['name', 'phone', 'question'];
@@ -255,6 +276,9 @@ function handleQuestion(data, respond) {
     data.registered === 'yes' ? 'התפקד/ה' : 'לא התפקד/ה',
     data.question    || '',
   ]);
+
+  // ADDITIVE Firestore mirror (questions). Guarded; no id_num.
+  try { mirrorQuestion_(data); } catch (err) { Logger.log('mirror question error: ' + err); }
 
   return respond(true, 'תודה! השאלה התקבלה');
 }
