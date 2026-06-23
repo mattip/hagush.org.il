@@ -1,0 +1,161 @@
+rules_version = '2';
+
+// hagush.org.il dashboard — Firestore Security Rules (Stage A)
+// Architecture: Option A (rules-gated SPA writes), Spark/free tier.
+//   - PII + audit (registrations, questions, login_events, aggregates):
+//       NEVER client-written. Written only by the Apps Script service account
+//       and the local backfill (both bypass these rules via the Admin SDK).
+//   - Telemetry (page_views, interactions): validated, anonymous client writes.
+//   - Management (groups, influencers, roles): admin-only client writes.
+//
+// Doc id convention: roles/{email} — the doc id IS the user's Google email.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ───────────────────────── helpers ─────────────────────────
+    function authed()  { return request.auth != null; }
+    function email()   { return request.auth.token.email; }
+
+    function roleDoc() {
+      return get(/databases/$(database)/documents/roles/$(email())).data;
+    }
+    // An active role doc must exist for the signed-in email.
+    function hasRole() {
+      return authed()
+        && exists(/databases/$(database)/documents/roles/$(email()))
+        && roleDoc().active == true;
+    }
+    function isAdmin() { return hasRole() && roleDoc().role == 'admin'; }
+
+    // Role/scope helpers for per-row read scoping.
+    function mgrFull()        { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'full'; }
+    function mgrGroup()       { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'group'; }
+    function influencerRole() { return hasRole() && roleDoc().role == 'influencer'; }
+    // A row is readable if you're admin / full-manager, or it falls inside your
+    // group (group-manager) or your own influencer scope. Queries MUST carry the
+    // matching where() filter so Firestore can prove the query is in-scope.
+    function canReadScoped(res) {
+      return isAdmin() || mgrFull()
+        || (mgrGroup()       && res.data.groupId == roleDoc().groupId)
+        || (influencerRole() && res.data.influencerId == roleDoc().influencerId);
+    }
+
+    // Telemetry: strict allow-list of keys. Because PII keys are simply not in
+    // the allow-list, hasOnly() makes it impossible to smuggle PII into a write.
+    function validIds(d) {
+      return d.sessionId is string && d.sessionId.size() > 0 && d.sessionId.size() <= 64
+          && d.dailyId   is string && d.dailyId.size()   > 0 && d.dailyId.size()   <= 64;
+    }
+    function smallStr(v) { return v is string && v.size() <= 512; }
+
+    function validPageView() {
+      let d = request.resource.data;
+      return validIds(d)
+        && d.keys().hasOnly([
+             'sessionId','dailyId','influencerId','groupId','page','medium',
+             'channel','deviceClass','ts','weekKey','isBot'
+           ])
+        && d.keys().hasAll(['sessionId','dailyId','page','ts'])
+        && smallStr(d.page)
+        && (!('medium' in d)       || d.medium in ['web','qr'])
+        && (!('channel' in d)      || smallStr(d.channel))
+        && (!('deviceClass' in d)  || smallStr(d.deviceClass))
+        && (!('influencerId' in d) || smallStr(d.influencerId))
+        && (!('groupId' in d)      || smallStr(d.groupId))
+        && (!('isBot' in d)        || d.isBot is bool)
+        && d.ts is timestamp;
+    }
+
+    function validInteraction() {
+      let d = request.resource.data;
+      return validIds(d)
+        && d.keys().hasOnly([
+             'type','sessionId','dailyId','influencerId','groupId',
+             'page','ts','weekKey','detail'
+           ])
+        && d.keys().hasAll(['type','sessionId','dailyId','ts'])
+        && d.type in [
+             'candidate_open','form_started','field_dropoff','validation_error',
+             'submit_attempt','cta_join','cta_party','whatsapp','status_check',
+             'scroll_reached_form','dwell'
+           ]
+        && (!('page' in d)         || smallStr(d.page))
+        && (!('influencerId' in d) || smallStr(d.influencerId))
+        && (!('groupId' in d)      || smallStr(d.groupId))
+        && (!('detail' in d)       || (d.detail is map && d.detail.size() <= 12))  // cap nesting/abuse
+        && d.ts is timestamp;
+    }
+
+    // ───────────────────────── PII / audit (server-only) ─────────────────────────
+    match /registrations/{id} {
+      allow read:           if canReadScoped(resource);   // per-row group/influencer scope
+      allow create, delete: if false;    // Apps Script SA + backfill only
+      // Admin backoffice may flag a registration — ONLY moderation flags (bool), never PII.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['isTest','isDuplicate','isSuspicious'])
+        && request.resource.data.isTest is bool
+        && request.resource.data.isDuplicate is bool
+        && (!('isSuspicious' in request.resource.data) || request.resource.data.isSuspicious is bool);
+    }
+    match /questions/{id} {
+      allow read:  if isAdmin() || mgrFull();   // questions carry no group/influencer scope
+      allow write: if false;
+    }
+    match /login_events/{id} {
+      allow read:  if isAdmin();
+      // Access audit: a signed-in user may record ONLY their own login event
+      // (create-only, fixed shape). No SA/server needed on the free tier.
+      allow create: if authed()
+        && request.resource.data.email == email()
+        && request.resource.data.status in ['success','forbidden','failed']
+        && request.resource.data.keys().hasOnly(['email','status','ts'])
+        && request.resource.data.ts is timestamp;
+      allow update, delete: if false;
+    }
+    match /aggregates/{id} {
+      allow read: if isAdmin() || mgrFull()
+        || (mgrGroup()       && resource.data.scope == 'group'      && resource.data.key == roleDoc().groupId)
+        || (influencerRole() && resource.data.scope == 'influencer' && resource.data.key == roleDoc().influencerId);
+      allow write: if false;             // nightly Apps Script job (SA)
+    }
+    match /meta/{id} {
+      allow read:  if isAdmin();
+      allow write: if false;             // import bookkeeping (SA / backfill)
+    }
+
+    // ───────────────────────── telemetry (validated client create) ─────────────────────────
+    match /page_views/{id} {
+      allow create: if validPageView();
+      allow read:   if canReadScoped(resource);   // per-row group/influencer scope
+      allow update, delete: if false;    // immutable; TTL handles expiry
+    }
+    match /interactions/{id} {
+      allow create: if validInteraction();
+      allow read:   if canReadScoped(resource);
+      allow update, delete: if false;
+    }
+
+    // ───────────────────────── management (admin-only writes) ─────────────────────────
+    match /groups/{id} {
+      allow read:  if hasRole();
+      allow write: if isAdmin();
+    }
+    match /influencers/{id} {
+      allow read:  if hasRole();
+      allow write: if isAdmin();
+    }
+
+    // roles: a user may read their own role doc; admins read/write all.
+    match /roles/{userEmail} {
+      allow read:  if isAdmin() || (authed() && email() == userEmail);
+      allow write: if isAdmin();
+    }
+
+    // ───────────────────────── default deny ─────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
