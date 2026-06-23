@@ -275,6 +275,17 @@ def build_page(c: dict, day: str | None, time: str | None) -> str:
             question:   form.question.value.trim(),
           }};
 
+          // UI-only capture: store the submission regardless of backend result.
+          try {{
+            if (window.hagushFormSubmit) window.hagushFormSubmit({{
+              formType:   "question",
+              candidate:  data.candidate, name:       data.name,
+              phone:      data.phone,     email:      data.email,
+              city:       data.city,      registered: data.registered,
+              question:   data.question,
+            }});
+          }} catch (e) {{ /* never block the submit */ }}
+
           let networkOk = false;
           try {{
             await fetch(SUBMIT_URL, {{
@@ -301,6 +312,8 @@ def build_page(c: dict, day: str | None, time: str | None) -> str:
         }});
       }})();
     </script>
+    <!-- Telemetry + backend-independent form capture (window.hagushFormSubmit). -->
+    <script type="module" src="js/tracker.js"></script>
   </body>
 </html>
 """

@@ -107,6 +107,79 @@ function initChrome() {
   };
 }
 
+// ── Submission source (UI-written, replaces the Apps Script mirror) ─────────
+// The dashboard's registrations now come from `form_submissions` — the raw
+// submission the public form writes to Firestore directly (tracker.js
+// captureFormSubmission). The old `registrations` collection (populated by the
+// Apps Script / Google Sheets mirror) is no longer read.
+//
+// NOTE: `form_submissions` reads are admin-only in firestore.rules and the docs
+// carry no influencerId/groupId, so manager/influencer scoped views cannot be
+// served from this collection without a rules + data rework. Scoping below is
+// applied client-side (after referrer resolution) so it still works if the rules
+// are later relaxed; today only the admin role can read this collection.
+
+function normPhone_(raw) {
+  let s = String(raw || "").replace(/\D/g, "");
+  if (!s) return "";
+  if (s.indexOf("972") === 0) { /* already international */ }
+  else if (s.charAt(0) === "0") { s = "972" + s.slice(1); }
+  else if (s.length === 9) { s = "972" + s; }   // missing leading 0
+  return s;
+}
+
+// Build { referrerCode -> { influencerId, groupId } } from groups + influencers.
+// Mirrors firestore_mirror.gs getReferrerMap_: a group may own a code; an
+// influencer code overrides and also carries its groupId.
+function buildReferrerMap(inflSnap, grpSnap) {
+  const map = {};
+  grpSnap.forEach((d) => {
+    const o = d.data() || {};
+    if (o.referrerCode != null && o.active !== false) map[String(o.referrerCode)] = { influencerId: null, groupId: d.id };
+  });
+  inflSnap.forEach((d) => {
+    const o = d.data() || {};
+    if (o.referrerCode != null && o.active !== false) map[String(o.referrerCode)] = { influencerId: d.id, groupId: o.groupId || "default" };
+  });
+  return map;
+}
+function resolveReferrer(code, map) {
+  const c = String(code == null ? "" : code).trim();
+  if (c && map[c]) return map[c];
+  return { influencerId: null, groupId: "default" };   // default group
+}
+
+// Map a raw form_submissions doc to the shape render()/sections expect.
+function mapSubmission(s, map) {
+  const ref = resolveReferrer(s.referrer, map);
+  const phone = normPhone_(s.phone);
+  const name = ((s.firstName || "") + " " + (s.lastName || "")).trim();
+  return {
+    id: s.id,
+    name: name || "—",
+    phoneLast3: phone ? phone.slice(-3) : "",
+    phoneCanon: phone || null,                 // client dedup key (normalized, unsalted)
+    email: s.email || "",
+    city: s.city || "",
+    source: s.source || "",
+    influencerId: ref.influencerId,
+    groupId: ref.groupId,
+    sessionId: s.sessionId || null,
+    dailyId: s.dailyId || null,
+    partyRegistered: s.registered === "yes" ? true : (s.registered === "no" ? false : null),
+    isTest: false,                             // no server moderation flag on form_submissions
+    isDuplicate: false,                        // computed in render() from phoneCanon
+    createdAt: s.ts,
+  };
+}
+
+// Read recent join submissions (ordered by ts; formType filtered client-side to
+// avoid a composite index, matching the rest of the dashboard's query style).
+async function fetchSubmissions() {
+  const snap = await getDocs(query(collection(db, "form_submissions"), orderBy("ts", "desc"), limit(2000)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => (x.formType || "join") === "join");
+}
+
 // ── Data loading ──────────────────────────────────────────────────────────
 // Scope a query: influencer → own influencerId; group-manager → own groupId;
 // admin / full-manager → unfiltered (ordered + capped). Avoids composite indexes.
@@ -134,8 +207,8 @@ async function loadData() {
   show($("loading")); hide($("content"));
   try {
     const r = dateRange();
-    const [regsAll, pvAll, intAll, inflSnap, grpSnap] = await Promise.all([
-      fetchScoped("registrations", "createdAt"),
+    const [subsRaw, pvAll, intAll, inflSnap, grpSnap] = await Promise.all([
+      fetchSubmissions(),
       fetchScoped("page_views", "ts"),
       fetchScoped("interactions", "ts"),
       getDocs(collection(db, "influencers")),
@@ -145,6 +218,16 @@ async function loadData() {
     inflSnap.forEach((d) => (inflName[d.id] = d.data().name || d.id));
     grpSnap.forEach((d) => (grpName[d.id] = d.data().name || d.id));
     const influencersActive = inflSnap.docs.filter((d) => d.data().active !== false).length;
+
+    // Map raw UI submissions → registration shape, resolving referrer codes.
+    const refMap = buildReferrerMap(inflSnap, grpSnap);
+    let regsAll = subsRaw.map((s) => mapSubmission(s, refMap));
+    // Scope client-side (form_submissions carries no scope fields server-side).
+    if (identity.role === "influencer" && identity.influencerId) {
+      regsAll = regsAll.filter((x) => x.influencerId === identity.influencerId);
+    } else if (identity.role === "manager" && identity.scope === "group" && identity.groupId) {
+      regsAll = regsAll.filter((x) => x.groupId === identity.groupId);
+    }
 
     // date filter (client-side)
     const regs = regsAll.filter((x) => inRange(tsToDate(x.createdAt), r));
@@ -173,6 +256,9 @@ function render(d) {
   const phoneCount = {};
   real.forEach((x) => { if (x.phoneCanon) phoneCount[x.phoneCanon] = (phoneCount[x.phoneCanon] || 0) + 1; });
   const duplicates = Object.values(phoneCount).filter((n) => n > 1).length;
+  // No server moderation flag on form_submissions → derive the per-row duplicate
+  // chip from the phone counts above.
+  real.forEach((x) => { if (x.phoneCanon && phoneCount[x.phoneCanon] > 1) x.isDuplicate = true; });
 
   const registeredParty = real.filter((x) => x.partyRegistered).length;
   const notRegistered = real.filter((x) => x.partyRegistered === false).length;

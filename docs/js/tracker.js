@@ -109,6 +109,30 @@ function track(type, detail) {
 }
 window.hagushTrack = track;
 
+// ── Backend-independent form capture ───────────────────────────────────────
+// Writes the raw submission to `form_submissions` in Firestore on EVERY submit,
+// regardless of whether the Apps Script backend succeeds. This is an explicit
+// user action (not passive telemetry), so it is NOT suppressed by DNT — but the
+// hard opt-out still applies. Pass the form fields; ids/timestamp are added here.
+// Usage: window.hagushFormSubmit({ formType: "join", firstName, lastName, ... })
+async function captureFormSubmission(fields) {
+  if (optedOut()) return;                 // honour the hard opt-out
+  const payload = {
+    ...fields,
+    formType: (fields && fields.formType) || "join",
+    sessionId: sessionId(),
+    dailyId: dailyId(),
+    page: pageName(),
+    weekKey: weekKey(new Date()),
+  };
+  try {
+    const fs = await getFs();
+    await fs.addDoc(fs.collection(fs.db, "form_submissions"),
+      { ...payload, ts: fs.serverTimestamp() });
+  } catch (e) { /* capture must never break the form */ }
+}
+window.hagushFormSubmit = captureFormSubmission;
+
 // ── Auto-instrumentation (guarded; all selectors null-safe) ────────────────
 function instrument() {
   const form = document.getElementById("joinForm");

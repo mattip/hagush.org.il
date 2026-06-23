@@ -1,7 +1,7 @@
 // backoffice.js — admin management UI (admin-only). Isolated; rules-gated writes.
 // Tabs: influencers, groups, roles (permissions), registration flags.
 import {
-  collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, orderBy, limit,
+  collection, getDocs, doc, setDoc, deleteDoc, query, orderBy, limit,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const $ = (id) => document.getElementById(id);
@@ -156,24 +156,36 @@ async function renderRoles() {
   bind();
 }
 
-// ── Registration flags ──────────────────────────────────────────────────────
+// ── Recent submissions (read-only) ───────────────────────────────────────────
+// Sourced from `form_submissions` (the UI-written submission), replacing the
+// Apps Script-fed `registrations`. form_submissions is append-only, so the
+// moderation flags (isTest/isDuplicate) are no longer editable here.
+function last3_(raw) {
+  let s = String(raw || "").replace(/\D/g, "");
+  if (!s) return "";
+  if (s.indexOf("972") === 0) { /* intl */ }
+  else if (s.charAt(0) === "0") s = "972" + s.slice(1);
+  else if (s.length === 9) s = "972" + s;
+  return s.slice(-3);
+}
 async function renderFlags() {
-  let regs;
-  if (DEMO_BO) { regs = MOCK.registrations.map((x) => ({ ...x })); }
+  let subs;
+  if (DEMO_BO) { subs = MOCK.registrations.map((x) => ({ ...x })); }
   else {
-    const snap = await getDocs(query(collection(DB, "registrations"), orderBy("createdAt", "desc"), limit(100)));
-    regs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const snap = await getDocs(query(collection(DB, "form_submissions"), orderBy("ts", "desc"), limit(100)));
+    subs = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => (x.formType || "join") === "join");
   }
+  const nameOf = (x) => x.name || ((x.firstName || "") + " " + (x.lastName || "")).trim() || "—";
+  const last3Of = (x) => x.phoneLast3 || last3_(x.phone);
+  const partyOf = (x) => x.registered === "yes" ? "כן" : (x.registered === "no" ? "לא" : (x.partyRegistered ? "כן" : "—"));
   const row = (x) => `<tr data-id="${esc(x.id)}">
-    <td>${esc(x.name || "—")}</td><td class="num">…${esc(x.phoneLast3 || "")}</td>
-    <td><label class="switch"><input type="checkbox" data-f="isTest" ${x.isTest?"checked":""}> בדיקה</label></td>
-    <td><label class="switch"><input type="checkbox" data-f="isDuplicate" ${x.isDuplicate?"checked":""}> כפילות</label></td>
-    <td><button class="bo-save" data-act="save-flag">שמירה</button></td>
+    <td>${esc(nameOf(x))}</td><td class="num">…${esc(last3Of(x))}</td>
+    <td>${esc(partyOf(x))}</td><td class="muted">${esc(x.source || "—")}</td>
   </tr>`;
   $("bo-body").innerHTML = `<div class="bo-card"><table>
-    <thead><tr><th>שם</th><th>טלפון</th><th>בדיקה</th><th>כפילות</th><th></th></tr></thead>
-    <tbody>${regs.length ? regs.map(row).join("") : '<tr><td colspan="5"><div class="empty">אין הרשמות</div></td></tr>'}</tbody>
-  </table></div><p class="sub" style="margin-top:8px">50 ההרשמות האחרונות. סימון בדיקה/כפילות בלבד — שאר השדות אינם ניתנים לעריכה.</p>`;
+    <thead><tr><th>שם</th><th>טלפון</th><th>התפקדות</th><th>מקור</th></tr></thead>
+    <tbody>${subs.length ? subs.map(row).join("") : '<tr><td colspan="4"><div class="empty">אין הרשמות</div></td></tr>'}</tbody>
+  </table></div><p class="sub" style="margin-top:8px">100 ההרשמות האחרונות מתוך form_submissions (לקריאה בלבד). אוסף זה הוא append-only — סימון בדיקה/כפילות אינו זמין עוד.</p>`;
   bind();
 }
 
@@ -223,9 +235,6 @@ async function handle(btn) {
         await setDoc(doc(DB, "roles", id), { role: v.role, scope: v.scope, groupId: v.groupId || null, influencerId: v.influencerId || null, active: v.active }, { merge: true });
         break;
       case "del-role": await deleteDoc(doc(DB, "roles", id)); break;
-      case "save-flag":
-        await updateDoc(doc(DB, "registrations", id), { isTest: v.isTest, isDuplicate: v.isDuplicate });
-        break;
     }
     msg("נשמר ✓", "ok");
     if (btn.dataset.act.startsWith("add") || btn.dataset.act.startsWith("del")) {

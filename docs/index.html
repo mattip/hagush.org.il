@@ -234,6 +234,19 @@
                 dailyId:    (window.hagushIds ? window.hagushIds().dailyId : ""),
               };
 
+              // UI-only capture: record this submission in Firestore BEFORE the
+              // backend call, so it is saved even if the Apps Script write fails.
+              try {
+                if (window.hagushFormSubmit) window.hagushFormSubmit({
+                  formType:   "join",
+                  firstName:  data.firstName, lastName: data.lastName,
+                  phone:      data.phone,     email:    data.email,
+                  city:       data.city,      idNumber: data.idNumber,
+                  registered: data.registered, source:  data.source,
+                  referrer:   data.referrer,
+                });
+              } catch (e) { /* never block the submit */ }
+
               // With mode: no-cors the browser can't read the response,
               // but the request goes through. A thrown error means a real
               // network failure (offline, wrong URL, DNS). We treat a
