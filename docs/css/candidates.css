@@ -704,28 +704,6 @@ html.no-scroll {
   margin: 0;
 }
 
-
-/* ════════════════════
-   Hero CTA pill (candidates page)
-   ════════════════════ */
-
-/* Navy pill CTA used under the date in the hero. */
-.cta-pill {
-  display: inline-block;
-  background: var(--nav);
-  color: #fff;
-  padding: 9px 22px;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  text-decoration: none;
-  line-height: 1;
-  transition: filter 0.15s;
-}
-.cta-pill:hover {
-  filter: brightness(1.15);
-}
-
 /* ── Interview badge (round "שואלות" icon, bottom-left of card) ── */
 .photo-stage .interview-badge {
   position: absolute;

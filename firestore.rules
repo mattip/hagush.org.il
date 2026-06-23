@@ -147,6 +147,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Campaign events calendar (public page reads, admin writes)
+    match /campaign_events/{id} {
+      allow read:  if true;
+      allow create, update, delete: if isAdmin();
+    }
+
     // roles: a user may read their own role doc; admins read/write all.
     match /roles/{userEmail} {
       allow read:  if isAdmin() || (authed() && email() == userEmail);
