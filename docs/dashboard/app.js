@@ -181,6 +181,15 @@ if (DEMO_MODE) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Sticky header shadow on scroll
+// ─────────────────────────────────────────────────────────────────────────────
+
+const band = document.querySelector(".band");
+window.addEventListener("scroll", () => {
+  band.classList.toggle("is-scrolled", window.scrollY > 4);
+}, { passive: true });
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Header chrome / UI initialization
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -293,13 +302,18 @@ const transformSubmissionToRegistration = (submission, referrerMap) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const fetchJoinFormSubmissions = async () => {
-  const snapshot = await getDocs(
-    query(collection(db, "join_form"), orderBy("ts", "desc"), limit(SUBMISSION_LIMIT))
-  );
-  return snapshot.docs.map((docSnapshot) => ({
-    id: docSnapshot.id,
-    ...docSnapshot.data(),
-  }));
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "join_form"), orderBy("ts", "desc"), limit(SUBMISSION_LIMIT))
+    );
+    return snapshot.docs.map((docSnapshot) => ({
+      id: docSnapshot.id,
+      ...docSnapshot.data(),
+    }));
+  } catch (e) {
+    console.warn("join_form read skipped", e?.code || e);
+    return [];
+  }
 };
 
 const fetchModerationFlags = async () => {
@@ -363,11 +377,16 @@ const fetchScopedData = async (collectionName, dateField) => {
     );
   }
 
-  const snapshot = await getDocs(queryObject);
-  return snapshot.docs.map((docSnapshot) => ({
-    id: docSnapshot.id,
-    ...docSnapshot.data(),
-  }));
+  try {
+    const snapshot = await getDocs(queryObject);
+    return snapshot.docs.map((docSnapshot) => ({
+      id: docSnapshot.id,
+      ...docSnapshot.data(),
+    }));
+  } catch (e) {
+    console.warn(`${collectionName} read skipped`, e?.code || e);
+    return [];
+  }
 };
 
 const loadData = async () => {
@@ -376,16 +395,19 @@ const loadData = async () => {
 
   try {
     const dateRange = getDateRange();
+    const isAdmin = userIdentity.role === "admin";
     const [
       submissionsRaw,
       flags,
+      registrationsRaw,
       pageViewsAll,
       interactionsAll,
       influencerSnapshot,
       groupSnapshot,
     ] = await Promise.all([
-      fetchJoinFormSubmissions(),
-      fetchModerationFlags(),
+      isAdmin ? fetchJoinFormSubmissions() : Promise.resolve([]),
+      isAdmin ? fetchModerationFlags() : Promise.resolve({}),
+      isAdmin ? Promise.resolve([]) : fetchScopedData("registrations", "createdAt"),
       fetchScopedData("page_views", "ts"),
       fetchScopedData("interactions", "ts"),
       getDocs(collection(db, "influencers")),
@@ -410,28 +432,16 @@ const loadData = async () => {
       (d) => d.data().active !== false
     ).length;
 
-    // Map raw UI submissions → registration shape, resolving referrer codes.
-    const referrerMap = buildReferrerCodeMap(influencerSnapshot, groupSnapshot);
-    let allRegistrations = submissionsRaw.map((submission) =>
-      transformSubmissionToRegistration(submission, referrerMap)
-    );
-
-    // Scope client-side (join_form carries no scope fields server-side).
-    if (
-      userIdentity.role === "influencer" &&
-      userIdentity.influencerId
-    ) {
-      allRegistrations = allRegistrations.filter(
-        (reg) => reg.influencerId === userIdentity.influencerId
+    // Admins: transform join_form submissions (raw client captures, no scope fields).
+    // Managers/influencers: use registrations (processed by Apps Script, already shaped + scoped server-side).
+    let allRegistrations;
+    if (isAdmin) {
+      const referrerMap = buildReferrerCodeMap(influencerSnapshot, groupSnapshot);
+      allRegistrations = submissionsRaw.map((submission) =>
+        transformSubmissionToRegistration(submission, referrerMap)
       );
-    } else if (
-      userIdentity.role === "manager" &&
-      userIdentity.scope === "group" &&
-      userIdentity.groupId
-    ) {
-      allRegistrations = allRegistrations.filter(
-        (reg) => reg.groupId === userIdentity.groupId
-      );
+    } else {
+      allRegistrations = registrationsRaw;
     }
 
     // Apply date filter (client-side)
@@ -810,8 +820,6 @@ const render = (data) => {
       )
     );
   }
-
-  getById("kpi-row").innerHTML = kpiCards.join("");
 
   // Party section
   getById("party-row").innerHTML = [
