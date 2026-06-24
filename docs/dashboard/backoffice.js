@@ -91,7 +91,7 @@ const getById = (id) => document.getElementById(id);
 
 let firebaseDb = null;
 let isWired = false;
-let groupsCache = [];
+let groupsCache = []; // eslint-disable-line no-unused-vars
 let isDemoMode = false;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -340,7 +340,7 @@ const renderRoles = async () => {
 
 const renderFlags = async () => {
   let submissions;
-  let flags = {};
+  const flags = {};
 
   if (isDemoMode) {
     submissions = MOCK_DATA.registrations.map((reg) => ({ ...reg }));

@@ -24,7 +24,7 @@ export default [
       },
     },
     rules: {
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_", caughtErrors: "none" }],
       "no-console": "off",
       eqeqeq: ["warn", "smart"],
       "prefer-const": "warn",
@@ -32,12 +32,11 @@ export default [
     },
   },
 
-  // app.js is a classic <script> (relies on global scope + document.currentScript),
-  // so parse it as a script rather than a module.
+  // app.js uses ES module imports; loaded via <script type="module">.
   {
     files: ["docs/js/app.js"],
     languageOptions: {
-      sourceType: "script",
+      sourceType: "module",
     },
   },
 

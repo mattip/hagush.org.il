@@ -4,7 +4,7 @@
  * Lock body scroll and hide scrollbar (for modals).
  * @param {HTMLElement} popup - The popup element
  */
-const lockBodyScroll = (popup) => {
+const lockBodyScroll = (_popup) => {
   const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
   document.body.style.paddingRight = `${scrollbarWidth}px`;
   document.body.style.top = `-${window.scrollY}px`;

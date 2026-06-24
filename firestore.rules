@@ -1,4 +1,4 @@
-rules_version = '3';
+rules_version = '2';
 
 // hagush.org.il dashboard — Firestore Security Rules (Stage A)
 // Architecture: Option A (rules-gated SPA writes), Spark/free tier.
@@ -188,6 +188,27 @@ service cloud.firestore {
       allow create:         if validFormSubmission();
       allow read:           if isAdmin();   // contains PII → admin only
       allow update, delete: if false;       // append-only from the client
+    }
+
+    // ───────────────────────── legacy form collections (read-only, no new writes) ──────
+    // Pre-consolidation collections — kept for dashboard reads of existing data.
+    // New submissions go to form_submissions; these are append-only from the old client.
+    match /join_form/{id} {
+      allow read:           if isAdmin();
+      allow create, update, delete: if false;
+    }
+    match /ask_candidate_form/{id} {
+      allow read:           if isAdmin();
+      allow create, update, delete: if false;
+    }
+    // Moderation flags overlay for join_form docs (keyed by join_form doc id).
+    match /submission_flags/{id} {
+      allow read:  if hasRole();
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['isTest','isDuplicate','updatedAt','by'])
+        && request.resource.data.isTest is bool
+        && request.resource.data.isDuplicate is bool
+        && (!('by' in request.resource.data) || smallStr(request.resource.data.by));
     }
 
     // ───────────────────────── management (admin-only writes) ─────────────────────────

@@ -25,7 +25,7 @@ const captureFormSubmission = async (
   if (hasOptedOut(optoutKey)) return; // honour hard opt-out
 
   const formType = (fields && fields.formType) || "join";
-  const collectionName = formType === "question" ? "ask_candidate_form" : "join_form";
+  const collectionName = "form_submissions";
 
   const payload = {
     ...fields,

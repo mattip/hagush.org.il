@@ -19,7 +19,7 @@ import {
   where,
   orderBy,
   limit,
-  addDoc,
+  setDoc,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { openBackoffice } from "./backoffice.js";
@@ -29,7 +29,6 @@ import {
   formatRelativeTime,
   toDate,
   normalizePhone,
-  getIsoWeekKey,
 } from "../js/utils/format.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,7 +102,11 @@ let lastFetchedData = null; // cached render input
 
 const auditLogin = async (email, status) => {
   try {
-    await addDoc(collection(db, "login_events"), {
+    // Readable, sortable doc ID: "2026-06-24T21-03-47_user@example.com"
+    const now = new Date();
+    const ts = now.toISOString().replace(/:/g, "-").replace(/\.\d{3}Z$/, "Z");
+    const docId = `${ts}_${email}`;
+    await setDoc(doc(db, "login_events", docId), {
       email,
       status,
       ts: serverTimestamp(),

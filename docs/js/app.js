@@ -2,9 +2,9 @@ import { HagushTracker } from "./tracker.js";
 import { shuffleWithPinning } from "./utils/shuffle.js";
 import { copyToClipboard } from "./utils/clipboard.js";
 import { setCookie, getCookie } from "./utils/cookie.js";
-import { setText, setHtml, rowShow, isTouch, supportsHover } from "./utils/element.js";
-import { startCycle, stopCycle } from "./utils/photo-cycle.js";
-import { escapeHtml, stripHonorific, linkRecommendation } from "./utils/html-escape.js";
+import { setText, setHtml, rowShow, isTouch } from "./utils/element.js";
+import { startCycle } from "./utils/photo-cycle.js";
+import { linkRecommendation } from "./utils/html-escape.js";
 import { lockBodyScroll, unlockBodyScroll } from "./utils/popup.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,11 +32,13 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 const timers = {};
 const popup = document.getElementById("popup");
-const POPUPS_ENABLED = document.currentScript?.dataset.popups !== "false";
+// document.currentScript is null in ES modules — read the attribute via selector instead.
+const POPUPS_ENABLED =
+  document.querySelector('script[src*="app.js"]')?.dataset.popups !== "false";
 
 let closeTimer = null;
 let selectMode = false;
-let selectedIds = new Set();
+const selectedIds = new Set();
 let allPeople = [];
 let popupHistory = [];
 let justOpened = false;
@@ -58,7 +60,7 @@ function isInterviewPast(person) {
 }
 
 // ── Tooltip: show "עוד מידע" hint until user clicks a card ──────
-let hasClickedCard = false;
+const hasClickedCard = false; // eslint-disable-line no-unused-vars
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Candidate open event tracking
@@ -319,7 +321,7 @@ const popupGoBack = () => {
   openPopup(prev.person, prev.card, false, "back");
 };
 
-const scheduleClose = () => {
+const scheduleClose = () => { // eslint-disable-line no-unused-vars
   closeTimer = setTimeout(closePopup, 120);
 };
 

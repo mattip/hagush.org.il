@@ -5,7 +5,6 @@
 import { generateUuid } from "./utils/id-gen.js";
 import {
   isDoNotTrackEnabled,
-  hasOptedOut,
   getOrCreateSessionId,
   getOrCreateDailyId,
 } from "./utils/privacy.js";
@@ -71,7 +70,7 @@ const createGetIds = () => {
   });
 };
 
-const createInstrument = (trackFn) => {
+const createInstrument = (trackFn) => { // eslint-disable-line no-unused-vars
   return () => {
     instrument(document, trackFn);
   };

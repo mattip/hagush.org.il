@@ -1,7 +1,7 @@
 /* ── Events page ─────────────────────────────────────────────────── */
 
 body {
-  background: rgb(235, 231, 245);
+  background: rgb(235 231 245);
 }
 
 .events-hero {
@@ -45,7 +45,7 @@ body {
   padding: 6px 18px;
   border: 1.5px solid var(--steel, #7a9eb8);
   border-radius: 999px;
-  background: rgb(212, 221, 232);
+  background: rgb(212 221 232);
   color: var(--nav);
   font: inherit;
   font-size: 0.85rem;
@@ -55,10 +55,11 @@ body {
 }
 
 .filter-pill.active {
-  background: rgb(212, 221, 232);
+  background: rgb(212 221 232);
 }
+
 .filter-pill:hover {
-  background: rgb(200, 210, 222);
+  background: rgb(200 210 222);
 }
 
 .filter-dropdown {
@@ -200,20 +201,24 @@ body {
 }
 
 /* ── Mobile adjustments ──────────────────────────────────────────── */
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .event-date-block {
     width: 75px;
     padding: 12px 6px;
   }
+
   .event-day {
     font-size: 1.6rem;
   }
+
   .event-time {
     font-size: 0.85rem;
   }
+
   .event-details {
     padding: 10px 10px 0;
   }
+
   .event-cta {
     margin: auto -10px 0;
   }
