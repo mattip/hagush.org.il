@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>הוספת הרשאות</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Open Sans', sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: .5rem; }
+    textarea { width: 100%; height: 200px; font-family: monospace; font-size: .9rem; padding: .75rem; border: 2px solid #ccc; border-radius: 8px; direction: ltr; }
+    button { margin-top: 1rem; padding: .6rem 1.5rem; background: #09366d; color: #fff; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+    button:disabled { background: #999; }
+    #log { margin-top: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 8px; font-size: .85rem; white-space: pre-wrap; direction: ltr; max-height: 300px; overflow-y: auto; }
+    .info { color: #666; font-size: .85rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>הוספת event_adder הרשאות</h1>
+  <p class="info">התחברו כ-admin, הדביקו רשימת אימיילים (אחד בכל שורה), ולחצו "צור הרשאות".</p>
+  <button id="login-btn">כניסה עם Google</button>
+  <span id="user-status" style="margin-right:8px; font-size:.85rem; color:#666"></span>
+  <br><br>
+  <textarea id="emails" placeholder="one@gmail.com&#10;two@gmail.com&#10;three@gmail.com"></textarea>
+  <br>
+  <button id="run-btn" disabled>צור הרשאות</button>
+  <div id="log"></div>
+
+  <script>
+  const firebaseConfig = {
+    apiKey:            "AIzaSyC7hQs04G8U0BMs9UXrHEurQnxgxN7jmLw",
+    authDomain:        "hagush-org-il.firebaseapp.com",
+    projectId:         "hagush-org-il",
+    storageBucket:     "hagush-org-il.firebasestorage.app",
+    messagingSenderId: "674306617225",
+    appId:             "1:674306617225:web:7f84e8f09bc35222e77b58",
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
+  const log  = document.getElementById("log");
+
+  document.getElementById("login-btn").addEventListener("click", () => {
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+  });
+
+  auth.onAuthStateChanged((user) => {
+    document.getElementById("user-status").textContent = user ? user.email : "";
+    document.getElementById("run-btn").disabled = !user;
+  });
+
+  document.getElementById("run-btn").addEventListener("click", async () => {
+    const raw = document.getElementById("emails").value;
+    const emails = raw.split("\n")
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e && e.includes("@"));
+
+    if (!emails.length) { log.textContent = "No valid emails found"; return; }
+
+    log.textContent = `Found ${emails.length} emails. Creating roles...\n`;
+    document.getElementById("run-btn").disabled = true;
+
+    let ok = 0, skip = 0, fail = 0;
+    for (const email of emails) {
+      try {
+        const ref = db.collection("roles").doc(email);
+        const existing = await ref.get();
+        if (existing.exists) {
+          log.textContent += `⏭ ${email} — already has role: ${existing.data().role}\n`;
+          skip++;
+        } else {
+          await ref.set({
+            role: "event_adder",
+            active: true,
+            created_at: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          log.textContent += `✓ ${email} — event_adder created\n`;
+          ok++;
+        }
+      } catch (err) {
+        log.textContent += `✗ ${email} — ${err.message}\n`;
+        fail++;
+      }
+      log.scrollTop = log.scrollHeight;
+    }
+
+    log.textContent += `\nDone: ${ok} created, ${skip} skipped, ${fail} failed.`;
+    document.getElementById("run-btn").disabled = false;
+  });
+  </script>
+</body>
+</html>

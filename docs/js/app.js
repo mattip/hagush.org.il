@@ -43,6 +43,23 @@ let justOpened = false;
 
 const eventDedup = {}; // track recent events to prevent double-fires
 
+// ── Interview badge: has the interview date+time passed? ─────────
+function isInterviewPast(person) {
+  if (!person.interview_day || !person.interview_time) return false;
+  // interview_day format: "שני, 22.6" → extract DD.M
+  const dayMatch = person.interview_day.match(/(\d{1,2})\.(\d{1,2})/);
+  if (!dayMatch) return false;
+  const day = parseInt(dayMatch[1], 10);
+  const month = parseInt(dayMatch[2], 10) - 1; // JS months are 0-based
+  const [hh, mm] = person.interview_time.split(":").map(Number);
+  const year = new Date().getFullYear();
+  const interviewDate = new Date(year, month, day, hh, mm);
+  return Date.now() > interviewDate.getTime();
+}
+
+// ── Tooltip: show "עוד מידע" hint until user clicks a card ──────
+let hasClickedCard = false;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Candidate open event tracking
 // ─────────────────────────────────────────────────────────────────────────────
@@ -100,6 +117,14 @@ const createCardPhoto = (person, firstPhoto) => {
   badge.className = "popup-name-badge";
   badge.textContent = person.name;
   stage.appendChild(badge);
+
+  // Interview badge — round "שואלות" icon for candidates whose interview has passed
+  if (isInterviewPast(person)) {
+    const iBadge = document.createElement("div");
+    iBadge.className = "interview-badge";
+    iBadge.title = "עכשיו שואלות!";
+    stage.appendChild(iBadge);
+  }
 
   return stage;
 };
