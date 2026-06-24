@@ -100,3 +100,8 @@ instrument(document, trackFn);
 
 // Export for module use
 export const HagushTracker = api;
+
+// Expose on window for inline scripts (backward compatibility)
+// Allows inline script forms to access: window.hagushIds() and window.hagushFormSubmit()
+window.hagushIds = () => api.getIds();
+window.hagushFormSubmit = (fields) => api.captureFormSubmission(fields);

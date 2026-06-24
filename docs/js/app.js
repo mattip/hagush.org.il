@@ -1,39 +1,65 @@
+import { HagushTracker } from "./tracker.js";
+import { shuffleWithPinning } from "./utils/shuffle.js";
+import { copyToClipboard } from "./utils/clipboard.js";
+import { setCookie, getCookie } from "./utils/cookie.js";
+import { setText, setHtml, rowShow, isTouch, supportsHover } from "./utils/element.js";
+import { startCycle, stopCycle } from "./utils/photo-cycle.js";
+import { escapeHtml, stripHonorific, linkRecommendation } from "./utils/html-escape.js";
+import { lockBodyScroll, unlockBodyScroll } from "./utils/popup.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
+
 const PORTRAITS_DIR = "portraits/";
 const CYCLE_MIN_MS = 1000;
 const CYCLE_MAX_MS = 2000;
-const CYCLE_JITTER_MS = 1000; // max random start delay
-const PINNED_IDS = ["gilad_k", "efrat_r", "naama_l"];  // always appear in first PINNED_WINDOW slots
-const PINNED_WINDOW = 6;        // how many leading slots the pinned ids are spread across
+const CYCLE_JITTER_MS = 1000;
+const PINNED_IDS = ["gilad_k", "efrat_r", "naama_l"];
+const PINNED_WINDOW = 6;
+const PROMO_SLOT = 11;
+
+const EVENT_URL = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
+const EVENT_TOKEN = "NachshavBaot2026";
+
+const COOKIE_CONSENT_KEY = "hagush_cookie_ok";
+const COOKIE_CHOICES_KEY = "hagush_choices";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
 
 const timers = {};
 const popup = document.getElementById("popup");
-const POPUPS_ENABLED = document.currentScript.dataset.popups !== "false";
+const POPUPS_ENABLED = document.currentScript?.dataset.popups !== "false";
 
 let closeTimer = null;
-
 let selectMode = false;
 let selectedIds = new Set();
 let allPeople = [];
-let popupHistory = []; // stack of {person, card} for back navigation
+let popupHistory = [];
+let justOpened = false;
 
-// ── Anonymous popup-open analytics ────────────────────────────────
-// Fire-and-forget ping to the same Apps Script /exec the forms use.
-// No cookie, no visitor id — only candidate + trigger + click time.
-const EVENT_URL   = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
-const EVENT_TOKEN = "NachshavBaot2026";
-const _evLast = {}; // de-dupe accidental double-fires (per candidate+trigger)
+const eventDedup = {}; // track recent events to prevent double-fires
 
-function logCandidateOpen(person, via) {
-  if (!person || !person.id) return;
+// ─────────────────────────────────────────────────────────────────────────────
+// Candidate open event tracking
+// ─────────────────────────────────────────────────────────────────────────────
+
+const logCandidateOpen = (person, via) => {
+  if (!person?.id) return;
   const key = person.id + "|" + (via || "card");
   const now = Date.now();
-  if (_evLast[key] && now - _evLast[key] < 1000) return; // coalesce <1s repeats
-  _evLast[key] = now;
+  if (eventDedup[key] && now - eventDedup[key] < 1000) return;
+  eventDedup[key] = now;
+
   try {
+    const ids = HagushTracker.getIds();
     fetch(EVENT_URL, {
       method: "POST",
       mode: "no-cors",
-      keepalive: true, // survive if the click also navigates the page
+      keepalive: true,
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({
         _token: EVENT_TOKEN,
@@ -42,146 +68,94 @@ function logCandidateOpen(person, via) {
         candidateId: person.id,
         candidateName: person.name || "",
         via: via || "card",
-        ts: new Date().toISOString(), // time-of-click, with the visitor's UTC offset
-        // anonymous visit ids (if the tracker loaded) so the event stitches to the visit
-        sessionId: (window.hagushIds ? window.hagushIds().sessionId : ""),
-        dailyId:   (window.hagushIds ? window.hagushIds().dailyId : ""),
+        ts: new Date().toISOString(),
+        sessionId: ids.sessionId,
+        dailyId: ids.dailyId,
       }),
     });
   } catch (e) {
     /* analytics must never break the popup */
   }
-}
+};
 
-// ── Bootstrap ────────────────────────────────────────────────────
-fetch("candidates.json")
-  .then((r) => r.json())
-  .then((people) => people.filter((p) => !p.hidden))
-  .then(shuffle)
-  .then((people) => {
-    allPeople = people;
-    buildGrid(people);
-    restoreFromCookies();
-    console.log("[hagush] init: allPeople loaded, count =", allPeople.length,
-                "location.href =", location.href);
-    // Open popup from URL: ?id=emily_m or ?name=אמיר
-    // (We don't rewrite the address bar here — doing so changes how the
-    // browser resolves relative URLs on the page, breaking nav links and
-    // image src paths. The pin button copies the canonical stub URL.)
-    syncPopupToUrl("init");
-    // Also resync on back/forward — otherwise the DOM keeps whatever popup
-    // was last drawn, even when the URL says a different candidate.
-    window.addEventListener("popstate", (e) => {
-      console.log("[hagush] popstate fired. location.href =", location.href,
-                  "  event.state =", e.state);
-      syncPopupToUrl("popstate");
-    });
-    // pageshow also fires on bfcache restore (back from another origin / tab).
-    // popstate doesn't always fire in that case, so this is a belt-and-braces.
-    window.addEventListener("pageshow", (e) => {
-      console.log("[hagush] pageshow fired. persisted =", e.persisted,
-                  "  location.href =", location.href);
-      if (e.persisted) syncPopupToUrl("pageshow-bfcache");
-    });
+// ─────────────────────────────────────────────────────────────────────────────
+// Grid building
+// ─────────────────────────────────────────────────────────────────────────────
+
+const createCardPhoto = (person, firstPhoto) => {
+  const stage = document.createElement("div");
+  stage.className = "photo-stage";
+
+  person.photos.forEach((filename, pi) => {
+    const img = document.createElement("img");
+    img.src = PORTRAITS_DIR + filename;
+    img.alt = person.name;
+    img.draggable = false;
+    img.loading = "lazy";
+    if (pi === firstPhoto) img.classList.add("active");
+    stage.appendChild(img);
   });
 
-function syncPopupToUrl(reason) {
-  console.log("[hagush] syncPopupToUrl(", reason, ") start. href =", location.href,
-              "  popup.open =", popup.classList.contains("open"),
-              "  popup.dataset.personId =", popup.dataset.personId);
-  if (!allPeople.length) {
-    console.log("[hagush]   bail: allPeople empty");
-    return;
-  }
-  const params    = new URLSearchParams(window.location.search);
-  const idParam   = params.get("id");
-  const nameParam = params.get("name");
-  console.log("[hagush]   params: id =", idParam, "  name =", nameParam);
-  if (!(idParam || nameParam)) {
-    if (popup.classList.contains("open")) {
-      console.log("[hagush]   no selector in URL → closing open popup");
-      closePopup();
-    } else {
-      console.log("[hagush]   no selector and no popup open → nothing to do");
-    }
-    return;
-  }
-  const match = allPeople.find((p) =>
-    idParam ? p.id === idParam : p.name === nameParam,
+  const badge = document.createElement("span");
+  badge.className = "popup-name-badge";
+  badge.textContent = person.name;
+  stage.appendChild(badge);
+
+  return stage;
+};
+
+const createCardElement = (person) => {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.tabIndex = 0;
+  card.setAttribute("role", "button");
+  card.setAttribute(
+    "aria-label",
+    `${person.name}${person.minister ? ", " + person.minister : ""}`,
   );
-  if (!match) {
-    console.log("[hagush]   no match found for that id/name in allPeople");
-    return;
-  }
-  console.log("[hagush]   match: id =", match.id, "  name =", match.name);
-  if (popup.classList.contains("open") && popup.dataset.personId === match.id) {
-    console.log("[hagush]   popup already shows this person → no-op");
-    return;
-  }
-  console.log("[hagush]   calling openPopup for", match.id);
-  openPopup(match, document.body, false, "deeplink");
-}
+  card.dataset.personId = person.id;
+  return card;
+};
 
-// Fisher-Yates shuffle, with pinned IDs guaranteed in first PINNED_WINDOW slots
-function shuffle(arr) {
-  const pinned   = arr.filter(p => PINNED_IDS.includes(p.id));
-  const unpinned = arr.filter(p => !PINNED_IDS.includes(p.id));
-
-  for (let i = pinned.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pinned[i], pinned[j]] = [pinned[j], pinned[i]];
-  }
-  for (let i = unpinned.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [unpinned[i], unpinned[j]] = [unpinned[j], unpinned[i]];
-  }
-
-  // Pick random slots within [0, PINNED_WINDOW) for the pinned ids
-  const windowSize = Math.min(PINNED_WINDOW, pinned.length + unpinned.length);
-  const slots = Array.from({ length: windowSize }, (_, i) => i);
-  for (let i = slots.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [slots[i], slots[j]] = [slots[j], slots[i]];
-  }
-  const pinnedSlots = new Set(slots.slice(0, pinned.length));
-
-  // Interleave pinned and unpinned into result
-  const result = new Array(arr.length);
-  let pi = 0, ui = 0;
-  for (let i = 0; i < arr.length; i++) {
-    if (i < windowSize && pinnedSlots.has(i)) {
-      result[i] = pinned[pi++];
+const attachCardListeners = (card, person) => {
+  card.addEventListener("click", () => {
+    if (selectMode) return;
+    if (!POPUPS_ENABLED) return;
+    if (isTouch()) {
+      const isOpen = popup.classList.contains("open");
+      const isSamePerson = popup.dataset.personId === person.id;
+      if (isOpen && isSamePerson) {
+        closePopup();
+      } else {
+        openPopup(person, card);
+      }
     } else {
-      result[i] = unpinned[ui++];
+      openPopup(person, card);
     }
-  }
-  return result;
-}
-
-// ── Grid ─────────────────────────────────────────────────────────
-function buildGrid(people) {
-  const grid = document.getElementById("grid");
-  const PROMO_SLOT = 11; // insert promo card before 0-based index 11 → 12th visual slot
-  let visualIdx = 0;
-
-  people.forEach((person, i) => {
-    if (i === PROMO_SLOT) {
-      const promoCard = createPromoCard();
-      promoCard.style.setProperty("--i", visualIdx++);
-      grid.appendChild(promoCard);
-    }
-    const { card, firstPhoto } = createCard(person, i);
-    card.style.setProperty("--i", visualIdx++);
-    grid.appendChild(card);
-    setTimeout(() => startCycle(i, card, firstPhoto), Math.random() * CYCLE_JITTER_MS);
   });
-}
 
-function createPromoCard() {
+  card.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      openPopup(person, card, true, "keyboard");
+    }
+  });
+};
+
+const createCard = (person) => {
+  const firstPhoto = Math.floor(Math.random() * person.photos.length);
+  const card = createCardElement(person);
+  const photoStage = createCardPhoto(person, firstPhoto);
+
+  card.appendChild(photoStage);
+  attachCardListeners(card, person);
+
+  return { card, firstPhoto };
+};
+
+const createPromoCard = () => {
   const card = document.createElement("div");
   card.className = "card promo-card";
 
-  // Badge (right side in RTL — first child in flex-row)
   const imgSection = document.createElement("div");
   imgSection.className = "promo-card-image";
 
@@ -189,10 +163,8 @@ function createPromoCard() {
   badge.src = "images/badge_ask.png";
   badge.alt = "עכשיו שואלות!";
   badge.loading = "lazy";
-
   imgSection.append(badge);
 
-  // Text (left side in RTL — second child)
   const textSection = document.createElement("div");
   textSection.className = "text";
 
@@ -213,152 +185,39 @@ function createPromoCard() {
   textSection.append(title, body, linkPara);
   card.append(imgSection, textSection);
   return card;
-}
+};
 
-function createCard(person, i) {
-  const card = document.createElement("div");
-  card.className = "card";
-  card.tabIndex = 0;
-  card.setAttribute("role", "button");
-  card.setAttribute(
-    "aria-label",
-    `${person.name}${person.minister ? ", " + person.minister : ""}`,
-  );
-  card.dataset.personId = person.id;
+const buildGrid = (people) => {
+  const grid = document.getElementById("grid");
+  let visualIdx = 0;
 
-  // Photo stage
-  const stage = document.createElement("div");
-  stage.className = "photo-stage";
-
-  const firstPhoto = Math.floor(Math.random() * person.photos.length);
-
-  person.photos.forEach((filename, pi) => {
-    const img = document.createElement("img");
-    img.src = PORTRAITS_DIR + filename;
-    img.alt = person.name;
-    img.draggable = false;
-    img.loading = "lazy";
-    if (pi === firstPhoto) img.classList.add("active");
-    stage.appendChild(img);
-  });
-
-  // Name badge overlaid on photo, matching popup style
-  const badge = document.createElement("span");
-  badge.className = "popup-name-badge";
-  badge.textContent = person.name;
-  stage.appendChild(badge);
-
-  card.append(stage);
-
-  // Events — hover on desktop, click-to-toggle on touch; all blocked in select mode
-  const isTouch = () => window.matchMedia("(hover: none)").matches;
-
-  // card.addEventListener("mouseenter", () => {
-  //   if (selectMode) return;
-  //   if (!isTouch()) openPopup(person, card);
-  // });
-  // card.addEventListener("mouseleave", (e) => {
-  //   if (selectMode) return;
-  //   if (!isTouch() && !e.relatedTarget?.closest("#popup")) scheduleClose();
-  // });
-  card.addEventListener("click", () => {
-    if (selectMode) return;
-    if (!POPUPS_ENABLED) return;
-    if (isTouch()) {
-      if (
-        popup.classList.contains("open") &&
-        popup.dataset.personId === person.id
-      ) {
-        closePopup();
-      } else {
-        openPopup(person, card);
-      }
-    } else {
-      openPopup(person, card);
+  people.forEach((person, i) => {
+    if (i === PROMO_SLOT) {
+      const promoCard = createPromoCard();
+      promoCard.style.setProperty("--i", visualIdx++);
+      grid.appendChild(promoCard);
     }
-  });
-  card.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") openPopup(person, card, true, "keyboard");
-  });
-
-  return { card, firstPhoto };
-}
-
-// ── Photo cycling ─────────────────────────────────────────────────
-function startCycle(idx, card, firstPhoto) {
-  if (timers[idx]) return;
-  const imgs = card.querySelectorAll(".photo-stage img");
-  const dir = Math.random() < 0.5 ? 1 : -1;
-  let current = firstPhoto;
-
-  function step() {
-    imgs[current].classList.remove("active");
-    current = (current + dir + imgs.length) % imgs.length;
-    imgs[current].classList.add("active");
-    timers[idx] = setTimeout(
-      step,
-      CYCLE_MIN_MS + Math.random() * (CYCLE_MAX_MS - CYCLE_MIN_MS),
+    const { card, firstPhoto } = createCard(person);
+    card.style.setProperty("--i", visualIdx++);
+    grid.appendChild(card);
+    setTimeout(
+      () => startCycle(i, card, firstPhoto, timers, CYCLE_MIN_MS, CYCLE_MAX_MS),
+      Math.random() * CYCLE_JITTER_MS,
     );
-  }
-
-  timers[idx] = setTimeout(
-    step,
-    CYCLE_MIN_MS + Math.random() * (CYCLE_MAX_MS - CYCLE_MIN_MS),
-  );
-}
-
-// ── Popup ─────────────────────────────────────────────────────────
-// popup.addEventListener("mouseenter", () => clearTimeout(closeTimer));
-// popup.addEventListener("mouseleave", scheduleClose);
-document.getElementById("popupClose").addEventListener("click", closePopup);
-document.getElementById("popupBack").addEventListener("click", popupGoBack);
-
-// Pin button — copies permalink to clipboard
-(function () {
-  const pinBtn   = document.getElementById("popupPin");
-  const pinToast = document.getElementById("popupPinToast");
-  if (!pinBtn) return;
-  let toastTimer;
-  pinBtn.addEventListener("click", () => {
-    const id = popup.dataset.personId;
-    if (!id) return;
-    // Copy the OG-stub URL, not the selector URL. The stub at
-    // /candidates/<id>.html carries social-preview meta tags (name + photo)
-    // and instantly redirects a real browser to candidates.html?id=<id>,
-    // so the in-app experience is identical but pasted links preview nicely.
-    const url = `${location.origin}/candidates/${encodeURIComponent(id)}.html`;
-    copyToClipboard(url).then(() => {
-      clearTimeout(toastTimer);
-      pinToast.classList.add("show");
-      toastTimer = setTimeout(() => pinToast.classList.remove("show"), 2000);
-    });
   });
-})();
+};
 
-function set(id, txt) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = txt ?? "";
-}
-function setHTML(id, html) {
-  const el = document.getElementById(id);
-  if (el) el.innerHTML = html;
-}
-function rowShow(id, show) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = show ? "" : "none";
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Popup management
+// ─────────────────────────────────────────────────────────────────────────────
 
-function openPopup(person, card, pushHistory = true, via = "card") {
+const openPopup = (person, card, pushHistory = true, via = "card") => {
   const photos = person.photos || [];
   if (!photos.length) return;
-  logCandidateOpen(person, via);
-  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-  document.body.style.paddingRight = `${scrollbarWidth}px`;
 
-  document.body.style.top = `-${window.scrollY}px`;
-  document.body.classList.add("no-scroll");
+  logCandidateOpen(person, via);
+  lockBodyScroll(popup);
   document.querySelector(".popup-info").scrollTop = 0;
-  document.getElementsByTagName("html")[0].classList.add("no-scroll");
   clearTimeout(closeTimer);
   justOpened = true;
 
@@ -374,39 +233,31 @@ function openPopup(person, card, pushHistory = true, via = "card") {
   document.getElementById("popupBack").style.display =
     popupHistory.length > 0 ? "" : "none";
 
-  // Photo
-  document.getElementById("popupImg").src = PORTRAITS_DIR + photos[photos.length - 1];
-  document.getElementById("popupImg").loading = "eager";
-  document.getElementById("popupImg").alt = person.name;
-
-  // Name badge on photo (name only)
-  set("popupNameBadge", person.name);
-
-  // 2-col rows
-  set("piName", person.name);
+  setText("popupNameBadge", person.name);
+  setText("piName", person.name);
   rowShow("piRowAge", !!person.age);
-  set("piAge", person.age);
+  setText("piAge", person.age);
   rowShow("piRowHome", !!person.home);
-  set("piHome", person.home);
+  setText("piHome", person.home);
   rowShow("piRowActivities", !!person.activities);
-  set("piActivities", person.activities);
-
-  // Full-width rows
+  setText("piActivities", person.activities);
   rowShow("piRowRationale", !!person.rationale);
-  set("piRationale", person.rationale);
+  setText("piRationale", person.rationale);
   rowShow("piRowRecommendation", !!person.recommendation);
-  if (person.recommendation) {
-    setHTML("piRecommendation", linkRecommendation(person.recommendation));
-  }
-  rowShow("piRowMinister", !!person.minister);
-  set("piMinister", person.minister);
 
-  // Links
+  if (person.recommendation) {
+    setHtml("piRecommendation", linkRecommendation(person.recommendation, allPeople));
+  }
+
+  rowShow("piRowMinister", !!person.minister);
+  setText("piMinister", person.minister);
+
   const links = person.links || {};
   const hasLinks = Object.keys(links).length > 0;
   rowShow("piRowLinks", hasLinks);
+
   if (hasLinks) {
-    setHTML(
+    setHtml(
       "piLinks",
       Object.entries(links)
         .sort(([a], [b]) => (a === "homepage" ? -1 : b === "homepage" ? 1 : 0))
@@ -421,252 +272,91 @@ function openPopup(person, card, pushHistory = true, via = "card") {
     );
   }
 
+  const popupImg = document.getElementById("popupImg");
+  popupImg.src = PORTRAITS_DIR + photos[photos.length - 1];
+  popupImg.loading = "eager";
+  popupImg.alt = person.name;
+
   popup.classList.add("open");
   popup.dataset.personId = person.id;
-  // requestAnimationFrame(() => positionPopup(card)); // Don't position the popup for now, as it is fullscreen on mobile.
-}
+};
 
-// ── Recommendation name linking ───────────────────────────────────
-function escapeHTML(str) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function stripHonorific(name) {
-  return name.replace(/^(ד"ר|פרופ'?|ח"כ|עו"ד|רב\s+|ד"ר\s+)\s*/u, "").trim();
-}
-
-function linkRecommendation(text) {
-  let result = escapeHTML(text);
-  for (const person of allPeople) {
-    const fullName     = escapeHTML(person.name);
-    const shortName    = escapeHTML(stripHonorific(person.name));
-    // Build list of name variants to try, longest first to avoid partial replacements
-    const variants = [...new Set([fullName, shortName])].sort((a, b) => b.length - a.length);
-    for (const variant of variants) {
-      if (!variant) continue;
-      result = result.replace(
-        new RegExp(variant, "g"),
-        `<a href="#" class="pi-rec-link" data-person-id="${person.id}">${variant} <span class="pi-rec-show">הצג</span></a>`,
-      );
-    }
-  }
-  return result;
-}
-
-// Delegate clicks on recommendation name links
-document.getElementById("popup").addEventListener("click", (e) => {
-  const link = e.target.closest(".pi-rec-link");
-  if (!link) return;
-  e.preventDefault();
-  e.stopPropagation();
-  const targetId = link.dataset.personId;
-  const targetPerson = allPeople.find((p) => p.id === targetId);
-  if (!targetPerson) return;
-  const targetCard = document.querySelector(
-    `.card[data-person-id="${targetId}"]`,
-  );
-  if (targetCard) {
-    targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
-    setTimeout(() => openPopup(targetPerson, targetCard, true, "recommendation"), 350);
-  } else {
-    openPopup(targetPerson, document.body, true, "recommendation");
-  }
-});
-
-function positionPopup(card) {
-  const GAP = 12;
-  const cr = card.getBoundingClientRect();
-  const pw = popup.offsetWidth;
-  const ph = popup.offsetHeight;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  popup.classList.remove(
-    "arrow-top",
-    "arrow-bottom",
-    "arrow-left",
-    "arrow-right",
-  );
-  let top, left;
-  if (cr.right + GAP + pw <= vw - 8) {
-    // right
-    left = cr.right + GAP;
-    top = cr.top + (cr.height - ph) / 2;
-    popup.classList.add("arrow-left");
-  } else if (cr.left - GAP - pw >= 8) {
-    // left
-    left = cr.left - GAP - pw;
-    top = cr.top + (cr.height - ph) / 2;
-    popup.classList.add("arrow-right");
-  } else if (cr.bottom + GAP + ph <= vh - 8) {
-    // below
-    top = cr.bottom + GAP;
-    left = cr.left + (cr.width - pw) / 2;
-    popup.classList.add("arrow-top");
-  } else {
-    // above
-    top = cr.top - GAP - ph;
-    left = cr.left + (cr.width - pw) / 2;
-    popup.classList.add("arrow-bottom");
-  }
-  popup.style.top = Math.max(8, Math.min(top, vh - ph - 8)) + "px";
-  popup.style.left = Math.max(8, Math.min(left, vw - pw - 8)) + "px";
-}
-
-function scheduleClose() {
-  closeTimer = setTimeout(closePopup, 120);
-}
-
-function closePopup() {
-  const scrollY = parseInt(document.body.style.top || "0") * -1;
-  document.body.style.top = "";
-  document.body.style.paddingRight = "";
-  document.body.classList.remove("no-scroll");
-  document.getElementsByTagName("html")[0].classList.remove("no-scroll");
-  window.scrollTo(0, scrollY);
+const closePopup = () => {
+  unlockBodyScroll();
   popup.classList.remove("open");
   popupHistory = [];
   document.getElementById("popupBack").style.display = "none";
-}
+};
 
-function popupGoBack() {
+const popupGoBack = () => {
   const prev = popupHistory.pop();
   if (!prev) return;
   openPopup(prev.person, prev.card, false, "back");
-}
+};
 
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closePopup();
-});
+const scheduleClose = () => {
+  closeTimer = setTimeout(closePopup, 120);
+};
 
-// Prevent the same click/tap that opens the popup from immediately closing it
-let justOpened = false;
-document.addEventListener("click", (e) => {
-  if (justOpened) {
-    justOpened = false;
+// ─────────────────────────────────────────────────────────────────────────────
+// URL synchronization
+// ─────────────────────────────────────────────────────────────────────────────
+
+const syncPopupToUrl = () => {
+  if (!allPeople.length) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const idParam = params.get("id");
+  const nameParam = params.get("name");
+
+  if (!(idParam || nameParam)) {
+    if (popup.classList.contains("open")) {
+      closePopup();
+    }
     return;
   }
-  if (!e.target.closest(".card") && !e.target.closest("#popup")) closePopup();
-});
 
-// ══════════════════════════════════════════════════════════
-// SELECT MODE
-// ══════════════════════════════════════════════════════════
+  const match = allPeople.find((p) =>
+    idParam ? p.id === idParam : p.name === nameParam,
+  );
 
-const COOKIE_CONSENT_KEY = "hagush_cookie_ok";
-const COOKIE_CHOICES_KEY = "hagush_choices";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+  if (!match) return;
 
-function setCookie(name, value, maxAge) {
-  document.cookie = `${name}=${encodeURIComponent(value)};max-age=${maxAge};path=/;SameSite=Lax`;
-}
-function getCookie(name) {
-  const m = document.cookie.match("(?:^|; )" + name + "=([^;]*)");
-  return m ? decodeURIComponent(m[1]) : null;
-}
-
-// Copy text to clipboard — works on mobile Safari via execCommand fallback
-function copyToClipboard(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    return navigator.clipboard.writeText(text);
+  if (popup.classList.contains("open") && popup.dataset.personId === match.id) {
+    return;
   }
-  // execCommand fallback for Safari / non-HTTPS
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  ta.style.cssText =
-    "position:fixed;top:0;left:0;opacity:0;pointer-events:none";
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
-  try {
-    document.execCommand("copy");
-  } catch (e) {}
-  document.body.removeChild(ta);
-  return Promise.resolve();
-}
 
-function restoreFromCookies() {
-  if (getCookie(COOKIE_CONSENT_KEY) !== "1") return;
-  const saved = getCookie(COOKIE_CHOICES_KEY);
-  if (saved) {
-    try {
-      JSON.parse(saved).forEach((id) => selectedIds.add(id));
-    } catch (e) {}
-  }
-  // enterSelectMode();
-}
+  openPopup(match, document.body, false, "deeplink");
+};
 
-const btnSelect = document.getElementById("btnSelect");
-const btnShowChoices = document.getElementById("btnShowChoices");
-const btnReset = document.getElementById("btnReset");
-const btnSelectOriginalText = btnSelect.textContent;
-const cookieOverlay = document.getElementById("cookieOverlay");
-const cookieYes = document.getElementById("cookieYes");
-const cookieNo = document.getElementById("cookieNo");
-const choicesOverlay = document.getElementById("choicesOverlay");
-const choicesClose = document.getElementById("choicesClose");
-const choicesCopy = document.getElementById("choicesCopy");
-const isTouch = () => navigator.maxTouchPoints > 0;
+// ─────────────────────────────────────────────────────────────────────────────
+// Select mode (candidate selection)
+// ─────────────────────────────────────────────────────────────────────────────
 
-btnSelect.addEventListener("click", () => {
-  if (selectMode) {
-    exitSelectMode();
-  } else if (isTouch() || getCookie(COOKIE_CONSENT_KEY) === "1") {
-    setCookie(COOKIE_CONSENT_KEY, "1", COOKIE_MAX_AGE);
-    enterSelectMode();
+const toggleSelection = (id, btn) => {
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id);
+    btn.classList.remove("selected");
   } else {
-    cookieOverlay.style.display = "flex";
+    selectedIds.add(id);
+    btn.classList.add("selected");
   }
-});
+  setCookie(
+    COOKIE_CHOICES_KEY,
+    JSON.stringify([...selectedIds]),
+    COOKIE_MAX_AGE,
+  );
+};
 
-cookieYes.addEventListener("click", () => {
-  setCookie(COOKIE_CONSENT_KEY, "1", COOKIE_MAX_AGE);
-  cookieOverlay.style.display = "none";
-  enterSelectMode();
-});
-cookieNo.addEventListener("click", () => {
-  cookieOverlay.style.display = "none";
-});
-cookieOverlay.addEventListener("click", (e) => {
-  if (e.target === cookieOverlay) cookieOverlay.style.display = "none";
-});
-
-btnShowChoices.addEventListener("click", openChoicesModal);
-btnReset.addEventListener("click", resetChoices);
-choicesClose.addEventListener("click", () => {
-  choicesOverlay.style.display = "none";
-});
-choicesOverlay.addEventListener("click", (e) => {
-  if (e.target === choicesOverlay) choicesOverlay.style.display = "none";
-});
-
-choicesCopy.addEventListener("click", () => {
-  const names = [...selectedIds]
-    .map((id) => {
-      const p = allPeople.find((p) => p.id === id);
-      return p ? p.name : null;
-    })
-    .filter(Boolean)
-    .join("\n");
-  copyToClipboard(names).then(() => {
-    const copied = document.getElementById("choicesCopied");
-    copied.style.display = "block";
-    setTimeout(() => {
-      copied.style.display = "none";
-    }, 2000);
-  });
-});
-
-function enterSelectMode() {
+const enterSelectMode = () => {
   selectMode = true;
   closePopup();
+
+  const btnSelect = document.getElementById("btnSelect");
   btnSelect.textContent = "✕ יציאה מבחירה";
   btnSelect.classList.add("active");
-  btnShowChoices.style.display = "";
-  btnReset.style.display = "";
+  document.getElementById("btnShowChoices").style.display = "";
+  document.getElementById("btnReset").style.display = "";
 
   document.querySelectorAll(".card[data-person-id]").forEach((card) => {
     if (card.querySelector(".card-select-btn")) return;
@@ -680,38 +370,25 @@ function enterSelectMode() {
       e.stopPropagation();
       toggleSelection(id, btn);
     });
-    card.appendChild(btn); // on .card, not .photo-stage, to avoid overflow:hidden clipping
+    card.appendChild(btn);
   });
-}
+};
 
-function exitSelectMode() {
+const exitSelectMode = () => {
   selectMode = false;
-  btnSelect.textContent = btnSelectOriginalText;
+  const btnSelect = document.getElementById("btnSelect");
+  btnSelect.textContent = btnSelect.dataset.originalText || "שמרו רשימה";
   btnSelect.classList.remove("active");
-  btnShowChoices.style.display = "none";
-  btnReset.style.display = "none";
+  document.getElementById("btnShowChoices").style.display = "none";
+  document.getElementById("btnReset").style.display = "none";
   document.querySelectorAll(".card-select-btn").forEach((b) => b.remove());
-}
+};
 
-function toggleSelection(id, btn) {
-  if (selectedIds.has(id)) {
-    selectedIds.delete(id);
-    btn.classList.remove("selected");
-  } else {
-    selectedIds.add(id);
-    btn.classList.add("selected");
-  }
-  setCookie(
-    COOKIE_CHOICES_KEY,
-    JSON.stringify([...selectedIds]),
-    COOKIE_MAX_AGE,
-  );
-}
-
-function openChoicesModal() {
+const openChoicesModal = () => {
   const list = document.getElementById("choicesList");
   const empty = document.getElementById("choicesEmpty");
   const copy = document.getElementById("choicesCopy");
+
   list.innerHTML = "";
   if (selectedIds.size === 0) {
     empty.style.display = "";
@@ -729,18 +406,203 @@ function openChoicesModal() {
       list.appendChild(li);
     });
   }
+
   document.getElementById("choicesCopied").style.display = "none";
-  choicesOverlay.style.display = "flex";
-}
+  document.getElementById("choicesOverlay").style.display = "flex";
+};
 
-function resetChoices() {
-  // Clear in-memory selections
+const resetChoices = () => {
   selectedIds.clear();
-
-  // Delete both cookies (max-age=0 expires them immediately)
   setCookie(COOKIE_CONSENT_KEY, "", 0);
   setCookie(COOKIE_CHOICES_KEY, "", 0);
-
-  // Exit select mode and return to initial state
   exitSelectMode();
-}
+};
+
+const restoreFromCookies = () => {
+  if (getCookie(COOKIE_CONSENT_KEY) !== "1") return;
+  const saved = getCookie(COOKIE_CHOICES_KEY);
+  if (saved) {
+    try {
+      JSON.parse(saved).forEach((id) => selectedIds.add(id));
+    } catch (e) {
+      /* invalid JSON */
+    }
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pin button
+// ─────────────────────────────────────────────────────────────────────────────
+
+const setupPinButton = () => {
+  const pinBtn = document.getElementById("popupPin");
+  const pinToast = document.getElementById("popupPinToast");
+  if (!pinBtn) return;
+
+  let toastTimer;
+  pinBtn.addEventListener("click", () => {
+    const id = popup.dataset.personId;
+    if (!id) return;
+    const url = `${location.origin}/candidates/${encodeURIComponent(id)}.html`;
+    copyToClipboard(url).then(() => {
+      clearTimeout(toastTimer);
+      pinToast.classList.add("show");
+      toastTimer = setTimeout(() => pinToast.classList.remove("show"), 2000);
+    });
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recommendation name linking (click delegation)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const setupRecommendationLinks = () => {
+  document.getElementById("popup").addEventListener("click", (e) => {
+    const link = e.target.closest(".pi-rec-link");
+    if (!link) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const targetId = link.dataset.personId;
+    const targetPerson = allPeople.find((p) => p.id === targetId);
+    if (!targetPerson) return;
+
+    const targetCard = document.querySelector(
+      `.card[data-person-id="${targetId}"]`,
+    );
+    if (targetCard) {
+      targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => openPopup(targetPerson, targetCard, true, "recommendation"), 350);
+    } else {
+      openPopup(targetPerson, document.body, true, "recommendation");
+    }
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Event listeners setup
+// ─────────────────────────────────────────────────────────────────────────────
+
+const setupPopupControls = () => {
+  document.getElementById("popupClose").addEventListener("click", closePopup);
+  document.getElementById("popupBack").addEventListener("click", popupGoBack);
+};
+
+const setupSelectModeControls = () => {
+  const btnSelect = document.getElementById("btnSelect");
+  const btnShowChoices = document.getElementById("btnShowChoices");
+  const btnReset = document.getElementById("btnReset");
+  const cookieOverlay = document.getElementById("cookieOverlay");
+  const cookieYes = document.getElementById("cookieYes");
+  const cookieNo = document.getElementById("cookieNo");
+  const choicesOverlay = document.getElementById("choicesOverlay");
+  const choicesClose = document.getElementById("choicesClose");
+  const choicesCopy = document.getElementById("choicesCopy");
+
+  btnSelect.dataset.originalText = btnSelect.textContent;
+
+  btnSelect.addEventListener("click", () => {
+    if (selectMode) {
+      exitSelectMode();
+    } else if (isTouch() || getCookie(COOKIE_CONSENT_KEY) === "1") {
+      setCookie(COOKIE_CONSENT_KEY, "1", COOKIE_MAX_AGE);
+      enterSelectMode();
+    } else {
+      cookieOverlay.style.display = "flex";
+    }
+  });
+
+  cookieYes.addEventListener("click", () => {
+    setCookie(COOKIE_CONSENT_KEY, "1", COOKIE_MAX_AGE);
+    cookieOverlay.style.display = "none";
+    enterSelectMode();
+  });
+
+  cookieNo.addEventListener("click", () => {
+    cookieOverlay.style.display = "none";
+  });
+
+  cookieOverlay.addEventListener("click", (e) => {
+    if (e.target === cookieOverlay) cookieOverlay.style.display = "none";
+  });
+
+  btnShowChoices.addEventListener("click", openChoicesModal);
+  btnReset.addEventListener("click", resetChoices);
+
+  choicesClose.addEventListener("click", () => {
+    choicesOverlay.style.display = "none";
+  });
+
+  choicesOverlay.addEventListener("click", (e) => {
+    if (e.target === choicesOverlay) choicesOverlay.style.display = "none";
+  });
+
+  choicesCopy.addEventListener("click", () => {
+    const names = [...selectedIds]
+      .map((id) => {
+        const p = allPeople.find((p) => p.id === id);
+        return p ? p.name : null;
+      })
+      .filter(Boolean)
+      .join("\n");
+    copyToClipboard(names).then(() => {
+      const copied = document.getElementById("choicesCopied");
+      copied.style.display = "block";
+      setTimeout(() => {
+        copied.style.display = "none";
+      }, 2000);
+    });
+  });
+};
+
+const setupKeyboardAndClickHandlers = () => {
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closePopup();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (justOpened) {
+      justOpened = false;
+      return;
+    }
+    if (!e.target.closest(".card") && !e.target.closest("#popup")) {
+      closePopup();
+    }
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bootstrap
+// ─────────────────────────────────────────────────────────────────────────────
+
+const bootstrap = () => {
+  fetch("candidates.json")
+    .then((r) => r.json())
+    .then((people) => people.filter((p) => !p.hidden))
+    .then((people) => shuffleWithPinning(people, PINNED_IDS, PINNED_WINDOW))
+    .then((people) => {
+      allPeople = people;
+      buildGrid(people);
+      restoreFromCookies();
+      syncPopupToUrl();
+
+      window.addEventListener("popstate", () => {
+        syncPopupToUrl();
+      });
+
+      window.addEventListener("pageshow", (e) => {
+        if (e.persisted) syncPopupToUrl();
+      });
+    });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Initialization
+// ─────────────────────────────────────────────────────────────────────────────
+
+setupPopupControls();
+setupRecommendationLinks();
+setupPinButton();
+setupSelectModeControls();
+setupKeyboardAndClickHandlers();
+bootstrap();
