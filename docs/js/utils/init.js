@@ -14,7 +14,6 @@ import {
  *   - track: function(type, detail)
  *   - captureFormSubmission: function(fields)
  *   - getIds: function
- *   - optoutKey: string
  * @returns {Object} Public API { track, captureFormSubmission, getIds }
  */
 const initTracker = (deps) => {

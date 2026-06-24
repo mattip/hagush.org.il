@@ -27,6 +27,12 @@ const unlockBodyScroll = () => {
 /**
  * Position popup relative to card (arrow positioning for desktop).
  * Falls back to fullscreen on mobile.
+ *
+ * IMPORTANT: popup must be rendered (not display:none) before calling this —
+ * offsetWidth/offsetHeight will be 0 otherwise and positioning will be wrong.
+ * Use visibility:hidden + opacity:0 to hide the popup before it is positioned,
+ * then reveal it after this function returns.
+ *
  * @param {HTMLElement} popup - Popup element
  * @param {HTMLElement} card - Card to position relative to
  */

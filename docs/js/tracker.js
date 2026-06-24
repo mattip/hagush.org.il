@@ -3,7 +3,6 @@
 // Auto-wiring via data attributes: <button data-track="event_name">
 
 import { generateUuid } from "./utils/id-gen.js";
-import { getIsoWeekKey } from "./utils/format.js";
 import {
   isDoNotTrackEnabled,
   hasOptedOut,
@@ -92,7 +91,6 @@ const api = initTracker({
   track: trackFn,
   captureFormSubmission: captureFormSubmissionFn,
   getIds: getIdsFn,
-  optoutKey: OPTOUT_KEY,
 });
 
 // Instrument manual event tracking (if user calls programmatically)
