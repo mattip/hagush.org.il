@@ -13,6 +13,8 @@ const startCycle = (idx, card, firstPhoto, timers, cycleMin, cycleMax) => {
   if (timers[idx]) return;
 
   const imgs = card.querySelectorAll(".photo-stage img");
+  if (!imgs.length) return;
+
   const dir = Math.random() < 0.5 ? 1 : -1;
   let current = firstPhoto;
 

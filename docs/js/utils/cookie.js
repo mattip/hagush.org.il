@@ -1,6 +1,13 @@
 // Cookie management utilities
 
 /**
+ * Escape regex meta-characters in a string.
+ * @param {string} s
+ * @returns {string}
+ */
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
  * Set a cookie with optional max-age.
  * @param {string} name - Cookie name
  * @param {string} value - Cookie value
@@ -16,7 +23,7 @@ const setCookie = (name, value, maxAge) => {
  * @returns {string|null} Cookie value or null if not found
  */
 const getCookie = (name) => {
-  const m = document.cookie.match("(?:^|; )" + name + "=([^;]*)");
+  const m = document.cookie.match("(?:^|; )" + escapeRe(name) + "=([^;]*)");
   return m ? decodeURIComponent(m[1]) : null;
 };
 

@@ -1,5 +1,7 @@
 // Pure DOM utilities (no business logic)
 
+import { escapeHtml } from "./html-escape.js";
+
 /**
  * Get element by ID (null-safe).
  * @param {string} id - Element ID
@@ -42,7 +44,6 @@ const hasClass = (element, className) => element.classList.contains(className);
  * @returns {string} HTML string for tooltip element
  */
 const createHelpTooltip = (tooltipText) => {
-  // Note: escapeHtml must be available in parent scope or imported
   return (
     '<span class="help" tabindex="0">?' +
     '<span class="tip">' +

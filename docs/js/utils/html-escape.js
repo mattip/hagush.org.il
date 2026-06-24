@@ -6,7 +6,7 @@
  * @returns {string} Escaped HTML-safe string
  */
 const escapeHtml = (str) =>
-  String(str || "").replace(/[&<>"]/g, (char) => ({
+  String(str ?? "").replace(/[&<>"]/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",

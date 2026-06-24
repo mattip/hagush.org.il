@@ -1,17 +1,6 @@
 // Pure formatting utilities (no side effects, no DOM)
 
-/**
- * Escape HTML special characters to prevent XSS.
- * @param {*} input - Value to escape (coerced to string)
- * @returns {string} Escaped HTML-safe string
- */
-const escapeHtml = (input) =>
-  String(input ?? "").replace(/[&<>"]/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-  }[char]));
+export { escapeHtml } from "./html-escape.js";
 
 /**
  * Format a percentage from numerator/denominator.
@@ -97,7 +86,6 @@ const getIsoWeekKey = (date) => {
 };
 
 export {
-  escapeHtml,
   formatPercentage,
   formatRelativeTime,
   toDate,

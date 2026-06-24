@@ -67,11 +67,9 @@ const wirePageViewTracking = (doc, trackPageView) => {
   // Track initial page view
   trackPageView();
 
-  // Track on hash changes (SPA support)
-  doc.addEventListener("hashchange", trackPageView);
-
-  // Track on popstate (back/forward buttons)
+  // Track on hash changes and popstate (hashchange fires on window, not document)
   if (typeof window !== "undefined") {
+    window.addEventListener("hashchange", trackPageView);
     window.addEventListener("popstate", trackPageView);
   }
 };
