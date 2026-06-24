@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>לוח ניהול — עכשיו באות!</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ── Login screen ── -->
+<div id="login" class="login">
+  <div class="login-card">
+    <h1>דשבורד עכשיו באות!</h1>
+    <p class="sub">כניסת מנהלים</p>
+    <button id="login-btn" class="login-btn">כניסה עם Google</button>
+    <p id="login-err" class="login-err"></p>
+  </div>
+</div>
+
+<!-- ── No-access screen ── -->
+<div id="noaccess" class="login hidden">
+  <div class="login-card">
+    <h1>אין הרשאה</h1>
+    <p class="sub">החשבון <span id="na-email"></span> אינו מורשה לצפות בלוח. פנו למנהל המערכת.</p>
+    <button id="na-logout" class="login-btn">התנתקות</button>
+  </div>
+</div>
+
+<!-- ── Dashboard ── -->
+<div id="dash" class="wrap hidden" style="padding-top:0">
+  <div class="band">
+    <div class="band-row">
+      <div>
+        <p class="eyebrow">עכשיו באות! · ניהול</p>
+        <div class="title-line">
+          <h1 class="page-title" id="dash-title">לוח ניהול</h1>
+          <span class="role-badge" id="role-badge">—</span>
+        </div>
+      </div>
+      <div class="controls">
+        <input id="from-date" type="date" class="input-date" aria-label="מתאריך" />
+        <input id="to-date" type="date" class="input-date" aria-label="עד תאריך" />
+        <button id="filter-btn" class="btn">סנן</button>
+        <button id="dup-toggle" class="toggle on" title="הסתרת כפילויות מהתצוגה ומהספירה">כפילות</button>
+        <button id="test-toggle" class="toggle on" title="הסתרת בדיקות מהתצוגה">בדיקה</button>
+        <button id="refresh-toggle" class="toggle"><span class="dot"></span> עדכון אוטומטי</button>
+        <span class="muted" id="updated">—</span>
+        <span class="email" id="user-email"></span>
+        <button id="logout-btn" class="btn">יציאה</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="empty"><span class="spinner"></span> טוען נתונים…</div>
+
+  <div id="content" class="hidden">
+    <!-- KPI row -->
+    <div class="grid4" id="kpi-row" style="margin-top:50px"></div>
+    <!-- Party registration -->
+    <h2 class="section-h">התפקדות למפלגה</h2>
+    <div class="grid4" id="party-row"></div>
+    <!-- Collapsible sections -->
+    <div id="sections" style="margin-top:24px"></div>
+  </div>
+
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

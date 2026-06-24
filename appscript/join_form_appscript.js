@@ -56,6 +56,13 @@ const REFERRERS = [
   'הילה גולן',            // 25
 ];
 
+// NEW (additive): explicit string referrer codes, e.g. ?referrer=tzipi
+// Fill this from the mapping you provide. The same code strings become the
+// `referrerCode` field on the influencer/group docs in Firestore, so the
+// Sheet name and the Firestore attribution stay in sync.
+// Example: const REFERRER_CODES = { tzipi: 'צפי שומר' };
+const REFERRER_CODES = {};
+
 function editDistance(a, b) {
   const m = a.length, n = b.length;
   const dp = Array.from({length: m + 1}, (_, i) => [i, ...Array(n).fill(0)]);
@@ -68,6 +75,13 @@ function editDistance(a, b) {
 }
 
 function referrerName(idx, source) {
+  // NEW (additive): explicit string code -> name, checked first. Empty map by
+  // default, so the existing int + fuzzy behavior is unchanged until you fill it.
+  const codeKey = String(idx == null ? '' : idx).trim();
+  if (codeKey && Object.prototype.hasOwnProperty.call(REFERRER_CODES, codeKey)) {
+    return REFERRER_CODES[codeKey];
+  }
+
   const n = parseInt(idx, 10);
   if (n >= 1 && n <= REFERRERS.length) return REFERRERS[n - 1];
 
@@ -199,8 +213,10 @@ function handleJoin(data, respond) {
     }
   }
 
+  const now = new Date();   // one timestamp shared by the Sheet row + the mirror
+
   appendRow(JOIN_SHEET_ID, JOIN_COLUMNS, [
-    new Date(),
+    now,
     data.source      || '',
     data.firstName   || '',
     data.lastName    || '',
@@ -211,6 +227,10 @@ function handleJoin(data, respond) {
     referrerName(data.referrer, data.source),
     data.email       || '',
   ]);
+
+  // ADDITIVE Firestore mirror. Guarded so a failure can NEVER affect the Sheet
+  // write above or the response below. No id_num, no raw phone.
+  try { mirrorRegistration_(data, now); } catch (err) { Logger.log('mirror join error: ' + err); }
 
   return respond(true, 'תודה! הפרטים התקבלו בהצלחה');
 }
@@ -225,9 +245,10 @@ function handleEvent(data) {
   // writes. If we can't get it quickly, drop the ping (analytics, not critical).
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(500)) return;
+  const now = new Date();   // one timestamp shared by the Sheet row + the mirror
   try {
     appendRow(EVENTS_SHEET_ID, EVENT_COLUMNS, [
-      new Date(),                 // server arrival time
+      now,                        // server arrival time
       data.ts           || '',    // client time-of-click (ISO, with offset)
       data.candidateId  || '',
       data.candidateName|| '',
@@ -236,6 +257,7 @@ function handleEvent(data) {
   } finally {
     lock.releaseLock();
   }
+
 }
 function handleQuestion(data, respond) {
   const required = ['name', 'phone', 'question'];
@@ -245,8 +267,10 @@ function handleQuestion(data, respond) {
     }
   }
 
+  const now = new Date();   // one timestamp shared by the Sheet row + the mirror
+
   appendRow(QUESTIONS_SHEET_ID, QUESTION_COLUMNS, [
-    new Date(),
+    now,
     data.candidate   || '',
     data.name        || '',
     data.phone       || '',
@@ -255,6 +279,7 @@ function handleQuestion(data, respond) {
     data.registered === 'yes' ? 'התפקד/ה' : 'לא התפקד/ה',
     data.question    || '',
   ]);
+
 
   return respond(true, 'תודה! השאלה התקבלה');
 }

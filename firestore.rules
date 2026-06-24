@@ -1,11 +1,10 @@
-rules_version = '3';
+rules_version = '2';
 
 // hagush.org.il dashboard — Firestore Security Rules (Stage A)
 // Architecture: Option A (rules-gated SPA writes), Spark/free tier.
 //   - PII + audit (registrations, questions, login_events, aggregates):
 //       NEVER client-written. Written only by the Apps Script service account
 //       and the local backfill (both bypass these rules via the Admin SDK).
-//   - Telemetry (page_views, interactions): validated, anonymous client writes.
 //   - Management (groups, influencers, roles): admin-only client writes.
 //
 // Doc id convention: roles/{email} — the doc id IS the user's Google email.
@@ -43,81 +42,12 @@ service cloud.firestore {
         || (influencerRole() && res.data.influencerId == roleDoc().influencerId);
     }
 
-    // Telemetry: strict allow-list of keys. Because PII keys are simply not in
     // the allow-list, hasOnly() makes it impossible to smuggle PII into a write.
-    function validIds(d) {
       return d.sessionId is string && d.sessionId.size() > 0 && d.sessionId.size() <= 64
           && d.dailyId   is string && d.dailyId.size()   > 0 && d.dailyId.size()   <= 64;
     }
     function smallStr(v) { return v is string && v.size() <= 512; }
 
-    function validPageView() {
-      let d = request.resource.data;
-      return validIds(d)
-        && d.keys().hasOnly([
-             'sessionId','dailyId','influencerId','groupId','page','medium',
-             'channel','deviceClass','ts','weekKey','isBot'
-           ])
-        && d.keys().hasAll(['sessionId','dailyId','page','ts'])
-        && smallStr(d.page)
-        && (!('medium' in d)       || d.medium in ['web','qr'])
-        && (!('channel' in d)      || smallStr(d.channel))
-        && (!('deviceClass' in d)  || smallStr(d.deviceClass))
-        && (!('influencerId' in d) || smallStr(d.influencerId))
-        && (!('groupId' in d)      || smallStr(d.groupId))
-        && (!('isBot' in d)        || d.isBot is bool)
-        && d.ts is timestamp;
-    }
-
-    function validInteraction() {
-      let d = request.resource.data;
-      return validIds(d)
-        && d.keys().hasOnly([
-             'type','sessionId','dailyId','influencerId','groupId',
-             'page','ts','weekKey','detail'
-           ])
-        && d.keys().hasAll(['type','sessionId','dailyId','ts'])
-        && d.type in [
-             'candidate_open','form_started','field_dropoff','validation_error',
-             'submit_attempt','cta_join','cta_party','whatsapp','status_check',
-             'scroll_reached_form','dwell'
-           ]
-        && (!('page' in d)         || smallStr(d.page))
-        && (!('influencerId' in d) || smallStr(d.influencerId))
-        && (!('groupId' in d)      || smallStr(d.groupId))
-        && (!('detail' in d)       || (d.detail is map && d.detail.size() <= 12))  // cap nesting/abuse
-        && d.ts is timestamp;
-    }
-
-    // form_submissions: anonymous client create of the raw form data (PII allowed
-    // but allow-listed + size-capped). Reads are admin-only (see the match block).
-    function validFormSubmission() {
-      let d = request.resource.data;
-      return d.keys().hasOnly([
-             'formType','firstName','lastName','phone','email','city','idNumber',
-             'registered','source','referrer','candidate','question',
-             'sessionId','dailyId','page','weekKey','ts','backendOk'
-           ])
-        && d.keys().hasAll(['formType','ts'])
-        && d.ts is timestamp
-        && d.formType in ['join','question']
-        && (!('firstName' in d)  || smallStr(d.firstName))
-        && (!('lastName' in d)   || smallStr(d.lastName))
-        && (!('phone' in d)      || smallStr(d.phone))
-        && (!('email' in d)      || smallStr(d.email))
-        && (!('city' in d)       || smallStr(d.city))
-        && (!('idNumber' in d)   || smallStr(d.idNumber))
-        && (!('registered' in d) || smallStr(d.registered))
-        && (!('source' in d)     || smallStr(d.source))
-        && (!('referrer' in d)   || smallStr(d.referrer))
-        && (!('candidate' in d)  || smallStr(d.candidate))
-        && (!('question' in d)   || (d.question is string && d.question.size() <= 2000))
-        && (!('sessionId' in d)  || smallStr(d.sessionId))
-        && (!('dailyId' in d)    || smallStr(d.dailyId))
-        && (!('page' in d)       || smallStr(d.page))
-        && (!('weekKey' in d)    || smallStr(d.weekKey))
-        && (!('backendOk' in d)  || d.backendOk is bool);
-    }
 
     // ───────────────────────── PII / audit (server-only) ─────────────────────────
     match /registrations/{id} {
@@ -153,7 +83,6 @@ service cloud.firestore {
       allow update, delete: if isAdmin()
         || (canManageEvents() && resource.data.created_by == email());
     }
-
     match /aggregates/{id} {
       allow read: if isAdmin() || mgrFull()
         || (mgrGroup()       && resource.data.scope == 'group'      && resource.data.key == roleDoc().groupId)
@@ -165,30 +94,26 @@ service cloud.firestore {
       allow write: if false;             // import bookkeeping (SA / backfill)
     }
 
-    // ───────────────────────── telemetry (validated client create) ─────────────────────────
-    match /page_views/{id} {
-      allow create: if validPageView();
-      allow read:   if canReadScoped(resource);   // per-row group/influencer scope
-      allow update, delete: if false;    // immutable; TTL handles expiry
-    }
-    match /interactions/{id} {
-      allow create: if validInteraction();
-      allow read:   if canReadScoped(resource);
-      allow update, delete: if false;
-    }
 
-    // ───────────────────────── form_submissions (UI-only capture) ─────────────────────────
-    // Backend-independent backup: the public (anonymous) client writes the raw
-    // form data here on every submit, regardless of whether the Apps Script
-    // backend succeeded. Because it CONTAINS PII, reads are admin-only. Create is
-    // shape-validated (allow-list + size caps) to limit abuse, and the collection
-    // is append-only from the client. NOTE: an anonymous open-create collection is
-    // inherently spammable — enable Firebase App Check on this project to bind
-    // writes to your real site and block scripted/fake submissions.
-    match /form_submissions/{id} {
-      allow create:         if validFormSubmission();
-      allow read:           if isAdmin();   // contains PII → admin only
-      allow update, delete: if false;       // append-only from the client
+    // ───────────────────────── legacy form collections (read-only, no new writes) ──────
+    // Pre-consolidation collections — kept for dashboard reads of existing data.
+    // New submissions go to form_submissions; these are append-only from the old client.
+    match /join_form/{id} {
+      allow read:           if isAdmin();
+      allow create, update, delete: if false;
+    }
+    match /ask_candidate_form/{id} {
+      allow read:           if isAdmin();
+      allow create, update, delete: if false;
+    }
+    // Moderation flags overlay for join_form docs (keyed by join_form doc id).
+    match /submission_flags/{id} {
+      allow read:  if hasRole();
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['isTest','isDuplicate','updatedAt','by'])
+        && request.resource.data.isTest is bool
+        && request.resource.data.isDuplicate is bool
+        && (!('by' in request.resource.data) || smallStr(request.resource.data.by));
     }
 
     // ───────────────────────── management (admin-only writes) ─────────────────────────
@@ -199,12 +124,6 @@ service cloud.firestore {
     match /influencers/{id} {
       allow read:  if hasRole();
       allow write: if isAdmin();
-    }
-
-    // ───────────────────────── campaign_events (admin-only writes) ─────────────────────────
-    match /campaign_events/{id} {
-      allow read:  if true;
-      allow create, update, delete: if isAdmin();
     }
 
     // roles: a user may read their own role doc; admins read/write all.
