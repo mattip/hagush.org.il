@@ -1,5 +1,9 @@
 /* ── Events page ─────────────────────────────────────────────────── */
 
+body {
+  background: rgb(235, 231, 245);
+}
+
 .events-hero {
   padding: 1.5rem 2rem 0.5rem;
   text-align: center;
@@ -39,9 +43,9 @@
 
 .filter-pill {
   padding: 6px 18px;
-  border: 2px solid var(--nav);
+  border: 1.5px solid var(--steel, #7a9eb8);
   border-radius: 999px;
-  background: #fff;
+  background: rgb(212, 221, 232);
   color: var(--nav);
   font: inherit;
   font-size: 0.85rem;
@@ -50,9 +54,11 @@
   transition: background 0.15s, color 0.15s;
 }
 
-.filter-pill:hover,
 .filter-pill.active {
-  background: var(--light, #eaeff6);
+  background: rgb(212, 221, 232);
+}
+.filter-pill:hover {
+  background: rgb(200, 210, 222);
 }
 
 .filter-dropdown {
@@ -167,7 +173,7 @@
 .event-cta {
   display: block;
   text-align: center;
-  background: var(--nav);
+  background: var(--blue, #1a6aff);
   color: #fff;
   padding: 10px;
   font-size: 0.85rem;
