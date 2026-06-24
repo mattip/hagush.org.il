@@ -1,0 +1,12 @@
+node_modules/
+
+# Data, not source
+docs/candidates.json
+docs/candidates/
+docs/c/
+
+# Generated pages (rebuilt by build_ask_page.py)
+docs/ask_*.html
+
+# Vendor / asset SVGs
+docs/*.svg

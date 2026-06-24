@@ -87,18 +87,24 @@ service cloud.firestore {
         && d.ts is timestamp;
     }
 
-    // form_submissions: anonymous client create of the raw form data (PII allowed
-    // but allow-listed + size-capped). Reads are admin-only (see the match block).
-    function validFormSubmission() {
+    // Form captures: anonymous client create of the raw form data (PII allowed
+    // but allow-listed + size-capped). Reads are admin-only (see the match
+    // blocks). The two form types live in two MUTUALLY EXCLUSIVE collections,
+    // each validated by its own function with a field allow-list scoped to that
+    // form and a pinned formType — so a join doc can never carry question data
+    // and vice versa.
+
+    // join_form: party-registration / join submissions.
+    function validJoinForm() {
       let d = request.resource.data;
       return d.keys().hasOnly([
              'formType','firstName','lastName','phone','email','city','idNumber',
-             'registered','source','referrer','candidate','question',
+             'registered','source','referrer',
              'sessionId','dailyId','page','weekKey','ts','backendOk'
            ])
         && d.keys().hasAll(['formType','ts'])
         && d.ts is timestamp
-        && d.formType in ['join','question']
+        && d.formType == 'join'
         && (!('firstName' in d)  || smallStr(d.firstName))
         && (!('lastName' in d)   || smallStr(d.lastName))
         && (!('phone' in d)      || smallStr(d.phone))
@@ -108,7 +114,29 @@ service cloud.firestore {
         && (!('registered' in d) || smallStr(d.registered))
         && (!('source' in d)     || smallStr(d.source))
         && (!('referrer' in d)   || smallStr(d.referrer))
+        && (!('sessionId' in d)  || smallStr(d.sessionId))
+        && (!('dailyId' in d)    || smallStr(d.dailyId))
+        && (!('page' in d)       || smallStr(d.page))
+        && (!('weekKey' in d)    || smallStr(d.weekKey))
+        && (!('backendOk' in d)  || d.backendOk is bool);
+    }
+
+    // ask_candidate_form: questions submitted to a candidate.
+    function validAskCandidateForm() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+             'formType','candidate','name','phone','email','city','registered','question',
+             'sessionId','dailyId','page','weekKey','ts','backendOk'
+           ])
+        && d.keys().hasAll(['formType','ts'])
+        && d.ts is timestamp
+        && d.formType == 'question'
         && (!('candidate' in d)  || smallStr(d.candidate))
+        && (!('name' in d)       || smallStr(d.name))
+        && (!('phone' in d)      || smallStr(d.phone))
+        && (!('email' in d)      || smallStr(d.email))
+        && (!('city' in d)       || smallStr(d.city))
+        && (!('registered' in d) || smallStr(d.registered))
         && (!('question' in d)   || (d.question is string && d.question.size() <= 2000))
         && (!('sessionId' in d)  || smallStr(d.sessionId))
         && (!('dailyId' in d)    || smallStr(d.dailyId))
@@ -167,18 +195,40 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // ───────────────────────── form_submissions (UI-only capture) ─────────────────────────
+    // ───────────────────────── form captures (UI-only, two collections) ─────────────────────────
     // Backend-independent backup: the public (anonymous) client writes the raw
     // form data here on every submit, regardless of whether the Apps Script
-    // backend succeeded. Because it CONTAINS PII, reads are admin-only. Create is
-    // shape-validated (allow-list + size caps) to limit abuse, and the collection
-    // is append-only from the client. NOTE: an anonymous open-create collection is
+    // backend succeeded. Join submissions and candidate questions go to two
+    // MUTUALLY EXCLUSIVE collections so their (differently-shaped) PII never
+    // mixes. Because both CONTAIN PII, reads are admin-only. Create is
+    // shape-validated (allow-list + size caps) to limit abuse, and both are
+    // append-only from the client. NOTE: anonymous open-create collections are
     // inherently spammable — enable Firebase App Check on this project to bind
     // writes to your real site and block scripted/fake submissions.
-    match /form_submissions/{id} {
-      allow create:         if validFormSubmission();
+    match /join_form/{id} {
+      allow create:         if validJoinForm();
       allow read:           if isAdmin();   // contains PII → admin only
       allow update, delete: if false;       // append-only from the client
+    }
+    match /ask_candidate_form/{id} {
+      allow create:         if validAskCandidateForm();
+      allow read:           if isAdmin();   // contains PII → admin only
+      allow update, delete: if false;       // append-only from the client
+    }
+
+    // ───────────────────────── submission_flags (admin moderation overlay) ─────────────────────────
+    // join_form is append-only, so moderation flags can't live on the submission
+    // docs. This sibling collection — keyed by the join_form doc id — holds ONLY
+    // moderation booleans (never PII). Admins write; any signed-in role may read
+    // (so the dashboard can filter), but note that reading the submissions
+    // themselves is still admin-only.
+    match /submission_flags/{id} {
+      allow read:  if hasRole();
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['isTest','isDuplicate','updatedAt','by'])
+        && request.resource.data.isTest is bool
+        && request.resource.data.isDuplicate is bool
+        && (!('by' in request.resource.data) || smallStr(request.resource.data.by));
     }
 
     // ───────────────────────── management (admin-only writes) ─────────────────────────

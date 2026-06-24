@@ -1,0 +1,25 @@
+{
+  "name": "hagush.org.il",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tooling for the hagush.org.il static site (dev-only; not shipped to GitHub Pages).",
+  "type": "module",
+  "scripts": {
+    "lint": "npm run lint:js && npm run lint:css",
+    "lint:js": "eslint \"docs/**/*.js\"",
+    "lint:css": "stylelint \"docs/**/*.css\"",
+    "lint:fix": "eslint \"docs/**/*.js\" --fix && stylelint \"docs/**/*.css\" --fix",
+    "format": "prettier --write \"docs/**/*.{js,css,html}\"",
+    "format:check": "prettier --check \"docs/**/*.{js,css,html}\"",
+    "check": "npm run format:check && npm run lint"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "eslint": "^9.29.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.15.0",
+    "prettier": "^3.5.3",
+    "stylelint": "^16.18.0",
+    "stylelint-config-standard": "^36.0.1"
+  }
+}

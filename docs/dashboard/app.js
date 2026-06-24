@@ -1,17 +1,42 @@
 // hagush.org.il dashboard — no-build SPA (vanilla ES modules + Firebase CDN).
 // Reads the Stage-A Firestore model; role-based views with PII masking.
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, collection, getDocs, getDoc, doc, query, where, orderBy, limit,
-  addDoc, serverTimestamp,
+  getFirestore,
+  collection,
+  getDocs,
+  getDoc,
+  doc,
+  query,
+  where,
+  orderBy,
+  limit,
+  addDoc,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { openBackoffice } from "./backoffice.js";
+import {
+  escapeHtml,
+  formatPercentage,
+  formatRelativeTime,
+  toDate,
+  normalizePhone,
+  getIsoWeekKey,
+} from "../js/utils/format.js";
 
-// Public client config (safe to expose; security is Rules + Auth).
-const firebaseConfig = {
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
+
+const FIREBASE_CONFIG = {
   apiKey: "AIzaSyC7hQs04G8U0BMs9UXrHEurQnxgxN7jmLw",
   authDomain: "hagush-org-il.firebaseapp.com",
   projectId: "hagush-org-il",
@@ -19,401 +44,967 @@ const firebaseConfig = {
   messagingSenderId: "674306617225",
   appId: "1:674306617225:web:7f84e8f09bc35222e77b58",
 };
-const app = initializeApp(firebaseConfig);
+
+const ROLE_LABELS = {
+  admin: "מנהל·ת",
+  manager: "מנהל·ת תוכן",
+  influencer: "מוביל·ה",
+};
+
+const DEMO_MODE = new URLSearchParams(location.search).has("demo") ||
+  location.hash === "#demo";
+
+const SUBMISSION_LIMIT = 2000;
+const DATE_RANGE_LIMIT = 2000;
+const RECENT_ROWS_LIMIT = 50;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOM shortcuts
+// ─────────────────────────────────────────────────────────────────────────────
+
+const getById = (id) => document.getElementById(id);
+
+const show = (element) => element.classList.remove("hidden");
+
+const hide = (element) => element.classList.add("hidden");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Firebase initialization
+// ─────────────────────────────────────────────────────────────────────────────
+
+const app = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ── DOM helpers ───────────────────────────────────────────────────────────
-const $ = (id) => document.getElementById(id);
-const show = (el) => el.classList.remove("hidden");
-const hide = (el) => el.classList.add("hidden");
-const nf = new Intl.NumberFormat("he-IL");
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c]));
-function pct(a, b) { return b > 0 ? Math.round((a / b) * 1000) / 10 + "%" : "0%"; }
-function relTime(d) {
-  if (!d) return "—";
-  const s = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (s < 60) return "לפני " + s + " שנ׳";
-  if (s < 3600) return "לפני " + Math.floor(s / 60) + " דק׳";
-  if (s < 86400) return "לפני " + Math.floor(s / 3600) + " שע׳";
-  return "לפני " + Math.floor(s / 86400) + " ימים";
-}
-function tsToDate(v) { return v && typeof v.toDate === "function" ? v.toDate() : (v ? new Date(v) : null); }
-function help(text) { return `<span class="help" tabindex="0">?<span class="tip">${esc(text)}</span></span>`; }
+// ─────────────────────────────────────────────────────────────────────────────
+// Formatting utilities
+// ─────────────────────────────────────────────────────────────────────────────
 
-let identity = null;      // { email, role, scope, groupId, influencerId }
-let refTimer = null;
+const NUMBER_FORMATTER = new Intl.NumberFormat("he-IL");
 
-// Demo mode: open with ?demo  → render the full UI with sample data, no login.
-const DEMO = new URLSearchParams(location.search).has("demo") || location.hash === "#demo";
+const createHelpTooltip = (text) =>
+  `<span class="help" tabindex="0">?<span class="tip">${escapeHtml(text)}</span></span>`;
 
-// ── Auth flow ─────────────────────────────────────────────────────────────
-$("login-btn").addEventListener("click", async () => {
-  $("login-err").textContent = "";
-  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
-  catch (err) { console.error(err); $("login-err").textContent = "שגיאה בכניסה: " + (err?.code || err); }
-});
-$("logout-btn").addEventListener("click", () => signOut(auth));
-$("na-logout").addEventListener("click", () => signOut(auth));
+const createChevron = () =>
+  '<svg class="chev" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-async function audit(email, status) {
-  try { await addDoc(collection(db, "login_events"), { email, status, ts: serverTimestamp() }); }
-  catch (e) { /* audit is best-effort */ }
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
 
-async function handleAuth(user) {
-  if (refTimer) { clearInterval(refTimer); refTimer = null; }
-  if (!user) { hide($("dash")); hide($("noaccess")); show($("login")); return; }
-  // Resolve role
-  let roleData = null;
-  try { const snap = await getDoc(doc(db, "roles", user.email)); if (snap.exists()) roleData = snap.data(); }
-  catch (e) { console.error("role read failed", e); }
+let userIdentity = null; // { email, role, scope, groupId, influencerId }
+let refreshTimer = null;
+let moderationFlags = {}; // { submissionId -> { isTest, isDuplicate } }
+let lastFetchedData = null; // cached render input
 
-  if (!roleData || roleData.active !== true) {
-    await audit(user.email, "forbidden");
-    $("na-email").textContent = user.email;
-    hide($("login")); hide($("dash")); show($("noaccess"));
+// ─────────────────────────────────────────────────────────────────────────────
+// Authentication flow
+// ─────────────────────────────────────────────────────────────────────────────
+
+const auditLogin = async (email, status) => {
+  try {
+    await addDoc(collection(db, "login_events"), {
+      email,
+      status,
+      ts: serverTimestamp(),
+    });
+  } catch (e) {
+    /* audit is best-effort */
+  }
+};
+
+const handleAuth = async (user) => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+
+  if (!user) {
+    hide(getById("dash"));
+    hide(getById("noaccess"));
+    show(getById("login"));
     return;
   }
-  await audit(user.email, "success");
-  identity = {
+
+  // Resolve role from Firestore
+  let roleData = null;
+  try {
+    const snapshot = await getDoc(doc(db, "roles", user.email));
+    if (snapshot.exists()) roleData = snapshot.data();
+  } catch (e) {
+    console.error("role read failed", e);
+  }
+
+  if (!roleData || roleData.active !== true) {
+    await auditLogin(user.email, "forbidden");
+    getById("na-email").textContent = user.email;
+    hide(getById("login"));
+    hide(getById("dash"));
+    show(getById("noaccess"));
+    return;
+  }
+
+  await auditLogin(user.email, "success");
+
+  userIdentity = {
     email: user.email,
-    role: roleData.role,                 // admin | manager | influencer
-    scope: roleData.scope || "full",     // full | group
+    role: roleData.role, // admin | manager | influencer
+    scope: roleData.scope || "full", // full | group
     groupId: roleData.groupId || null,
     influencerId: roleData.influencerId || null,
   };
-  hide($("login")); hide($("noaccess")); show($("dash"));
-  initChrome();
+
+  hide(getById("login"));
+  hide(getById("noaccess"));
+  show(getById("dash"));
+  initializeChrome();
   loadData();
-}
+};
 
-if (DEMO) startDemo(); else onAuthStateChanged(auth, handleAuth);
-
-// ── Header chrome ─────────────────────────────────────────────────────────
-function initChrome() {
-  const roleLabel = { admin: "מנהל·ת", manager: "מנהל·ת תוכן", influencer: "מוביל·ה" }[identity.role] || identity.role;
-  $("role-badge").textContent = roleLabel;
-  $("user-email").textContent = identity.email;
-  $("dash-title").textContent = identity.role === "influencer" ? "הדף שלי" : "לוח ניהול כללי";
-  if (identity.role === "admin") show($("manage-btn"));
-  $("manage-btn").onclick = (e) => { e.preventDefault(); openBackoffice(db, DEMO); };
-  $("filter-btn").onclick = () => loadData();
-  const toggle = $("refresh-toggle");
-  toggle.onclick = () => {
-    toggle.classList.toggle("on");
-    if (toggle.classList.contains("on")) { refTimer = setInterval(loadData, 30000); }
-    else if (refTimer) { clearInterval(refTimer); refTimer = null; }
-  };
-}
-
-// ── Submission source (UI-written, replaces the Apps Script mirror) ─────────
-// The dashboard's registrations now come from `form_submissions` — the raw
-// submission the public form writes to Firestore directly (tracker.js
-// captureFormSubmission). The old `registrations` collection (populated by the
-// Apps Script / Google Sheets mirror) is no longer read.
-//
-// NOTE: `form_submissions` reads are admin-only in firestore.rules and the docs
-// carry no influencerId/groupId, so manager/influencer scoped views cannot be
-// served from this collection without a rules + data rework. Scoping below is
-// applied client-side (after referrer resolution) so it still works if the rules
-// are later relaxed; today only the admin role can read this collection.
-
-function normPhone_(raw) {
-  let s = String(raw || "").replace(/\D/g, "");
-  if (!s) return "";
-  if (s.indexOf("972") === 0) { /* already international */ }
-  else if (s.charAt(0) === "0") { s = "972" + s.slice(1); }
-  else if (s.length === 9) { s = "972" + s; }   // missing leading 0
-  return s;
-}
-
-// Build { referrerCode -> { influencerId, groupId } } from groups + influencers.
-// Mirrors firestore_mirror.gs getReferrerMap_: a group may own a code; an
-// influencer code overrides and also carries its groupId.
-function buildReferrerMap(inflSnap, grpSnap) {
-  const map = {};
-  grpSnap.forEach((d) => {
-    const o = d.data() || {};
-    if (o.referrerCode != null && o.active !== false) map[String(o.referrerCode)] = { influencerId: null, groupId: d.id };
-  });
-  inflSnap.forEach((d) => {
-    const o = d.data() || {};
-    if (o.referrerCode != null && o.active !== false) map[String(o.referrerCode)] = { influencerId: d.id, groupId: o.groupId || "default" };
-  });
-  return map;
-}
-function resolveReferrer(code, map) {
-  const c = String(code == null ? "" : code).trim();
-  if (c && map[c]) return map[c];
-  return { influencerId: null, groupId: "default" };   // default group
-}
-
-// Map a raw form_submissions doc to the shape render()/sections expect.
-function mapSubmission(s, map) {
-  const ref = resolveReferrer(s.referrer, map);
-  const phone = normPhone_(s.phone);
-  const name = ((s.firstName || "") + " " + (s.lastName || "")).trim();
-  return {
-    id: s.id,
-    name: name || "—",
-    phoneLast3: phone ? phone.slice(-3) : "",
-    phoneCanon: phone || null,                 // client dedup key (normalized, unsalted)
-    email: s.email || "",
-    city: s.city || "",
-    source: s.source || "",
-    influencerId: ref.influencerId,
-    groupId: ref.groupId,
-    sessionId: s.sessionId || null,
-    dailyId: s.dailyId || null,
-    partyRegistered: s.registered === "yes" ? true : (s.registered === "no" ? false : null),
-    isTest: false,                             // no server moderation flag on form_submissions
-    isDuplicate: false,                        // computed in render() from phoneCanon
-    createdAt: s.ts,
-  };
-}
-
-// Read recent join submissions (ordered by ts; formType filtered client-side to
-// avoid a composite index, matching the rest of the dashboard's query style).
-async function fetchSubmissions() {
-  const snap = await getDocs(query(collection(db, "form_submissions"), orderBy("ts", "desc"), limit(2000)));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => (x.formType || "join") === "join");
-}
-
-// ── Data loading ──────────────────────────────────────────────────────────
-// Scope a query: influencer → own influencerId; group-manager → own groupId;
-// admin / full-manager → unfiltered (ordered + capped). Avoids composite indexes.
-async function fetchScoped(name, dateField) {
-  let q;
-  if (identity.role === "influencer" && identity.influencerId) {
-    q = query(collection(db, name), where("influencerId", "==", identity.influencerId), limit(2000));
-  } else if (identity.role === "manager" && identity.scope === "group" && identity.groupId) {
-    q = query(collection(db, name), where("groupId", "==", identity.groupId), limit(2000));
-  } else {
-    q = query(collection(db, name), orderBy(dateField, "desc"), limit(2000));
-  }
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-}
-
-function dateRange() {
-  const f = $("from-date").value ? new Date($("from-date").value + "T00:00:00") : null;
-  const t = $("to-date").value ? new Date($("to-date").value + "T23:59:59") : null;
-  return { f, t };
-}
-function inRange(d, r) { if (!d) return false; if (r.f && d < r.f) return false; if (r.t && d > r.t) return false; return true; }
-
-async function loadData() {
-  show($("loading")); hide($("content"));
+getById("login-btn").addEventListener("click", async () => {
+  getById("login-err").textContent = "";
   try {
-    const r = dateRange();
-    const [subsRaw, pvAll, intAll, inflSnap, grpSnap] = await Promise.all([
-      fetchSubmissions(),
-      fetchScoped("page_views", "ts"),
-      fetchScoped("interactions", "ts"),
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (err) {
+    console.error(err);
+    getById("login-err").textContent = "שגיאה בכניסה: " + (err?.code || err);
+  }
+});
+
+getById("logout-btn").addEventListener("click", () => signOut(auth));
+getById("na-logout").addEventListener("click", () => signOut(auth));
+
+if (DEMO_MODE) {
+  startDemoMode();
+} else {
+  onAuthStateChanged(auth, handleAuth);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Header chrome / UI initialization
+// ─────────────────────────────────────────────────────────────────────────────
+
+const initializeChrome = () => {
+  const roleLabel = ROLE_LABELS[userIdentity.role] || userIdentity.role;
+  getById("role-badge").textContent = roleLabel;
+  getById("user-email").textContent = userIdentity.email;
+
+  const dashTitle = userIdentity.role === "influencer" ? "הדף שלי" : "לוח ניהול כללי";
+  getById("dash-title").textContent = dashTitle;
+
+  if (userIdentity.role === "admin") show(getById("manage-btn"));
+
+  getById("manage-btn").onclick = (event) => {
+    event.preventDefault();
+    openBackoffice(db, DEMO_MODE);
+  };
+
+  getById("filter-btn").onclick = () => loadData();
+
+  // Moderation filters: re-render from cached data (no re-fetch). Default "on" = hide
+  const reFilterFromCache = (button) => {
+    button.classList.toggle("on");
+    if (lastFetchedData) render(lastFetchedData);
+  };
+
+  getById("dup-toggle").onclick = (event) => reFilterFromCache(event.currentTarget);
+  getById("test-toggle").onclick = (event) => reFilterFromCache(event.currentTarget);
+
+  const refreshToggle = getById("refresh-toggle");
+  refreshToggle.onclick = () => {
+    refreshToggle.classList.toggle("on");
+    if (refreshToggle.classList.contains("on")) {
+      refreshTimer = setInterval(loadData, 30000);
+    } else if (refreshTimer) {
+      clearInterval(refreshTimer);
+      refreshTimer = null;
+    }
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Data transformation
+// ─────────────────────────────────────────────────────────────────────────────
+
+const buildReferrerCodeMap = (influencerSnapshot, groupSnapshot) => {
+  const map = {};
+
+  groupSnapshot.forEach((docSnapshot) => {
+    const data = docSnapshot.data() || {};
+    if (data.referrerCode != null && data.active !== false) {
+      map[String(data.referrerCode)] = {
+        influencerId: null,
+        groupId: docSnapshot.id,
+      };
+    }
+  });
+
+  influencerSnapshot.forEach((docSnapshot) => {
+    const data = docSnapshot.data() || {};
+    if (data.referrerCode != null && data.active !== false) {
+      map[String(data.referrerCode)] = {
+        influencerId: docSnapshot.id,
+        groupId: data.groupId || "default",
+      };
+    }
+  });
+
+  return map;
+};
+
+const resolveReferrerCode = (code, referrerMap) => {
+  const codeStr = String(code == null ? "" : code).trim();
+  if (codeStr && referrerMap[codeStr]) return referrerMap[codeStr];
+  return { influencerId: null, groupId: "default" };
+};
+
+const transformSubmissionToRegistration = (submission, referrerMap) => {
+  const referrer = resolveReferrerCode(submission.referrer, referrerMap);
+  const phone = normalizePhone(submission.phone);
+  const fullName =
+    ((submission.firstName || "") + " " + (submission.lastName || "")).trim();
+
+  return {
+    id: submission.id,
+    name: fullName || "—",
+    phoneLast3: phone ? phone.slice(-3) : "",
+    phoneCanon: phone || null, // client dedup key (normalized, unsalted)
+    email: submission.email || "",
+    city: submission.city || "",
+    source: submission.source || "",
+    influencerId: referrer.influencerId,
+    groupId: referrer.groupId,
+    sessionId: submission.sessionId || null,
+    dailyId: submission.dailyId || null,
+    partyRegistered:
+      submission.registered === "yes"
+        ? true
+        : submission.registered === "no"
+          ? false
+          : null,
+    isTest: false, // no server moderation flag on join_form
+    isDuplicate: false, // computed in render() from phoneCanon
+    createdAt: submission.ts,
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Data fetching
+// ─────────────────────────────────────────────────────────────────────────────
+
+const fetchJoinFormSubmissions = async () => {
+  const snapshot = await getDocs(
+    query(collection(db, "join_form"), orderBy("ts", "desc"), limit(SUBMISSION_LIMIT))
+  );
+  return snapshot.docs.map((docSnapshot) => ({
+    id: docSnapshot.id,
+    ...docSnapshot.data(),
+  }));
+};
+
+const fetchModerationFlags = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "submission_flags"));
+    const flagsMap = {};
+    snapshot.forEach((docSnapshot) => {
+      flagsMap[docSnapshot.id] = docSnapshot.data() || {};
+    });
+    return flagsMap;
+  } catch (e) {
+    console.warn("submission_flags read skipped", e?.code || e);
+    return {};
+  }
+};
+
+const getDateRange = () => {
+  const fromDate = getById("from-date").value
+    ? new Date(getById("from-date").value + "T00:00:00")
+    : null;
+  const toDate = getById("to-date").value
+    ? new Date(getById("to-date").value + "T23:59:59")
+    : null;
+  return { fromDate, toDate };
+};
+
+const isInDateRange = (date, range) => {
+  if (!date) return false;
+  if (range.fromDate && date < range.fromDate) return false;
+  if (range.toDate && date > range.toDate) return false;
+  return true;
+};
+
+const fetchScopedData = async (collectionName, dateField) => {
+  let queryObject;
+
+  if (
+    userIdentity.role === "influencer" &&
+    userIdentity.influencerId
+  ) {
+    queryObject = query(
+      collection(db, collectionName),
+      where("influencerId", "==", userIdentity.influencerId),
+      limit(DATE_RANGE_LIMIT)
+    );
+  } else if (
+    userIdentity.role === "manager" &&
+    userIdentity.scope === "group" &&
+    userIdentity.groupId
+  ) {
+    queryObject = query(
+      collection(db, collectionName),
+      where("groupId", "==", userIdentity.groupId),
+      limit(DATE_RANGE_LIMIT)
+    );
+  } else {
+    queryObject = query(
+      collection(db, collectionName),
+      orderBy(dateField, "desc"),
+      limit(DATE_RANGE_LIMIT)
+    );
+  }
+
+  const snapshot = await getDocs(queryObject);
+  return snapshot.docs.map((docSnapshot) => ({
+    id: docSnapshot.id,
+    ...docSnapshot.data(),
+  }));
+};
+
+const loadData = async () => {
+  show(getById("loading"));
+  hide(getById("content"));
+
+  try {
+    const dateRange = getDateRange();
+    const [
+      submissionsRaw,
+      flags,
+      pageViewsAll,
+      interactionsAll,
+      influencerSnapshot,
+      groupSnapshot,
+    ] = await Promise.all([
+      fetchJoinFormSubmissions(),
+      fetchModerationFlags(),
+      fetchScopedData("page_views", "ts"),
+      fetchScopedData("interactions", "ts"),
       getDocs(collection(db, "influencers")),
       getDocs(collection(db, "groups")),
     ]);
-    const inflName = {}, grpName = {};
-    inflSnap.forEach((d) => (inflName[d.id] = d.data().name || d.id));
-    grpSnap.forEach((d) => (grpName[d.id] = d.data().name || d.id));
-    const influencersActive = inflSnap.docs.filter((d) => d.data().active !== false).length;
+
+    moderationFlags = flags;
+
+    const influencerNames = {};
+    const groupNames = {};
+
+    influencerSnapshot.forEach((docSnapshot) => {
+      influencerNames[docSnapshot.id] =
+        docSnapshot.data().name || docSnapshot.id;
+    });
+
+    groupSnapshot.forEach((docSnapshot) => {
+      groupNames[docSnapshot.id] = docSnapshot.data().name || docSnapshot.id;
+    });
+
+    const activeInfluencersCount = influencerSnapshot.docs.filter(
+      (d) => d.data().active !== false
+    ).length;
 
     // Map raw UI submissions → registration shape, resolving referrer codes.
-    const refMap = buildReferrerMap(inflSnap, grpSnap);
-    let regsAll = subsRaw.map((s) => mapSubmission(s, refMap));
-    // Scope client-side (form_submissions carries no scope fields server-side).
-    if (identity.role === "influencer" && identity.influencerId) {
-      regsAll = regsAll.filter((x) => x.influencerId === identity.influencerId);
-    } else if (identity.role === "manager" && identity.scope === "group" && identity.groupId) {
-      regsAll = regsAll.filter((x) => x.groupId === identity.groupId);
+    const referrerMap = buildReferrerCodeMap(influencerSnapshot, groupSnapshot);
+    let allRegistrations = submissionsRaw.map((submission) =>
+      transformSubmissionToRegistration(submission, referrerMap)
+    );
+
+    // Scope client-side (join_form carries no scope fields server-side).
+    if (
+      userIdentity.role === "influencer" &&
+      userIdentity.influencerId
+    ) {
+      allRegistrations = allRegistrations.filter(
+        (reg) => reg.influencerId === userIdentity.influencerId
+      );
+    } else if (
+      userIdentity.role === "manager" &&
+      userIdentity.scope === "group" &&
+      userIdentity.groupId
+    ) {
+      allRegistrations = allRegistrations.filter(
+        (reg) => reg.groupId === userIdentity.groupId
+      );
     }
 
-    // date filter (client-side)
-    const regs = regsAll.filter((x) => inRange(tsToDate(x.createdAt), r));
-    const pv = pvAll.filter((x) => inRange(tsToDate(x.ts), r));
-    const inter = intAll.filter((x) => inRange(tsToDate(x.ts), r));
+    // Apply date filter (client-side)
+    const registrations = allRegistrations.filter((reg) =>
+      isInDateRange(toDate(reg.createdAt), dateRange)
+    );
+    const pageViews = pageViewsAll.filter((pv) =>
+      isInDateRange(toDate(pv.ts), dateRange)
+    );
+    const interactions = interactionsAll.filter((interaction) =>
+      isInDateRange(toDate(interaction.ts), dateRange)
+    );
 
-    render({ regs, pv, inter, inflName, grpName, influencersActive });
-    $("updated").textContent = "עודכן " + relTime(new Date());
-    hide($("loading")); show($("content"));
+    lastFetchedData = {
+      registrations,
+      pageViews,
+      interactions,
+      influencerNames,
+      groupNames,
+      activeInfluencersCount,
+    };
+
+    render(lastFetchedData);
+    getById("updated").textContent =
+      "עודכן " + formatRelativeTime(new Date());
+    hide(getById("loading"));
+    show(getById("content"));
   } catch (e) {
     console.error(e);
-    $("loading").innerHTML = '<div class="empty">שגיאה בטעינת הנתונים: ' + esc(e?.code || e?.message || e) + "</div>";
+    getById("loading").innerHTML =
+      '<div class="empty">שגיאה בטעינת הנתונים: ' +
+      escapeHtml(e?.code || e?.message || e) +
+      "</div>";
   }
-}
+};
 
-// ── Rendering ─────────────────────────────────────────────────────────────
-function render(d) {
-  const { regs, pv: pvRaw, inter, inflName, grpName, influencersActive } = d;
-  const pv = pvRaw.filter((x) => !x.isBot);   // exclude flagged bot traffic from all views
-  const real = regs.filter((x) => !x.isTest);
-  const uniques = new Set(pv.map((x) => x.dailyId).filter(Boolean)).size;
-  const clicks = pv.filter((x) => x.influencerId).length;
-  const byType = (t) => inter.filter((x) => x.type === t).length;
+// ─────────────────────────────────────────────────────────────────────────────
+// Rendering
+// ─────────────────────────────────────────────────────────────────────────────
 
-  // phoneCanon duplicates
+const shouldMaskEmail = () => userIdentity.role === "admin";
+
+const createStatCard = (label, value, accent, subtext, helpText) => {
+  return `<div class="stat ${accent ? "accent" : ""}">
+    <p class="label">${escapeHtml(label)} ${helpText ? createHelpTooltip(helpText) : ""}</p>
+    <p class="value">${value}</p>
+    ${subtext ? `<p class="sub">${subtext}</p>` : ""}
+  </div>`;
+};
+
+const createPartyChips = (registration) => {
+  const chips = [];
+
+  if (registration.partyRegistered) {
+    chips.push('<span class="chip green">סימנ/ה שכבר התפקד/ה</span>');
+  } else if (registration.partyRegistered === false) {
+    chips.push('<span class="chip amber">סימנ/ה שלא התפקד/ה</span>');
+  }
+
+  if (registration.isDuplicate) {
+    chips.push('<span class="chip rose">חשד לכפילות</span>');
+  }
+
+  if (registration.isTest) {
+    chips.push('<span class="chip violet">בדיקה</span>');
+  }
+
+  return chips.join(" ") || '<span class="muted">—</span>';
+};
+
+const renderRecentSubmissionsSection = (registrations, groupNames) => {
+  const sortedRows = registrations
+    .slice()
+    .sort(
+      (a, b) =>
+        (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0)
+    )
+    .slice(0, RECENT_ROWS_LIMIT);
+
+  const tableBody = sortedRows.length
+    ? sortedRows
+        .map((reg) => {
+          const emailColumn = shouldMaskEmail()
+            ? `<td class="muted">${escapeHtml(reg.email || "—")}</td>`
+            : "";
+
+          return `<tr>
+          <td>${escapeHtml(reg.name || "—")}</td>
+          <td class="num">…${escapeHtml(reg.phoneLast3 || "")}</td>
+          ${emailColumn}
+          <td>${escapeHtml(groupNames[reg.groupId] || "כללי")}</td>
+          <td>${createPartyChips(reg)}</td>
+          <td class="muted">${formatRelativeTime(toDate(reg.createdAt))}</td>
+        </tr>`;
+        })
+        .join("")
+    : `<tr><td colspan="6"><div class="empty">אין הרשמות בטווח שנבחר</div></td></tr>`;
+
+  const emailHeader = shouldMaskEmail() ? "<th>אימייל</th>" : "";
+
+  return `<details open>
+    <summary>
+      <span class="sum-title">הרשמות אחרונות</span>
+      <span class="sum-meta">${NUMBER_FORMATTER.format(registrations.length)} סה״כ ${createChevron()}</span>
+    </summary>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th>שם</th>
+            <th>טלפון</th>
+            ${emailHeader}
+            <th>קבוצה</th>
+            <th>התפקדות למפלגה</th>
+            <th>נרשם/ה</th>
+          </tr>
+        </thead>
+        <tbody>${tableBody}</tbody>
+      </table>
+    </div>
+  </details>`;
+};
+
+const renderLeadersSection = (registrations, pageViews, interactions, influencerNames) => {
+  const stats = {};
+
+  const ensureInfluencerStats = (influencerId) => {
+    if (!stats[influencerId]) {
+      stats[influencerId] = { clicks: 0, forms: 0, party: 0, whatsapp: 0 };
+    }
+    return stats[influencerId];
+  };
+
+  pageViews.forEach((pv) => {
+    if (pv.influencerId) {
+      ensureInfluencerStats(pv.influencerId).clicks++;
+    }
+  });
+
+  registrations.forEach((reg) => {
+    if (reg.influencerId) {
+      const influencerStats = ensureInfluencerStats(reg.influencerId);
+      influencerStats.forms++;
+      if (reg.partyRegistered) influencerStats.party++;
+    }
+  });
+
+  interactions.forEach((interaction) => {
+    if (interaction.influencerId && interaction.type === "whatsapp") {
+      ensureInfluencerStats(interaction.influencerId).whatsapp++;
+    }
+  });
+
+  const influencerIds = Object.keys(stats).sort(
+    (a, b) => stats[b].forms - stats[a].forms
+  );
+
+  const maxConversion = Math.max(
+    1,
+    ...influencerIds.map((id) =>
+      stats[id].clicks ? stats[id].forms / stats[id].clicks : 0
+    )
+  );
+
+  const tableBody = influencerIds.length
+    ? influencerIds
+        .map((id) => {
+          const influencerStats = stats[id];
+          const conversion = influencerStats.clicks
+            ? influencerStats.forms / influencerStats.clicks
+            : 0;
+
+          return `<tr>
+          <td>${escapeHtml(influencerNames[id] || id)}</td>
+          <td class="num">${NUMBER_FORMATTER.format(influencerStats.clicks)}</td>
+          <td class="num">${NUMBER_FORMATTER.format(influencerStats.forms)}</td>
+          <td class="num">${NUMBER_FORMATTER.format(influencerStats.party)}</td>
+          <td class="num">${NUMBER_FORMATTER.format(influencerStats.whatsapp)}</td>
+          <td>
+            <div class="bar-mini">
+              <i style="width:${Math.round((conversion / maxConversion) * 100)}%"></i>
+            </div>
+          </td>
+        </tr>`;
+        })
+        .join("")
+    : `<tr><td colspan="6"><div class="empty">אין נתוני מובילים בטווח</div></td></tr>`;
+
+  return `<details>
+    <summary>
+      <span class="sum-title">סטטיסטיקות לפי מוביל כוח</span>
+      <span class="sum-meta">קליקים · טופס · התפקדות · ווטסאפ ${createChevron()}</span>
+    </summary>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th>מוביל</th>
+            <th>קליקים</th>
+            <th>טופס</th>
+            <th>התפקדות</th>
+            <th>ווטסאפ</th>
+            <th>המרה</th>
+          </tr>
+        </thead>
+        <tbody>${tableBody}</tbody>
+      </table>
+    </div>
+  </details>`;
+};
+
+const renderPageViewsSection = (pageViews, influencerNames) => {
+  const uniqueVisitors = new Set(
+    pageViews.map((pv) => pv.dailyId).filter(Boolean)
+  ).size;
+
+  const sortedRows = pageViews
+    .slice()
+    .sort((a, b) => (toDate(b.ts) || 0) - (toDate(a.ts) || 0))
+    .slice(0, RECENT_ROWS_LIMIT);
+
+  const tableBody = sortedRows.length
+    ? sortedRows
+        .map((pv) => `<tr>
+        <td>${escapeHtml(pv.page || "—")}</td>
+        <td class="muted">${escapeHtml(pv.channel || pv.medium || "ישיר")}</td>
+        <td class="muted">${escapeHtml(pv.deviceClass || "—")}</td>
+        <td>${escapeHtml(influencerNames[pv.influencerId] || "—")}</td>
+        <td class="muted">${formatRelativeTime(toDate(pv.ts))}</td>
+      </tr>`)
+        .join("")
+    : `<tr><td colspan="5"><div class="empty">אין צפיות בטווח</div></td></tr>`;
+
+  return `<details>
+    <summary>
+      <span class="sum-title">צפיות בעמוד</span>
+      <span class="sum-meta">${NUMBER_FORMATTER.format(pageViews.length)} צפיות · ${NUMBER_FORMATTER.format(uniqueVisitors)} מבקרים ייחודיים ${createChevron()}</span>
+    </summary>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th>עמוד</th>
+            <th>ערוץ</th>
+            <th>מכשיר</th>
+            <th>מוביל</th>
+            <th>זמן</th>
+          </tr>
+        </thead>
+        <tbody>${tableBody}</tbody>
+      </table>
+    </div>
+  </details>`;
+};
+
+const render = (data) => {
+  const {
+    registrations,
+    pageViews: pageViewsRaw,
+    interactions,
+    influencerNames,
+    groupNames,
+    activeInfluencersCount,
+  } = data;
+
+  // Apply the admin moderation overlay (submission_flags) onto each submission.
+  registrations.forEach((reg) => {
+    const flags = moderationFlags[reg.id];
+    if (flags) {
+      if (flags.isTest) reg.isTest = true;
+      if (flags.isDuplicate) reg.isDuplicate = true;
+    }
+  });
+
+  // Filter state: "on" = hide that category (default).
+  const hideDuplicates = !!getById("dup-toggle") &&
+    getById("dup-toggle").classList.contains("on");
+  const hideTests = !!getById("test-toggle") &&
+    getById("test-toggle").classList.contains("on");
+
+  const pageViews = pageViewsRaw.filter((pv) => !pv.isBot);
+  const realRegistrations = registrations.filter((reg) => !reg.isTest);
+  const uniqueVisitors = new Set(
+    pageViews.map((pv) => pv.dailyId).filter(Boolean)
+  ).size;
+  const influencerClicks = pageViews.filter((pv) => pv.influencerId).length;
+  const countByInteractionType = (type) =>
+    interactions.filter((interaction) => interaction.type === type).length;
+
+  // Phone duplicate detection
   const phoneCount = {};
-  real.forEach((x) => { if (x.phoneCanon) phoneCount[x.phoneCanon] = (phoneCount[x.phoneCanon] || 0) + 1; });
-  const duplicates = Object.values(phoneCount).filter((n) => n > 1).length;
-  // No server moderation flag on form_submissions → derive the per-row duplicate
-  // chip from the phone counts above.
-  real.forEach((x) => { if (x.phoneCanon && phoneCount[x.phoneCanon] > 1) x.isDuplicate = true; });
+  realRegistrations.forEach((reg) => {
+    if (reg.phoneCanon) {
+      phoneCount[reg.phoneCanon] = (phoneCount[reg.phoneCanon] || 0) + 1;
+    }
+  });
 
-  const registeredParty = real.filter((x) => x.partyRegistered).length;
-  const notRegistered = real.filter((x) => x.partyRegistered === false).length;
-  const lastReg = real.map((x) => tsToDate(x.createdAt)).filter(Boolean).sort((a, b) => b - a)[0];
-  const lastPv = pv.map((x) => tsToDate(x.ts)).filter(Boolean).sort((a, b) => b - a)[0];
+  const duplicatePhoneCount = Object.values(phoneCount).filter(
+    (n) => n > 1
+  ).length;
 
-  // KPI cards (influencer hides duplicates + leaders)
-  const isInfl = identity.role === "influencer";
-  const kpis = [];
-  if (!isInfl) kpis.push(card("מובילים", nf.format(influencersActive), false, "", "מספר המובילים (משפיענים) הפעילים שמפיצים לינקים."));
-  kpis.push(card("מבקרים ייחודיים", nf.format(uniques), true,
-    `תנועה: ${nf.format(clicks)} קליקים · ${nf.format(pv.length)} צפיות<br>אחרון: ${lastPv ? "צפייה " + relTime(lastPv) : "—"}`,
-    "מבקרים ייחודיים לפי dailyId — נספרים פעם ביום לכל מבקר."));
-  kpis.push(card("הרשמות", nf.format(real.length), false,
-    `${pct(real.length, uniques)} המרה<br>אחרון: ${lastReg ? relTime(lastReg) : "—"}`,
-    "סך ההרשמות שהתקבלו דרך הטופס (לא כולל בדיקות)."));
-  if (!isInfl) kpis.push(card("כפילויות", nf.format(duplicates), false, "", "מספרי טלפון שמופיעים ביותר מהרשמה אחת."));
-  $("kpi-row").innerHTML = kpis.join("");
+  realRegistrations.forEach((reg) => {
+    if (reg.phoneCanon && phoneCount[reg.phoneCanon] > 1) {
+      reg.isDuplicate = true;
+    }
+  });
+
+  // Counted = real registrations that aren't filtered out by toggles
+  const countedRegistrations = hideDuplicates
+    ? realRegistrations.filter((reg) => !reg.isDuplicate)
+    : realRegistrations;
+
+  const partyRegisteredCount = countedRegistrations.filter(
+    (reg) => reg.partyRegistered
+  ).length;
+  const notRegisteredCount = countedRegistrations.filter(
+    (reg) => reg.partyRegistered === false
+  ).length;
+
+  const lastRegistration = countedRegistrations
+    .map((reg) => toDate(reg.createdAt))
+    .filter(Boolean)
+    .sort((a, b) => b - a)[0];
+
+  const lastPageView = pageViews
+    .map((pv) => toDate(pv.ts))
+    .filter(Boolean)
+    .sort((a, b) => b - a)[0];
+
+  // KPI cards
+  const isInfluencer = userIdentity.role === "influencer";
+  const kpiCards = [];
+
+  if (!isInfluencer) {
+    kpiCards.push(
+      createStatCard(
+        "מובילים",
+        NUMBER_FORMATTER.format(activeInfluencersCount),
+        false,
+        "",
+        "מספר המובילים (משפיענים) הפעילים שמפיצים לינקים."
+      )
+    );
+  }
+
+  kpiCards.push(
+    createStatCard(
+      "מבקרים ייחודיים",
+      NUMBER_FORMATTER.format(uniqueVisitors),
+      true,
+      `תנועה: ${NUMBER_FORMATTER.format(influencerClicks)} קליקים · ${NUMBER_FORMATTER.format(pageViews.length)} צפיות<br>אחרון: ${lastPageView ? "צפייה " + formatRelativeTime(lastPageView) : "—"}`,
+      "מבקרים ייחודיים לפי dailyId — נספרים פעם ביום לכל מבקר."
+    )
+  );
+
+  kpiCards.push(
+    createStatCard(
+      "הרשמות",
+      NUMBER_FORMATTER.format(countedRegistrations.length),
+      false,
+      `${formatPercentage(countedRegistrations.length, uniqueVisitors)} המרה<br>אחרון: ${lastRegistration ? formatRelativeTime(lastRegistration) : "—"}`,
+      hideDuplicates
+        ? "סך ההרשמות התקינות (לא כולל בדיקות וכפילויות)."
+        : "סך ההרשמות שהתקבלו דרך הטופס (לא כולל בדיקות)."
+    )
+  );
+
+  if (!isInfluencer) {
+    kpiCards.push(
+      createStatCard(
+        "כפילויות",
+        NUMBER_FORMATTER.format(duplicatePhoneCount),
+        false,
+        "",
+        "מספרי טלפון שמופיעים ביותר מהרשמה אחת."
+      )
+    );
+  }
+
+  getById("kpi-row").innerHTML = kpiCards.join("");
 
   // Party section
-  $("party-row").innerHTML = [
-    card("סימנו שכבר התפקדו למפלגה", nf.format(registeredParty), true, "", "נרשמים שדיווחו בעצמם שהם כבר חברי מפלגה. דיווח עצמי — לא מאומת."),
-    card("בדקו התפקדות", nf.format(byType("status_check")), false, "", "מי שלחצו לבדוק את סטטוס ההתפקדות."),
-    card("סימנו שלא התפקדו", nf.format(notRegistered), false, "", "נרשמים שדיווחו בעצמם שעדיין אינם חברי מפלגה."),
-    card("לחצו על התפקדות למפלגה", nf.format(byType("cta_party")), true, "", "מי שלחצו על כפתור ההתפקדות למפלגה."),
+  getById("party-row").innerHTML = [
+    createStatCard(
+      "סימנו שכבר התפקדו למפלגה",
+      NUMBER_FORMATTER.format(partyRegisteredCount),
+      true,
+      "",
+      "נרשמים שדיווחו בעצמם שהם כבר חברי מפלגה. דיווח עצמי — לא מאומת."
+    ),
+    createStatCard(
+      "בדקו התפקדות",
+      NUMBER_FORMATTER.format(countByInteractionType("status_check")),
+      false,
+      "",
+      "מי שלחצו לבדוק את סטטוס ההתפקדות."
+    ),
+    createStatCard(
+      "סימנו שלא התפקדו",
+      NUMBER_FORMATTER.format(notRegisteredCount),
+      false,
+      "",
+      "נרשמים שדיווחו בעצמם שעדיין אינם חברי מפלגה."
+    ),
+    createStatCard(
+      "לחצו על התפקדות למפלגה",
+      NUMBER_FORMATTER.format(countByInteractionType("cta_party")),
+      true,
+      "",
+      "מי שלחצו על כפתור ההתפקדות למפלגה."
+    ),
   ].join("");
 
-  // Sections
+  // Sections — the recent table shows every submission but drops the categories
+  // hidden by the active toggles (tests / duplicates).
+  const visibleRegistrations = registrations.filter(
+    (reg) => !(hideTests && reg.isTest) && !(hideDuplicates && reg.isDuplicate)
+  );
+
   const sections = [];
-  sections.push(sectionRecent(real, grpName));
-  if (!isInfl) sections.push(sectionLeaders(real, pv, inter, inflName));
-  sections.push(sectionPageViews(pv, inflName));
-  $("sections").innerHTML = sections.join("");
-}
+  sections.push(
+    renderRecentSubmissionsSection(visibleRegistrations, groupNames)
+  );
 
-function card(label, value, accent, sub, info) {
-  return `<div class="stat ${accent ? "accent" : ""}">
-    <p class="label">${esc(label)} ${info ? help(info) : ""}</p>
-    <p class="value">${value}</p>
-    ${sub ? `<p class="sub">${sub}</p>` : ""}
-  </div>`;
-}
-function chev() { return '<svg class="chev" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
-function maskEmail() { return identity.role === "admin"; } // only admin sees email
+  if (!isInfluencer) {
+    sections.push(
+      renderLeadersSection(
+        countedRegistrations,
+        pageViews,
+        interactions,
+        influencerNames
+      )
+    );
+  }
 
-function partyChips(x) {
-  const out = [];
-  if (x.partyRegistered) out.push('<span class="chip green">סימנ/ה שכבר התפקד/ה</span>');
-  else if (x.partyRegistered === false) out.push('<span class="chip amber">סימנ/ה שלא התפקד/ה</span>');
-  if (x.isDuplicate) out.push('<span class="chip rose">חשד לכפילות</span>');
-  if (x.isTest) out.push('<span class="chip violet">בדיקה</span>');
-  return out.join(" ") || '<span class="muted">—</span>';
-}
+  sections.push(renderPageViewsSection(pageViews, influencerNames));
+  getById("sections").innerHTML = sections.join("");
+};
 
-function sectionRecent(regs, grpName) {
-  const rows = regs.slice().sort((a, b) => (tsToDate(b.createdAt) || 0) - (tsToDate(a.createdAt) || 0)).slice(0, 50);
-  const body = rows.length ? rows.map((x) => `<tr>
-      <td>${esc(x.name || "—")}</td>
-      <td class="num">…${esc(x.phoneLast3 || "")}</td>
-      ${maskEmail() ? `<td class="muted">${esc(x.email || "—")}</td>` : ""}
-      <td>${esc(grpName[x.groupId] || "כללי")}</td>
-      <td>${partyChips(x)}</td>
-      <td class="muted">${relTime(tsToDate(x.createdAt))}</td>
-    </tr>`).join("") : `<tr><td colspan="6"><div class="empty">אין הרשמות בטווח שנבחר</div></td></tr>`;
-  return `<details open><summary><span class="sum-title">הרשמות אחרונות</span>
-      <span class="sum-meta">${nf.format(regs.length)} סה״כ ${chev()}</span></summary>
-    <div class="panel"><table><thead><tr>
-      <th>שם</th><th>טלפון</th>${maskEmail() ? "<th>אימייל</th>" : ""}<th>קבוצה</th><th>התפקדות למפלגה</th><th>נרשם/ה</th>
-    </tr></thead><tbody>${body}</tbody></table></div></details>`;
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Demo mode (no Firebase, sample data)
+// ─────────────────────────────────────────────────────────────────────────────
 
-function sectionLeaders(regs, pv, inter, inflName) {
-  const stats = {};
-  const ensure = (id) => (stats[id] = stats[id] || { clicks: 0, forms: 0, party: 0, wa: 0 });
-  pv.forEach((x) => { if (x.influencerId) ensure(x.influencerId).clicks++; });
-  regs.forEach((x) => { if (x.influencerId) { const s = ensure(x.influencerId); s.forms++; if (x.partyRegistered) s.party++; } });
-  inter.forEach((x) => { if (x.influencerId && x.type === "whatsapp") ensure(x.influencerId).wa++; });
-  const ids = Object.keys(stats).sort((a, b) => stats[b].forms - stats[a].forms);
-  const maxConv = Math.max(1, ...ids.map((id) => (stats[id].clicks ? stats[id].forms / stats[id].clicks : 0)));
-  const body = ids.length ? ids.map((id) => {
-    const s = stats[id]; const conv = s.clicks ? s.forms / s.clicks : 0;
-    return `<tr><td>${esc(inflName[id] || id)}</td>
-      <td class="num">${nf.format(s.clicks)}</td><td class="num">${nf.format(s.forms)}</td>
-      <td class="num">${nf.format(s.party)}</td><td class="num">${nf.format(s.wa)}</td>
-      <td><div class="bar-mini"><i style="width:${Math.round((conv / maxConv) * 100)}%"></i></div></td></tr>`;
-  }).join("") : `<tr><td colspan="6"><div class="empty">אין נתוני מובילים בטווח</div></td></tr>`;
-  return `<details><summary><span class="sum-title">סטטיסטיקות לפי מוביל כוח</span>
-      <span class="sum-meta">קליקים · טופס · התפקדות · ווטסאפ ${chev()}</span></summary>
-    <div class="panel"><table><thead><tr>
-      <th>מוביל</th><th>קליקים</th><th>טופס</th><th>התפקדות</th><th>ווטסאפ</th><th>המרה</th>
-    </tr></thead><tbody>${body}</tbody></table></div></details>`;
-}
+const startDemoMode = () => {
+  userIdentity = {
+    email: "demo@hagush.org.il",
+    role: "admin",
+    scope: "full",
+    groupId: null,
+    influencerId: null,
+  };
 
-// ── Demo mode (no Firebase, sample data) ────────────────────────────────────
-function startDemo() {
-  identity = { email: "demo@hagush.org.il", role: "admin", scope: "full", groupId: null, influencerId: null };
-  hide($("login")); hide($("noaccess")); show($("dash"));
-  initChrome();
-  $("role-badge").textContent = "מנהל·ת (תצוגה)";
+  hide(getById("login"));
+  hide(getById("noaccess"));
+  show(getById("dash"));
+  initializeChrome();
+  getById("role-badge").textContent = "מנהל·ת (תצוגה)";
 
-  const leaders = ["צפי שומר", "נופר בן צור", "עמוס דורון", "טל קורנט", "דורית זמיר",
-    "ראובן קוסט", "הילה גולן", "גיא אדוט", "דפנה מילר", "נורית מלניק"];
-  const inflName = {}; leaders.forEach((n, i) => (inflName["infl_" + (i + 1)] = n));
-  const grpName = { default: "כללי", g_tzipi: "צפי שומר" };
-  const now = Date.now(); const ago = (h) => new Date(now - h * 3600 * 1000);
+  const leaderNames = [
+    "צפי שומר",
+    "נופר בן צור",
+    "עמוס דורון",
+    "טל קורנט",
+    "דורית זמיר",
+    "ראובן קוסט",
+    "הילה גולן",
+    "גיא אדוט",
+    "דפנה מילר",
+    "נורית מלניק",
+  ];
+
+  const influencerNames = {};
+  leaderNames.forEach((name, index) => {
+    influencerNames["infl_" + (index + 1)] = name;
+  });
+
+  const groupNames = { default: "כללי", g_tzipi: "צפי שומר" };
+  const now = Date.now();
+  const ago = (hours) => new Date(now - hours * 3600 * 1000);
 
   // 28 registrations: 16 party-registered, 4 explicitly not, rest unknown; 2 dup phones
-  const regs = [];
+  const registrations = [];
   for (let i = 0; i < 28; i++) {
-    const party = i < 16 ? true : i < 20 ? false : null;
-    regs.push({
-      id: "r" + i, name: leaders[i % leaders.length].replace(/ .*/, " " + "אבגדהוזחטי"[i % 10]),
-      phoneLast3: String(100 + (i % 9) * 7).slice(-3), email: "user" + i + "@example.com",
-      phoneCanon: i < 2 ? "DUP_A" : i < 4 ? "DUP_B" : "p" + i,   // → 2 duplicate phones
+    const partyStatus =
+      i < 16 ? true : i < 20 ? false : null;
+
+    registrations.push({
+      id: "r" + i,
+      name:
+        leaderNames[i % leaderNames.length].replace(/ .*/, " " + "אבגדהוזחטי"[i % 10]),
+      phoneLast3: String(100 + ((i % 9) * 7)).slice(-3),
+      email: "user" + i + "@example.com",
+      phoneCanon: i < 2 ? "DUP_A" : i < 4 ? "DUP_B" : "p" + i, // → 2 duplicate phones
       groupId: i % 6 === 0 ? "g_tzipi" : "default",
-      influencerId: "infl_" + ((i % 5) + 1), partyRegistered: party,
-      isDuplicate: i < 4, isTest: i === 27, createdAt: ago(i * 5 + 1),
+      influencerId: "infl_" + ((i % 5) + 1),
+      partyRegistered: partyStatus,
+      isDuplicate: i < 4,
+      isTest: i === 27,
+      createdAt: ago(i * 5 + 1),
     });
   }
+
   // 179 page views, 67 distinct dailyIds, 122 with an influencer (clicks)
-  const pv = [];
-  for (let i = 0; i < 179; i++) pv.push({
-    id: "v" + i, dailyId: "d" + (i % 67), sessionId: "s" + i, page: i % 3 ? "/candidates" : "/",
-    channel: ["WhatsApp", "ישיר", "QR", "Facebook"][i % 4], medium: i % 4 === 2 ? "qr" : "web",
-    deviceClass: i % 2 ? "Mobile" : "Desktop",
-    influencerId: i < 122 ? "infl_" + ((i % 5) + 1) : null, ts: ago(i % 72),
-  });
-  // interactions: 12 status_check, 4 cta_party, some whatsapp + candidate_open
-  const inter = [];
-  for (let i = 0; i < 12; i++) inter.push({ id: "sc" + i, type: "status_check", influencerId: "infl_" + ((i % 5) + 1), sessionId: "s" + i, dailyId: "d" + i, ts: ago(i) });
-  for (let i = 0; i < 4; i++) inter.push({ id: "cp" + i, type: "cta_party", influencerId: "infl_" + ((i % 3) + 1), sessionId: "s" + i, dailyId: "d" + i, ts: ago(i) });
-  for (let i = 0; i < 18; i++) inter.push({ id: "wa" + i, type: "whatsapp", influencerId: "infl_" + ((i % 5) + 1), sessionId: "s" + i, dailyId: "d" + i, ts: ago(i) });
+  const pageViews = [];
+  for (let i = 0; i < 179; i++) {
+    pageViews.push({
+      id: "v" + i,
+      dailyId: "d" + (i % 67),
+      sessionId: "s" + i,
+      page: i % 3 ? "/candidates" : "/",
+      channel: ["WhatsApp", "ישיר", "QR", "Facebook"][i % 4],
+      medium: i % 4 === 2 ? "qr" : "web",
+      deviceClass: i % 2 ? "Mobile" : "Desktop",
+      influencerId: i < 122 ? "infl_" + ((i % 5) + 1) : null,
+      ts: ago(i % 72),
+    });
+  }
+
+  // Interactions: 12 status_check, 4 cta_party, some whatsapp + candidate_open
+  const interactions = [];
+  for (let i = 0; i < 12; i++) {
+    interactions.push({
+      id: "sc" + i,
+      type: "status_check",
+      influencerId: "infl_" + ((i % 5) + 1),
+      sessionId: "s" + i,
+      dailyId: "d" + i,
+      ts: ago(i),
+    });
+  }
+
+  for (let i = 0; i < 4; i++) {
+    interactions.push({
+      id: "cp" + i,
+      type: "cta_party",
+      influencerId: "infl_" + ((i % 3) + 1),
+      sessionId: "s" + i,
+      dailyId: "d" + i,
+      ts: ago(i),
+    });
+  }
+
+  for (let i = 0; i < 18; i++) {
+    interactions.push({
+      id: "wa" + i,
+      type: "whatsapp",
+      influencerId: "infl_" + ((i % 5) + 1),
+      sessionId: "s" + i,
+      dailyId: "d" + i,
+      ts: ago(i),
+    });
+  }
 
   try {
-    render({ regs, pv, inter, inflName, grpName, influencersActive: leaders.length });
+    lastFetchedData = {
+      registrations,
+      pageViews,
+      interactions,
+      influencerNames,
+      groupNames,
+      activeInfluencersCount: leaderNames.length,
+    };
+
+    render(lastFetchedData);
   } catch (e) {
     console.error("demo render failed", e);
-    $("content").innerHTML = '<div class="empty">שגיאת תצוגה: ' + esc(e?.message || e) + "</div>";
+    getById("content").innerHTML =
+      '<div class="empty">שגיאת תצוגה: ' +
+      escapeHtml(e?.message || e) +
+      "</div>";
   } finally {
-    hide($("loading")); show($("content"));   // always reveal — never leave the spinner stuck
-    $("updated").textContent = "תצוגת דמו · נתונים לדוגמה";
+    hide(getById("loading"));
+    show(getById("content")); // always reveal — never leave the spinner stuck
+    getById("updated").textContent = "תצוגת דמו · נתונים לדוגמה";
   }
-}
-
-function sectionPageViews(pv, inflName) {
-  const uniques = new Set(pv.map((x) => x.dailyId).filter(Boolean)).size;
-  const rows = pv.slice().sort((a, b) => (tsToDate(b.ts) || 0) - (tsToDate(a.ts) || 0)).slice(0, 50);
-  const body = rows.length ? rows.map((x) => `<tr>
-      <td>${esc(x.page || "—")}</td><td class="muted">${esc(x.channel || x.medium || "ישיר")}</td>
-      <td class="muted">${esc(x.deviceClass || "—")}</td><td>${esc(inflName[x.influencerId] || "—")}</td>
-      <td class="muted">${relTime(tsToDate(x.ts))}</td></tr>`).join("")
-    : `<tr><td colspan="5"><div class="empty">אין צפיות בטווח</div></td></tr>`;
-  return `<details><summary><span class="sum-title">צפיות בעמוד</span>
-      <span class="sum-meta">${nf.format(pv.length)} צפיות · ${nf.format(uniques)} מבקרים ייחודיים ${chev()}</span></summary>
-    <div class="panel"><table><thead><tr>
-      <th>עמוד</th><th>ערוץ</th><th>מכשיר</th><th>מוביל</th><th>זמן</th>
-    </tr></thead><tbody>${body}</tbody></table></div></details>`;
-}
+};

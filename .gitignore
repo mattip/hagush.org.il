@@ -1,8 +1,8 @@
 hagush_github.code-workspace
-# ── Append these lines to the repo-root .gitignore on dashboard-2 ──
-# (current .gitignore only has: hagush_github.code-workspace)
-# No npm / no build → no node_modules or dist to ignore. These are just
-# belt-and-suspenders so a stray credential can never be committed.
+
+# dev tooling (lint/format only — never deployed)
+node_modules/
+
 
 # secrets — never commit
 .env
