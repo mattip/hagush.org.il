@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>יומן אירועים | עכשיו באות!</title>
+    <link rel="icon" href="favicon.ico" />
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./css/main.css?v=4" />
+    <link rel="stylesheet" href="./css/events.css?v=2" />
+    <link rel="canonical" href="https://hagush.org.il/events.html" />
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  </head>
+  <body>
+    <header>
+      <input type="checkbox" id="nav-toggle" />
+      <nav>
+        <a class="nav-logo" href="index.html"><img src="images/logo_white.svg" alt="עכשיו באות!" /></a>
+        <a class="nav-cta" href="index.html#signup">הצטרפו &gt;</a>
+        <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
+          <span></span><span></span><span></span>
+        </label>
+        <ul>
+          <li><a href="index.html">דף בית</a></li>
+          <li><a href="about.html">אודות</a></li>
+          <li><a href="candidates.html">בחירות בדמוקרטים!</a></li>
+          <li><a href="events.html" class="active">יומן אירועים</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <section class="events-hero section">
+        <div class="text">
+          <p class="hero-eyebrow">פריימריז בדמוקרטים</p>
+          <h1 class="hero-h1">יומן אירועים</h1>
+          <h2 class="hero-h2">הבחירות המקדימות ב-20 ליולי!</h2>
+          <p class="hero-date">תאריך אחרון להתפקדות: 12.7</p>
+          <p style="margin-bottom:1em">
+            <a class="cta-pill" href="https://l.democrats.org.il/baot" target="_blank" rel="noreferrer">הצטרפו והתפקדו עכשיו &gt;</a>
+          </p>
+          <p class="muted hero-small">(*העמוד לא רשמי ולא מפלגתי)</p>
+          <p class="hero-disclaimer">
+            שימו לב - זו רשימה חלקית, לא רשמית ומתעדכנת מעת לעת. הפרסום
+            והאחריות לתוכן הוא על המועמדים ששלחו לנו את המידע. הלינק
+            מפנה לאתר/טופס של המועמד.
+          </p>
+          <p class="hero-disclaimer">
+            מוזמנים.ות להפנות אלינו מועמדים.ות לפרסם פה אירועים שלהם
+          </p>
+        </div>
+      </section>
+
+      <!-- Filters -->
+      <section class="filters-bar">
+        <span class="filter-label">סינון</span>
+        <button class="filter-pill active" data-filter="region" data-value="">איפה?</button>
+        <button class="filter-pill active" data-filter="participant" data-value="">מי מופיע?</button>
+      </section>
+
+      <!-- Filter dropdowns (hidden by default) -->
+      <div class="filter-dropdown" id="regionDropdown" style="display:none">
+        <button class="filter-option" data-value="">הכל</button>
+        <button class="filter-option" data-value="צפון">צפון</button>
+        <button class="filter-option" data-value="חיפה">חיפה</button>
+        <button class="filter-option" data-value="מרכז">מרכז</button>
+        <button class="filter-option" data-value="תל אביב">תל אביב</button>
+        <button class="filter-option" data-value="ירושלים">ירושלים</button>
+        <button class="filter-option" data-value="דרום">דרום</button>
+      </div>
+      <div class="filter-dropdown" id="participantDropdown" style="display:none"></div>
+
+      <!-- Events list -->
+      <section class="events-list" id="eventsList">
+        <p class="loading-msg">טוען אירועים…</p>
+      </section>
+    </main>
+
+    <footer>
+      <a href="index.html" aria-label="עכשיו באות! — לדף הבית">
+        <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
+      </a>
+      כל הזכויות שמורות לעכשיו באות! 2026
+    </footer>
+
+    <script>
+    // ── Firebase ──
+    const firebaseConfig = {
+      apiKey:            "AIzaSyC7hQs04G8U0BMs9UXrHEurQnxgxN7jmLw",
+      authDomain:        "hagush-org-il.firebaseapp.com",
+      projectId:         "hagush-org-il",
+      storageBucket:     "hagush-org-il.firebasestorage.app",
+      messagingSenderId: "674306617225",
+      appId:             "1:674306617225:web:7f84e8f09bc35222e77b58",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let allEvents = [];
+    let activeRegion = "";
+    let activeParticipant = "";
+
+    // ── Load events ──
+    async function loadEvents() {
+      try {
+        const snap = await db.collection("campaign_events")
+          .orderBy("date")
+          .get();
+
+        allEvents = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+      // Build participant filter options
+      const participants = new Set();
+      allEvents.forEach(ev => (ev.participants || []).forEach(p => participants.add(p)));
+      const dropdown = document.getElementById("participantDropdown");
+      dropdown.innerHTML = '<button class="filter-option" data-value="">הכל</button>'
+        + [...participants].sort().map(p =>
+          `<button class="filter-option" data-value="${esc(p)}">${esc(p)}</button>`
+        ).join("");
+
+      renderEvents();
+      } catch (err) {
+        console.error("Failed to load events:", err);
+        document.getElementById("eventsList").innerHTML =
+          '<p class="empty-msg">שגיאה בטעינת אירועים. נסו לרענן את הדף.</p>';
+      }
+    }
+
+    // ── Render ──
+    function renderEvents() {
+      const list = document.getElementById("eventsList");
+      let filtered = allEvents;
+
+      // Only show future events (or today)
+      const today = new Date().toISOString().slice(0, 10);
+      filtered = filtered.filter(ev => ev.date >= today);
+
+      if (activeRegion) {
+        filtered = filtered.filter(ev => ev.region === activeRegion);
+      }
+      if (activeParticipant) {
+        filtered = filtered.filter(ev =>
+          (ev.participants || []).includes(activeParticipant)
+        );
+      }
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<p class="empty-msg">אין אירועים להצגה</p>';
+        return;
+      }
+
+      list.innerHTML = filtered.map(ev => {
+        const [year, month, day] = (ev.date || "").split("-");
+        const monthNames = ["", "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
+                            "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
+        const monthName = monthNames[parseInt(month)] || month;
+        const dayNum = parseInt(day) || day;
+
+        const participantsStr = (ev.participants || []).join(" + ");
+        const locationParts = [ev.city, ev.address].filter(Boolean).join(" | ");
+
+        let cta = "";
+        if (ev.registration_link) {
+          cta = `<a class="event-cta" href="${esc(ev.registration_link)}" target="_blank" rel="noreferrer">פרטים ורישום &gt;</a>`;
+        } else {
+          cta = `<div class="event-cta no-reg">ללא רישום מוקדם</div>`;
+        }
+
+        return `
+          <article class="event-card">
+            <div class="event-card-body">
+              <div class="event-date-block">
+                <span class="event-month">${esc(monthName)}</span>
+                <span class="event-day">${esc(String(dayNum))}</span>
+                <span class="event-time">${esc(ev.time || "")}</span>
+              </div>
+              <div class="event-details">
+                <p class="event-participants">${esc(participantsStr)}</p>
+                <p class="event-location">${esc(locationParts)}</p>
+                ${ev.description ? `<p class="event-desc">${esc(ev.description)}</p>` : ""}
+              </div>
+            </div>
+            ${cta}
+          </article>
+        `;
+      }).join("");
+    }
+
+    // ── Filters ──
+    document.querySelectorAll(".filter-pill").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const filter = btn.dataset.filter;
+        const dropdown = document.getElementById(
+          filter === "region" ? "regionDropdown" : "participantDropdown"
+        );
+        // Toggle dropdown
+        const isOpen = dropdown.style.display !== "none";
+        document.querySelectorAll(".filter-dropdown").forEach(d => d.style.display = "none");
+        if (!isOpen) dropdown.style.display = "flex";
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      const option = e.target.closest(".filter-option");
+      if (!option) return;
+
+      const dropdown = option.closest(".filter-dropdown");
+      const value = option.dataset.value;
+
+      if (dropdown.id === "regionDropdown") {
+        activeRegion = value;
+        const pill = document.querySelector('[data-filter="region"]');
+        pill.textContent = value || "איפה?";
+      } else {
+        activeParticipant = value;
+        const pill = document.querySelector('[data-filter="participant"]');
+        pill.textContent = value || "מי מופיע?";
+      }
+
+      dropdown.style.display = "none";
+      renderEvents();
+    });
+
+    // Close dropdowns on outside click
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".filter-pill") && !e.target.closest(".filter-dropdown")) {
+        document.querySelectorAll(".filter-dropdown").forEach(d => d.style.display = "none");
+      }
+    });
+
+    function esc(s) {
+      const d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    loadEvents();
+    </script>
+  </body>
+</html>

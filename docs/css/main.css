@@ -170,6 +170,23 @@ nav ul a:not(.active):hover {
   }
 }
 
+/* ── CTA pill (used on candidates + events pages) ──────────────── */
+.cta-pill {
+  display: inline-block;
+  background: var(--nav);
+  color: #fff;
+  padding: 9px 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  line-height: 1;
+  transition: filter 0.15s;
+}
+.cta-pill:hover {
+  filter: brightness(1.15);
+}
+
 /* ════════════════════
    MAIN
 ════════════════════ */
