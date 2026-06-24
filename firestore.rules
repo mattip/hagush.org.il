@@ -1,4 +1,4 @@
-rules_version = '2';
+rules_version = '3';
 
 // hagush.org.il dashboard — Firestore Security Rules (Stage A)
 // Architecture: Option A (rules-gated SPA writes), Spark/free tier.
@@ -27,6 +27,8 @@ service cloud.firestore {
         && roleDoc().active == true;
     }
     function isAdmin() { return hasRole() && roleDoc().role == 'admin'; }
+    function isEventAdder() { return hasRole() && roleDoc().role == 'event_adder'; }
+    function canManageEvents() { return isAdmin() || isEventAdder(); }
 
     // Role/scope helpers for per-row read scoping.
     function mgrFull()        { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'full'; }
@@ -87,6 +89,36 @@ service cloud.firestore {
         && d.ts is timestamp;
     }
 
+    // form_submissions: anonymous client create of the raw form data (PII allowed
+    // but allow-listed + size-capped). Reads are admin-only (see the match block).
+    function validFormSubmission() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+             'formType','firstName','lastName','phone','email','city','idNumber',
+             'registered','source','referrer','candidate','question',
+             'sessionId','dailyId','page','weekKey','ts','backendOk'
+           ])
+        && d.keys().hasAll(['formType','ts'])
+        && d.ts is timestamp
+        && d.formType in ['join','question']
+        && (!('firstName' in d)  || smallStr(d.firstName))
+        && (!('lastName' in d)   || smallStr(d.lastName))
+        && (!('phone' in d)      || smallStr(d.phone))
+        && (!('email' in d)      || smallStr(d.email))
+        && (!('city' in d)       || smallStr(d.city))
+        && (!('idNumber' in d)   || smallStr(d.idNumber))
+        && (!('registered' in d) || smallStr(d.registered))
+        && (!('source' in d)     || smallStr(d.source))
+        && (!('referrer' in d)   || smallStr(d.referrer))
+        && (!('candidate' in d)  || smallStr(d.candidate))
+        && (!('question' in d)   || (d.question is string && d.question.size() <= 2000))
+        && (!('sessionId' in d)  || smallStr(d.sessionId))
+        && (!('dailyId' in d)    || smallStr(d.dailyId))
+        && (!('page' in d)       || smallStr(d.page))
+        && (!('weekKey' in d)    || smallStr(d.weekKey))
+        && (!('backendOk' in d)  || d.backendOk is bool);
+    }
+
     // ───────────────────────── PII / audit (server-only) ─────────────────────────
     match /registrations/{id} {
       allow read:           if canReadScoped(resource);   // per-row group/influencer scope
@@ -106,7 +138,7 @@ service cloud.firestore {
     match /login_events/{id} {
       allow read:  if isAdmin();
       // Access audit: a signed-in user may record ONLY their own login event
-      // (create-only, fixed shape). No SA/server needed on the free tier.
+      // (create-only, fixed shape).
       allow create: if authed()
         && request.resource.data.email == email()
         && request.resource.data.status in ['success','forbidden','failed']
@@ -114,6 +146,14 @@ service cloud.firestore {
         && request.resource.data.ts is timestamp;
       allow update, delete: if false;
     }
+    match /campaign_events/{id} {
+      allow read: if true;
+      allow create: if canManageEvents()
+        && request.resource.data.created_by == email();
+      allow update, delete: if isAdmin()
+        || (canManageEvents() && resource.data.created_by == email());
+    }
+
     match /aggregates/{id} {
       allow read: if isAdmin() || mgrFull()
         || (mgrGroup()       && resource.data.scope == 'group'      && resource.data.key == roleDoc().groupId)
@@ -137,6 +177,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ───────────────────────── form_submissions (UI-only capture) ─────────────────────────
+    // Backend-independent backup: the public (anonymous) client writes the raw
+    // form data here on every submit, regardless of whether the Apps Script
+    // backend succeeded. Because it CONTAINS PII, reads are admin-only. Create is
+    // shape-validated (allow-list + size caps) to limit abuse, and the collection
+    // is append-only from the client. NOTE: an anonymous open-create collection is
+    // inherently spammable — enable Firebase App Check on this project to bind
+    // writes to your real site and block scripted/fake submissions.
+    match /form_submissions/{id} {
+      allow create:         if validFormSubmission();
+      allow read:           if isAdmin();   // contains PII → admin only
+      allow update, delete: if false;       // append-only from the client
+    }
+
     // ───────────────────────── management (admin-only writes) ─────────────────────────
     match /groups/{id} {
       allow read:  if hasRole();
@@ -147,7 +201,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Campaign events calendar (public page reads, admin writes)
+    // ───────────────────────── campaign_events (admin-only writes) ─────────────────────────
     match /campaign_events/{id} {
       allow read:  if true;
       allow create, update, delete: if isAdmin();

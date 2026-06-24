@@ -65,7 +65,7 @@
       font-weight: 700;
       cursor: pointer;
     }
-    .login-error { color: #c0392b; font-size: .85rem; margin-top: .75rem; }
+    .login-error { color: #c0392b; font-size: .8rem; margin-top: .75rem; word-break: break-word; }
 
     /* Form */
     #admin-panel { display: none; max-width: 600px; margin: 1.5rem auto; padding: 0 1rem; }
@@ -152,8 +152,12 @@
       white-space: nowrap;
     }
 
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
     .submit-btn {
-      width: 100%;
+      flex: 6;
       padding: .75rem;
       background: #e47f09;
       color: #fff;
@@ -166,6 +170,18 @@
     }
     .submit-btn:hover { filter: brightness(1.08); }
     .submit-btn:disabled { background: #999; cursor: default; }
+    .cancel-btn {
+      flex: 4;
+      padding: .75rem 1.5rem;
+      background: #e0e3e8;
+      border: none;
+      border-radius: 8px;
+      font: inherit;
+      font-size: .9rem;
+      color: #444;
+      cursor: pointer;
+      font-weight: 600;
+    }
 
     .toast {
       position: fixed;
@@ -193,6 +209,8 @@
     }
     .existing-event .ev-info { color: #333; }
     .existing-event .ev-date { color: #7890a6; font-size: .8rem; }
+    .existing-event .ev-creator { color: #aaa; font-size: .72rem; margin-top: 2px; }
+    .existing-event .ev-actions { display: flex; flex-direction: column; gap: 4px; }
     .existing-event button {
       background: none;
       border: none;
@@ -201,6 +219,7 @@
       font-size: .8rem;
       font-weight: 600;
     }
+    .existing-event .ev-edit { color: #09366d; }
   </style>
 </head>
 <body>
@@ -219,7 +238,10 @@
   <div id="admin-panel">
     <div class="top-bar">
       <h1>הוספת אירוע</h1>
-      <button id="logout-btn">יציאה</button>
+      <div style="display:flex; align-items:center; gap:8px">
+        <span id="userEmail" style="font-size:.75rem; opacity:.7"></span>
+        <button id="logout-btn">יציאה</button>
+      </div>
     </div>
 
     <div class="form-card" style="margin-top:1.5rem">
@@ -280,7 +302,10 @@
         <div class="hint">השאירו ריק אם אין צורך ברישום</div>
       </div>
 
-      <button class="submit-btn" id="submitBtn">הוסף אירוע</button>
+      <div class="btn-row">
+        <button class="submit-btn" id="submitBtn">הוסף אירוע</button>
+        <button class="cancel-btn" id="cancelBtn" style="display:none" type="button">ביטול</button>
+      </div>
     </div>
 
     <!-- Existing events -->
@@ -313,25 +338,15 @@
   const adminPanel  = document.getElementById("admin-panel");
 
   document.getElementById("login-btn").addEventListener("click", async () => {
+    document.getElementById("login-error").textContent = "";
     try {
       await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
     } catch (err) {
-      document.getElementById("login-error").textContent = "שגיאה בכניסה";
+      document.getElementById("login-error").textContent = err.code + ": " + err.message;
     }
   });
 
   document.getElementById("logout-btn").addEventListener("click", () => auth.signOut());
-
-  auth.onAuthStateChanged((user) => {
-    if (user) {
-      loginScreen.style.display = "none";
-      adminPanel.style.display  = "block";
-      loadExisting();
-    } else {
-      loginScreen.style.display = "flex";
-      adminPanel.style.display  = "none";
-    }
-  });
 
   // ── Participants ──
   let participants = [];
@@ -364,6 +379,10 @@
 
   // ── Submit ──
   document.getElementById("submitBtn").addEventListener("click", async () => {
+    // Auto-add any pending participant text
+    const pendingInput = document.getElementById("evParticipantInput");
+    if (pendingInput.value.trim()) addParticipant();
+
     const date = document.getElementById("evDate").value;
     const time = document.getElementById("evTime").value;
     const region = document.getElementById("evRegion").value;
@@ -379,7 +398,7 @@
     btn.textContent = "שומר…";
 
     try {
-      await db.collection("campaign_events").add({
+      const eventData = {
         date:              date,
         time:              time,
         region:            region,
@@ -388,9 +407,18 @@
         participants:      [...participants],
         description:       document.getElementById("evDesc").value.trim(),
         registration_link: document.getElementById("evLink").value.trim(),
-        created_at:        firebase.firestore.FieldValue.serverTimestamp(),
-        created_by:        auth.currentUser.email,
-      });
+      };
+
+      if (editingId) {
+        // Update existing
+        await db.collection("campaign_events").doc(editingId).update(eventData);
+        editingId = null;
+      } else {
+        // Create new
+        eventData.created_at = firebase.firestore.FieldValue.serverTimestamp();
+        eventData.created_by = auth.currentUser.email;
+        await db.collection("campaign_events").add(eventData);
+      }
 
       // Reset form
       document.getElementById("evDate").value = "";
@@ -415,9 +443,26 @@
 
     btn.disabled = false;
     btn.textContent = "הוסף אירוע";
+    document.getElementById("cancelBtn").style.display = "none";
+    editingId = null;
   });
 
   // ── Load existing events ──
+  let currentUserEmail = null;
+
+  auth.onAuthStateChanged((user) => {
+    currentUserEmail = user ? user.email : null;
+    if (user) {
+      loginScreen.style.display = "none";
+      adminPanel.style.display  = "block";
+      document.getElementById("userEmail").textContent = user.email;
+      loadExisting();
+    } else {
+      loginScreen.style.display = "flex";
+      adminPanel.style.display  = "none";
+    }
+  });
+
   async function loadExisting() {
     const snap = await db.collection("campaign_events")
       .orderBy("date")
@@ -432,17 +477,64 @@
     wrap.innerHTML = snap.docs.map(doc => {
       const ev = doc.data();
       const names = (ev.participants || []).join(", ");
+      const isOwner = ev.created_by === currentUserEmail;
+      const createdBy = ev.created_by || "לא ידוע";
+
       return `
         <div class="existing-event">
           <div>
-            <span class="ev-info">${esc(names)}</span>
-            <span class="ev-date">${esc(ev.date)} ${esc(ev.time)} — ${esc(ev.city || "")}</span>
+            <div class="ev-info">${esc(names)}</div>
+            <div class="ev-date">${esc(ev.date)} ${esc(ev.time)} — ${esc(ev.city || "")}</div>
+            <div class="ev-creator">נוסף ע״י ${esc(createdBy)}</div>
           </div>
-          <button onclick="deleteEvent('${doc.id}')">מחק</button>
+          <div class="ev-actions">
+            ${isOwner ? `<button class="ev-edit" onclick="editEvent('${doc.id}')">ערוך</button>` : ""}
+            ${isOwner ? `<button onclick="deleteEvent('${doc.id}')">מחק</button>` : ""}
+          </div>
         </div>
       `;
     }).join("");
   }
+
+  // ── Edit event — load into form ──
+  let editingId = null;
+
+  async function editEvent(id) {
+    const doc = await db.collection("campaign_events").doc(id).get();
+    if (!doc.exists) return;
+    const ev = doc.data();
+
+    document.getElementById("evDate").value = ev.date || "";
+    document.getElementById("evTime").value = ev.time || "";
+    document.getElementById("evRegion").value = ev.region || "";
+    document.getElementById("evCity").value = ev.city || "";
+    document.getElementById("evAddress").value = ev.address || "";
+    document.getElementById("evDesc").value = ev.description || "";
+    document.getElementById("evLink").value = ev.registration_link || "";
+
+    participants = [...(ev.participants || [])];
+    renderParticipants();
+
+    editingId = id;
+    document.getElementById("submitBtn").textContent = "עדכן אירוע";
+    document.getElementById("cancelBtn").style.display = "block";
+    document.querySelector(".form-card").scrollIntoView({ behavior: "smooth" });
+  }
+
+  document.getElementById("cancelBtn").addEventListener("click", () => {
+    editingId = null;
+    document.getElementById("evDate").value = "";
+    document.getElementById("evTime").value = "";
+    document.getElementById("evRegion").value = "";
+    document.getElementById("evCity").value = "";
+    document.getElementById("evAddress").value = "";
+    document.getElementById("evDesc").value = "";
+    document.getElementById("evLink").value = "";
+    participants = [];
+    renderParticipants();
+    document.getElementById("submitBtn").textContent = "הוסף אירוע";
+    document.getElementById("cancelBtn").style.display = "none";
+  });
 
   async function deleteEvent(id) {
     if (!confirm("למחוק את האירוע?")) return;
