@@ -158,12 +158,6 @@ onAuthStateChanged(auth, handleAuth);
 // UI
 // ─────────────────────────────────────────────────────────────────────────────
 
-const band = document.querySelector(".band");
-if (band) {
-  window.addEventListener("scroll", () => {
-    band.classList.toggle("is-scrolled", window.scrollY > 4);
-  }, { passive: true });
-}
 
 const initializeChrome = () => {
   getById("role-badge").textContent = ROLE_LABELS[userIdentity.role] || userIdentity.role;
