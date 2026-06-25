@@ -277,8 +277,6 @@ const transformSubmissionToRegistration = (submission, referrerMap) => {
     source: submission.source || "",
     influencerId: referrer.influencerId,
     groupId: referrer.groupId,
-    sessionId: submission.sessionId || null,
-    dailyId: submission.dailyId || null,
     partyRegistered:
       submission.registered === "yes"
         ? true
@@ -384,6 +382,7 @@ const fetchScopedData = async (collectionName, dateField) => {
 };
 
 const loadData = async () => {
+  if (!userIdentity) return;
   show(getById("loading"));
   hide(getById("content"));
 
@@ -476,7 +475,7 @@ const loadData = async () => {
 // Rendering
 // ─────────────────────────────────────────────────────────────────────────────
 
-const shouldMaskEmail = () => userIdentity.role === "admin";
+const shouldShowEmail = () => userIdentity.role === "admin";
 
 const createStatCard = (label, value, accent, subtext, helpText) => {
   return `<div class="stat ${accent ? "accent" : ""}">
@@ -518,7 +517,7 @@ const renderRecentSubmissionsSection = (registrations, groupNames) => {
   const tableBody = sortedRows.length
     ? sortedRows
         .map((reg) => {
-          const emailColumn = shouldMaskEmail()
+          const emailColumn = shouldShowEmail()
             ? `<td class="muted">${escapeHtml(reg.email || "—")}</td>`
             : "";
 
@@ -534,7 +533,7 @@ const renderRecentSubmissionsSection = (registrations, groupNames) => {
         .join("")
     : `<tr><td colspan="6"><div class="empty">אין הרשמות בטווח שנבחר</div></td></tr>`;
 
-  const emailHeader = shouldMaskEmail() ? "<th>אימייל</th>" : "";
+  const emailHeader = shouldShowEmail() ? "<th>אימייל</th>" : "";
 
   return `<details open>
     <summary>
@@ -564,7 +563,7 @@ const renderLeadersSection = (registrations, pageViews, interactions, influencer
 
   const ensureInfluencerStats = (influencerId) => {
     if (!stats[influencerId]) {
-      stats[influencerId] = { clicks: 0, forms: 0, party: 0, whatsapp: 0 };
+      stats[influencerId] = { clicks: 0, forms: 0, party: 0 };
     }
     return stats[influencerId];
   };
@@ -580,12 +579,6 @@ const renderLeadersSection = (registrations, pageViews, interactions, influencer
       const influencerStats = ensureInfluencerStats(reg.influencerId);
       influencerStats.forms++;
       if (reg.partyRegistered) influencerStats.party++;
-    }
-  });
-
-  interactions.forEach((interaction) => {
-    if (interaction.influencerId && interaction.type === "whatsapp") {
-      ensureInfluencerStats(interaction.influencerId).whatsapp++;
     }
   });
 
@@ -613,7 +606,6 @@ const renderLeadersSection = (registrations, pageViews, interactions, influencer
           <td class="num">${NUMBER_FORMATTER.format(influencerStats.clicks)}</td>
           <td class="num">${NUMBER_FORMATTER.format(influencerStats.forms)}</td>
           <td class="num">${NUMBER_FORMATTER.format(influencerStats.party)}</td>
-          <td class="num">${NUMBER_FORMATTER.format(influencerStats.whatsapp)}</td>
           <td>
             <div class="bar-mini">
               <i style="width:${Math.round((conversion / maxConversion) * 100)}%"></i>
@@ -622,12 +614,12 @@ const renderLeadersSection = (registrations, pageViews, interactions, influencer
         </tr>`;
         })
         .join("")
-    : `<tr><td colspan="6"><div class="empty">אין נתוני מובילים בטווח</div></td></tr>`;
+    : `<tr><td colspan="5"><div class="empty">אין נתוני מובילים בטווח</div></td></tr>`;
 
   return `<details>
     <summary>
       <span class="sum-title">סטטיסטיקות לפי מוביל כוח</span>
-      <span class="sum-meta">קליקים · טופס · התפקדות · ווטסאפ ${createChevron()}</span>
+      <span class="sum-meta">קליקים · טופס · התפקדות ${createChevron()}</span>
     </summary>
     <div class="panel">
       <table>
@@ -637,7 +629,6 @@ const renderLeadersSection = (registrations, pageViews, interactions, influencer
             <th>קליקים</th>
             <th>טופס</th>
             <th>התפקדות</th>
-            <th>ווטסאפ</th>
             <th>המרה</th>
           </tr>
         </thead>
@@ -648,9 +639,7 @@ const renderLeadersSection = (registrations, pageViews, interactions, influencer
 };
 
 const renderPageViewsSection = (pageViews, influencerNames) => {
-  const uniqueVisitors = new Set(
-    pageViews.map((pv) => pv.dailyId).filter(Boolean)
-  ).size;
+  const uniqueVisitors = pageViews.length;
 
   const sortedRows = pageViews
     .slice()
@@ -662,12 +651,11 @@ const renderPageViewsSection = (pageViews, influencerNames) => {
         .map((pv) => `<tr>
         <td>${escapeHtml(pv.page || "—")}</td>
         <td class="muted">${escapeHtml(pv.channel || "ישיר")}</td>
-        <td class="muted">${escapeHtml(pv.deviceClass || "—")}</td>
         <td>${escapeHtml(influencerNames[pv.influencerId] || "—")}</td>
         <td class="muted">${formatRelativeTime(toDate(pv.ts))}</td>
       </tr>`)
         .join("")
-    : `<tr><td colspan="5"><div class="empty">אין צפיות בטווח</div></td></tr>`;
+    : `<tr><td colspan="4"><div class="empty">אין צפיות בטווח</div></td></tr>`;
 
   return `<details>
     <summary>
@@ -680,7 +668,6 @@ const renderPageViewsSection = (pageViews, influencerNames) => {
           <tr>
             <th>עמוד</th>
             <th>ערוץ</th>
-            <th>מכשיר</th>
             <th>מוביל</th>
             <th>זמן</th>
           </tr>
@@ -716,14 +703,10 @@ const render = (data) => {
   const hideTests = !!getById("test-toggle") &&
     getById("test-toggle").classList.contains("on");
 
-  const pageViews = pageViewsRaw.filter((pv) => !pv.isBot);
+  const pageViews = pageViewsRaw;
   const realRegistrations = registrations.filter((reg) => !reg.isTest);
-  const uniqueVisitors = new Set(
-    pageViews.map((pv) => pv.dailyId).filter(Boolean)
-  ).size;
+  const uniqueVisitors = pageViews.length;
   const influencerClicks = pageViews.filter((pv) => pv.influencerId).length;
-  const countByInteractionType = (type) =>
-    interactions.filter((interaction) => interaction.type === type).length;
 
   // Phone duplicate detection
   const phoneCount = {};
@@ -788,7 +771,7 @@ const render = (data) => {
       NUMBER_FORMATTER.format(uniqueVisitors),
       true,
       `תנועה: ${NUMBER_FORMATTER.format(influencerClicks)} קליקים · ${NUMBER_FORMATTER.format(pageViews.length)} צפיות<br>אחרון: ${lastPageView ? "צפייה " + formatRelativeTime(lastPageView) : "—"}`,
-      "מבקרים ייחודיים לפי dailyId — נספרים פעם ביום לכל מבקר."
+      "מספר הצפיות בעמוד."
     )
   );
 
@@ -826,25 +809,11 @@ const render = (data) => {
       "נרשמים שדיווחו בעצמם שהם כבר חברי מפלגה. דיווח עצמי — לא מאומת."
     ),
     createStatCard(
-      "בדקו התפקדות",
-      NUMBER_FORMATTER.format(countByInteractionType("status_check")),
-      false,
-      "",
-      "מי שלחצו לבדוק את סטטוס ההתפקדות."
-    ),
-    createStatCard(
       "סימנו שלא התפקדו",
       NUMBER_FORMATTER.format(notRegisteredCount),
       false,
       "",
       "נרשמים שדיווחו בעצמם שעדיין אינם חברי מפלגה."
-    ),
-    createStatCard(
-      "לחצו על התפקדות למפלגה",
-      NUMBER_FORMATTER.format(countByInteractionType("cta_party")),
-      true,
-      "",
-      "מי שלחצו על כפתור ההתפקדות למפלגה."
     ),
   ].join("");
 
@@ -937,55 +906,19 @@ const startDemoMode = () => {
     });
   }
 
-  // 179 page views, 67 distinct dailyIds, 122 with an influencer (clicks)
+  // 179 page views, 122 with an influencer (clicks)
   const pageViews = [];
   for (let i = 0; i < 179; i++) {
     pageViews.push({
       id: "v" + i,
-      dailyId: "d" + (i % 67),
-      sessionId: "s" + i,
       page: i % 3 ? "/candidates" : "/",
       channel: ["WhatsApp", "ישיר", "QR", "Facebook"][i % 4],
-      deviceClass: i % 2 ? "Mobile" : "Desktop",
       influencerId: i < 122 ? "infl_" + ((i % 5) + 1) : null,
       ts: ago(i % 72),
     });
   }
 
-  // Interactions: 12 status_check, 4 cta_party, some whatsapp + candidate_open
   const interactions = [];
-  for (let i = 0; i < 12; i++) {
-    interactions.push({
-      id: "sc" + i,
-      type: "status_check",
-      influencerId: "infl_" + ((i % 5) + 1),
-      sessionId: "s" + i,
-      dailyId: "d" + i,
-      ts: ago(i),
-    });
-  }
-
-  for (let i = 0; i < 4; i++) {
-    interactions.push({
-      id: "cp" + i,
-      type: "cta_party",
-      influencerId: "infl_" + ((i % 3) + 1),
-      sessionId: "s" + i,
-      dailyId: "d" + i,
-      ts: ago(i),
-    });
-  }
-
-  for (let i = 0; i < 18; i++) {
-    interactions.push({
-      id: "wa" + i,
-      type: "whatsapp",
-      influencerId: "infl_" + ((i % 5) + 1),
-      sessionId: "s" + i,
-      dailyId: "d" + i,
-      ts: ago(i),
-    });
-  }
 
   try {
     lastFetchedData = {

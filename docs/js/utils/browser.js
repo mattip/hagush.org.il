@@ -1,12 +1,6 @@
 // Browser environment — navigator, location, storage, DOM
 
 /**
- * Get current page's user agent string.
- * @returns {string}
- */
-export const getUserAgent = () => navigator.userAgent || "";
-
-/**
  * Get URL search parameters from location.search.
  * @returns {URLSearchParams}
  */
@@ -17,12 +11,6 @@ export const getUrlParams = () => new URLSearchParams(location.search);
  * @returns {string}
  */
 export const getPathname = () => location.pathname;
-
-/**
- * Get document referrer (previous page URL).
- * @returns {string}
- */
-export const getReferrer = () => document.referrer;
 
 /**
  * Try to access localStorage (gracefully handle private mode).
