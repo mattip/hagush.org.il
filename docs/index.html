@@ -229,16 +229,7 @@
 
               // Capture to Firestore before the backend call so it's saved even if Apps Script fails.
               try {
-                if (window.hagushFormSubmit) window.hagushFormSubmit({
-                  firstName:  data.firstName,
-                  lastName:   data.lastName,
-                  phone:      data.phone,
-                  email:      data.email,
-                  city:       data.city,
-                  idNumber:   data.idNumber,
-                  registered: data.registered,
-                  referrer:   data.referrer,
-                });
+                if (window.hagushFormSubmit) window.hagushFormSubmit(data);
               } catch (e) { /* never block the submit */ }
 
               // With mode: no-cors the browser can't read the response,
