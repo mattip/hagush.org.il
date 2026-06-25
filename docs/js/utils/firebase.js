@@ -45,6 +45,7 @@ const getFirebase = async () => {
  * Silently fails — telemetry must never break the page.
  * @param {string} collectionName - Firestore collection name
  * @param {Object} fields - Fields to write (ts will be added automatically)
+ * @param {string} [docId] - Optional document ID; auto-generated if omitted
  * @returns {Promise<void>}
  */
 export const writeToFirestore = async (collectionName, fields, docId) => {

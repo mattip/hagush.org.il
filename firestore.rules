@@ -36,14 +36,7 @@ service cloud.firestore {
     match /questions/{id}    { allow read: if isAdmin() || mgrFull(); allow write: if false; }
 
     // ── telemetry (server-written only) ──────────────────────────────────────
-    match /page_views/{id} {
-      allow read:   if canReadScoped(resource);
-      allow write:  if false;
-    }
-    match /interactions/{id} {
-      allow read:   if canReadScoped(resource);
-      allow write:  if false;
-    }
+
 
     // ── join form (anonymous create, PII, admin-read) ─────────────────────────
     match /join_form/{id} {
