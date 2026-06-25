@@ -56,22 +56,3 @@ export const normalizePhone = (rawPhone) => {
 
   return digits;
 };
-
-/**
- * Calculate ISO week key for a date.
- * Format: "YYYY-Www" (e.g., "2026-W25")
- * @param {Date} date - Date to process
- * @returns {string} ISO week key
- */
-export const getIsoWeekKey = (date) => {
-  const utcDate = new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-  );
-  const dayOfWeek = utcDate.getUTCDay() || 7;
-  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - dayOfWeek);
-
-  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
-  const weekNumber = Math.ceil((((utcDate - yearStart) / 86400000) + 1) / 7);
-
-  return utcDate.getUTCFullYear() + "-W" + String(weekNumber).padStart(2, "0");
-};
