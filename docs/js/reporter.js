@@ -1,5 +1,5 @@
-// tracker.js — entry point for client telemetry.
-// Tracks form submissions. All logic lives in utils/.
+// reporter.js — entry point for client telemetry.
+// Reports form submissions. All logic lives in utils/.
 
 import { captureFormSubmission } from "./utils/tracking/form-capture.js";
 
