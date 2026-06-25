@@ -292,27 +292,18 @@ const transformSubmissionToRegistration = (submission, referrerMap) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const fetchJoinFormSubmissions = async () => {
-  const toRows = (snapshot) =>
-    snapshot.docs.map((docSnapshot) => ({
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "join_form"), orderBy("ts", "desc"), limit(SUBMISSION_LIMIT))
+    );
+    return snapshot.docs.map((docSnapshot) => ({
       id: docSnapshot.id,
       ...docSnapshot.data(),
     }));
-
-  const [legacyResult, newResult] = await Promise.allSettled([
-    getDocs(query(collection(db, "join_form"), orderBy("ts", "desc"), limit(SUBMISSION_LIMIT))),
-    getDocs(query(collection(db, "form_submissions"), orderBy("ts", "desc"), limit(SUBMISSION_LIMIT))),
-  ]);
-
-  const legacy = legacyResult.status === "fulfilled" ? toRows(legacyResult.value) : [];
-  const newSubs = newResult.status === "fulfilled" ? toRows(newResult.value) : [];
-
-  if (legacyResult.status === "rejected") console.warn("join_form read skipped", legacyResult.reason?.code || legacyResult.reason);
-  if (newResult.status === "rejected") console.warn("form_submissions read skipped", newResult.reason?.code || newResult.reason);
-
-  // Merge and sort by ts descending; keep most recent SUBMISSION_LIMIT entries
-  return [...legacy, ...newSubs]
-    .sort((a, b) => (toDate(b.ts) || 0) - (toDate(a.ts) || 0))
-    .slice(0, SUBMISSION_LIMIT);
+  } catch (e) {
+    console.warn("join_form read skipped", e?.code || e);
+    return [];
+  }
 };
 
 const fetchModerationFlags = async () => {
