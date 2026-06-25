@@ -31,6 +31,8 @@ const getFirebase = async () => {
       db: fsMod.getFirestore(app),
       collection: fsMod.collection,
       addDoc: fsMod.addDoc,
+      setDoc: fsMod.setDoc,
+      doc: fsMod.doc,
       serverTimestamp: fsMod.serverTimestamp,
     };
   })();
@@ -45,13 +47,15 @@ const getFirebase = async () => {
  * @param {Object} fields - Fields to write (ts will be added automatically)
  * @returns {Promise<void>}
  */
-export const writeToFirestore = async (collectionName, fields) => {
+export const writeToFirestore = async (collectionName, fields, docId) => {
   try {
     const fs = await getFirebase();
-    await fs.addDoc(fs.collection(fs.db, collectionName), {
-      ...fields,
-      ts: fs.serverTimestamp(),
-    });
+    const data = { ...fields, ts: fs.serverTimestamp() };
+    if (docId) {
+      await fs.setDoc(fs.doc(fs.db, collectionName, docId), data);
+    } else {
+      await fs.addDoc(fs.collection(fs.db, collectionName), data);
+    }
   } catch (e) {
     console.error("writeToFirestore failed:", collectionName, e?.code || e?.message || e);
   }

@@ -23,11 +23,18 @@ export const captureFormSubmission = async (
 ) => {
   if (hasOptedOut(optoutKey)) return;
 
+  const now = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  const il = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
+  const ts = `${il.getFullYear()}-${p(il.getMonth()+1)}-${p(il.getDate())}T${p(il.getHours())}-${p(il.getMinutes())}-${p(il.getSeconds())}`;
+  const phoneSuffix = String(fields.phone || "").replace(/\D/g, "").slice(-4) || "xxxx";
+  const docId = `${ts}_${phoneSuffix}`;
+
   await writeToFirestore("join_form", {
     ...fields,
     sessionId: getSessionId(),
     dailyId:   getDailyId(),
     page:      getPageName(),
-    weekKey:   getIsoWeekKey(new Date()),
-  });
+    weekKey:   getIsoWeekKey(now),
+  }, docId);
 };

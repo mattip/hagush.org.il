@@ -91,7 +91,9 @@ const auditLogin = async (email, status) => {
   try {
     // Readable, sortable doc ID: "2026-06-24T21-03-47_user@example.com"
     const now = new Date();
-    const ts = now.toISOString().replace(/:/g, "-").replace(/\.\d{3}Z$/, "Z");
+    const p = (n) => String(n).padStart(2, "0");
+    const il = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
+    const ts = `${il.getFullYear()}-${p(il.getMonth()+1)}-${p(il.getDate())}T${p(il.getHours())}-${p(il.getMinutes())}-${p(il.getSeconds())}`;
     const docId = `${ts}_${email}`;
     await setDoc(doc(db, "login_events", docId), {
       email,
