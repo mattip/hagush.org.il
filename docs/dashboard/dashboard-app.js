@@ -184,9 +184,11 @@ if (DEMO_MODE) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const band = document.querySelector(".band");
-window.addEventListener("scroll", () => {
-  band.classList.toggle("is-scrolled", window.scrollY > 4);
-}, { passive: true });
+if (band) {
+  window.addEventListener("scroll", () => {
+    band.classList.toggle("is-scrolled", window.scrollY > 4);
+  }, { passive: true });
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Header chrome / UI initialization
@@ -735,6 +737,7 @@ const render = (data) => {
     (n) => n > 1
   ).length;
 
+  // Mutates shared reg objects in place; callers must not assume immutability
   realRegistrations.forEach((reg) => {
     if (reg.phoneCanon && phoneCount[reg.phoneCanon] > 1) {
       reg.isDuplicate = true;
