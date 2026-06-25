@@ -32,13 +32,6 @@ service cloud.firestore {
         && request.resource.data.status in ['clean','test','duplicate','suspicious'];
     }
     match /questions/{id}    { allow read: if isAdmin() || mgrFull(); allow write: if false; }
-    match /aggregates/{id}   {
-      allow read: if isAdmin() || mgrFull()
-        || (mgrGroup()       && resource.data.scope == 'group'      && resource.data.key == roleDoc().groupId)
-        || (influencerRole() && resource.data.scope == 'influencer' && resource.data.key == roleDoc().influencerId);
-      allow write: if false;
-    }
-    match /meta/{id}         { allow read: if isAdmin(); allow write: if false; }
 
     // ── telemetry (server-written only) ──────────────────────────────────────
     match /page_views/{id} {
