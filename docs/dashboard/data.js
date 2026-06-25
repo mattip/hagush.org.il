@@ -9,8 +9,6 @@ import {
   orderBy,
   limit,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { toDate } from "../js/utils/format.js";
-
 const SUBMISSION_LIMIT = 2000;
 const DATE_RANGE_LIMIT = 2000;
 
@@ -36,13 +34,6 @@ export const transformSubmissionToRegistration = (submission) => {
     status: "clean",
     createdAt: submission.ts,
   };
-};
-
-export const isInDateRange = (date, { fromDate, toDate: toDateBound }) => {
-  if (!date) return false;
-  if (fromDate && date < fromDate) return false;
-  if (toDateBound && date > toDateBound) return false;
-  return true;
 };
 
 export const fetchJoinFormSubmissions = async (db) => {

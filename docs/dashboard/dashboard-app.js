@@ -17,11 +17,10 @@ import {
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { escapeHtml } from "../js/utils/html-escape.js";
-import { formatRelativeTime, toDate } from "../js/utils/format.js";
+import { formatRelativeTime } from "../js/utils/format.js";
 import { getById, show, hide } from "../js/utils/dom.js";
 import {
   transformSubmissionToRegistration,
-  isInDateRange,
   fetchJoinFormSubmissions,
   fetchScopedData,
 } from "./data.js";
@@ -59,7 +58,6 @@ const db = getFirestore(app);
 // ─────────────────────────────────────────────────────────────────────────────
 
 let userIdentity = null; // { email, role, scope, groupId, influencerId }
-let refreshTimer = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth
@@ -86,11 +84,6 @@ const auditLogin = async (email, status) => {
 };
 
 const handleAuth = async (user) => {
-  if (refreshTimer) {
-    clearInterval(refreshTimer);
-    refreshTimer = null;
-  }
-
   if (!user) {
     hide(getById("dash"));
     hide(getById("noaccess"));
@@ -178,33 +171,12 @@ const initializeChrome = () => {
   getById("dash-title").textContent =
     userIdentity.role === "influencer" ? "הדף שלי" : "לוח ניהול כללי";
 
-  getById("filter-btn").onclick = () => loadData();
-
-  const refreshToggle = getById("refresh-toggle");
-  refreshToggle.onclick = () => {
-    refreshToggle.classList.toggle("on");
-    if (refreshToggle.classList.contains("on")) {
-      refreshTimer = setInterval(loadData, 30000);
-    } else if (refreshTimer) {
-      clearInterval(refreshTimer);
-      refreshTimer = null;
-    }
-  };
+  getById("refresh-btn").onclick = () => loadData();
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data loading
 // ─────────────────────────────────────────────────────────────────────────────
-
-const getDateRange = () => {
-  const fromDate = getById("from-date").value
-    ? new Date(getById("from-date").value + "T00:00:00")
-    : null;
-  const toDate = getById("to-date").value
-    ? new Date(getById("to-date").value + "T23:59:59")
-    : null;
-  return { fromDate, toDate };
-};
 
 const loadData = async () => {
   if (!userIdentity) return;
@@ -212,18 +184,12 @@ const loadData = async () => {
   hide(getById("content"));
 
   try {
-    const dateRange = getDateRange();
-    const [submissionsRaw, interactionsAll] = await Promise.all([
+    const [submissionsRaw, interactions] = await Promise.all([
       fetchJoinFormSubmissions(db),
       fetchScopedData(db, userIdentity, "interactions", "ts"),
     ]);
 
-    const registrations = submissionsRaw
-      .map(transformSubmissionToRegistration)
-      .filter((reg) => isInDateRange(toDate(reg.createdAt), dateRange));
-
-    const interactions = interactionsAll
-      .filter((i) => isInDateRange(toDate(i.ts), dateRange));
+    const registrations = submissionsRaw.map(transformSubmissionToRegistration);
 
     render({ registrations, interactions, userRole: userIdentity.role });
     getById("updated").textContent = "עודכן " + formatRelativeTime(new Date());
