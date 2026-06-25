@@ -23,6 +23,7 @@ export const transformSubmissionToRegistration = (submission) => {
     email: submission.email || "",
     city: submission.city || "",
     source: submission.source || "",
+    referrer: submission.referrer || "",
     influencerId: null,
     groupId: submission.referrer || "default",
     partyRegistered:
@@ -48,36 +49,3 @@ export const fetchJoinFormSubmissions = async (db) => {
   }
 };
 
-export const fetchScopedData = async (db, userIdentity, collectionName, dateField) => {
-  let q;
-
-  if (userIdentity.role === "influencer" && userIdentity.influencerId) {
-    q = query(
-      collection(db, collectionName),
-      where("influencerId", "==", userIdentity.influencerId),
-      orderBy(dateField, "desc"),
-      limit(DATE_RANGE_LIMIT)
-    );
-  } else if (userIdentity.role === "manager" && userIdentity.scope === "group" && userIdentity.groupId) {
-    q = query(
-      collection(db, collectionName),
-      where("groupId", "==", userIdentity.groupId),
-      orderBy(dateField, "desc"),
-      limit(DATE_RANGE_LIMIT)
-    );
-  } else {
-    q = query(
-      collection(db, collectionName),
-      orderBy(dateField, "desc"),
-      limit(DATE_RANGE_LIMIT)
-    );
-  }
-
-  try {
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-  } catch (e) {
-    console.warn(`${collectionName} read skipped`, e?.code || e);
-    return [];
-  }
-};

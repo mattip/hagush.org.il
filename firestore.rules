@@ -14,6 +14,8 @@ service cloud.firestore {
     function isAdmin()         { return hasRole() && roleDoc().role == 'admin'; }
     function isEventAdder()    { return hasRole() && roleDoc().role == 'event_adder'; }
     function canManageEvents() { return isAdmin() || isEventAdder(); }
+    function isAskAdmin() { return hasRole() && roleDoc().role == 'ask_admin'; }
+    function canManageInterviews() { return isAdmin() || isAskAdmin(); }
     function mgrFull()         { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'full'; }
     function mgrGroup()        { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'group'; }
     function influencerRole()  { return hasRole() && roleDoc().role == 'influencer'; }
@@ -46,23 +48,32 @@ service cloud.firestore {
     // ── join form (anonymous create, PII, admin-read) ─────────────────────────
     match /join_form/{id} {
       allow create: if request.resource.data.ts is timestamp
-        && request.resource.data.keys().hasOnly([
-             'ts','firstName','lastName','phone','email',
-             'city','idNumber','registered','referrer'])
+        && request.resource.data.keys().hasOnly(
+          [
+            'ts',
+            'firstName',
+            'lastName',
+            'phone',
+            'email',
+            'city',
+            'idNumber',
+            'registered',
+            'referrer',
+            'source'
+          ])
         && request.resource.data.firstName is string
         && request.resource.data.lastName  is string
         && request.resource.data.phone     is string
-        && request.resource.data.referrer  is string;
+        && request.resource.data.email     is string
+        && request.resource.data.referrer  is string
+        && request.resource.data.city      is string
+        && request.resource.data.idNumber  is string
+        && (request.resource.data.registered is bool || request.resource.data.registered is string)
+        && request.resource.data.source    is string;
       allow read:           if isAdmin();
       allow update, delete: if false;
     }
     match /ask_candidate_form/{id} { allow read: if isAdmin(); allow write: if false; }
-    match /submission_flags/{id} {
-      allow read:  if hasRole();
-      allow write: if isAdmin()
-        && request.resource.data.status in ['clean','test','duplicate','suspicious']
-        && request.resource.data.keys().hasOnly(['status']);
-    }
 
     // ── login audit ───────────────────────────────────────────────────────────
     match /login_events/{id} {
@@ -75,16 +86,18 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // ── events ────────────────────────────────────────────────────────────────
+    // ── events and interviews ─────────────────────────────────────────────────
     match /campaign_events/{id} {
       allow read:           if true;
       allow create:         if canManageEvents() && request.resource.data.created_by == email();
       allow update, delete: if isAdmin() || (canManageEvents() && resource.data.created_by == email());
     }
+    match /interviews/{id} {
+      allow read: if true;
+      allow create, update, delete: if canManageInterviews();
+    }
 
     // ── management ────────────────────────────────────────────────────────────
-    match /groups/{id}     { allow read: if hasRole(); allow write: if isAdmin(); }
-    match /influencers/{id}{ allow read: if hasRole(); allow write: if isAdmin(); }
     match /roles/{userEmail} {
       allow read:  if isAdmin() || (authed() && email() == userEmail);
       allow write: if isAdmin();

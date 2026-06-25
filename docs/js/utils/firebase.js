@@ -57,6 +57,13 @@ export const writeToFirestore = async (collectionName, fields, docId) => {
       await fs.addDoc(fs.collection(fs.db, collectionName), data);
     }
   } catch (e) {
-    console.error("writeToFirestore failed:", collectionName, e?.code || e?.message || e);
+    const fieldList = Object.keys(fields).join(", ");
+    console.error(
+      `Firestore write failed for '${collectionName}':\n` +
+      `  Error: ${e?.code} — ${e?.message}\n` +
+      `  Attempted fields: ${fieldList}\n` +
+      `  Doc ID: ${docId || "(auto-generated)"}\n` +
+      `  Check firestore.rules for allowed fields and types.`
+    );
   }
 };

@@ -22,9 +22,9 @@ import { getById, show, hide } from "../js/utils/dom.js";
 import {
   transformSubmissionToRegistration,
   fetchJoinFormSubmissions,
-  fetchScopedData,
 } from "./data.js";
 import { render } from "./render.js";
+import { REFERRERS_MAP } from "./referrers.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config
@@ -184,14 +184,10 @@ const loadData = async () => {
   hide(getById("content"));
 
   try {
-    const [submissionsRaw, interactions] = await Promise.all([
-      fetchJoinFormSubmissions(db),
-      fetchScopedData(db, userIdentity, "interactions", "ts"),
-    ]);
-
+    const submissionsRaw = await fetchJoinFormSubmissions(db);
     const registrations = submissionsRaw.map(transformSubmissionToRegistration);
 
-    render({ registrations, interactions, userRole: userIdentity.role });
+    render({ registrations, referrers: REFERRERS_MAP, userRole: userIdentity.role });
     getById("updated").textContent = "עודכן " + formatRelativeTime(new Date());
     hide(getById("loading"));
     show(getById("content"));

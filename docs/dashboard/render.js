@@ -45,7 +45,7 @@ const renderSubmissionsTable = (registrations, showEmail) => {
     .slice(0, RECENT_ROWS_LIMIT);
 
   if (!rows.length) {
-    const colSpan = showEmail ? 5 : 4;
+    const colSpan = showEmail ? 6 : 5;
     return `<tr><td colspan="${colSpan}"><div class="empty">אין הרשמות בטווח שנבחר</div></td></tr>`;
   }
 
@@ -57,6 +57,7 @@ const renderSubmissionsTable = (registrations, showEmail) => {
       <td>${escapeHtml(reg.name || "—")}</td>
       <td class="num">${escapeHtml(reg.phoneMasked || "")}</td>
       ${emailCell}
+      <td class="muted">${escapeHtml(reg.referrerName || reg.referrer || "—")}</td>
       <td>${createPartyChips(reg)}</td>
       <td class="muted">${formatRelativeTime(toDate(reg.createdAt))}</td>
     </tr>`;
@@ -78,6 +79,7 @@ const renderRecentSubmissionsSection = (registrations, showEmail) => {
             <th>שם</th>
             <th>טלפון</th>
             ${emailHeader}
+            <th>מפנה</th>
             <th>התפקדות למפלגה</th>
             <th>נרשם/ה</th>
           </tr>
@@ -88,21 +90,68 @@ const renderRecentSubmissionsSection = (registrations, showEmail) => {
   </details>`;
 };
 
-export const render = ({ registrations, userRole }) => {
+const renderReferrerSection = (registrations, referrers) => {
+  // Count registrations per referrer code
+  const counts = new Map();
+  for (const reg of registrations) {
+    const code = reg.referrer || "";
+    counts.set(code, (counts.get(code) || 0) + 1);
+  }
+
+  const rows = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([code, count]) => {
+      const name = referrers.get(code)?.name || code || "—";
+      return `<tr>
+        <td class="num">${escapeHtml(code || "—")}</td>
+        <td>${escapeHtml(name)}</td>
+        <td class="num">${NUMBER_FORMATTER.format(count)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const body = rows || `<tr><td colspan="3"><div class="empty">אין נתוני הפניה</div></td></tr>`;
+
+  return `<details open>
+    <summary>
+      <span class="sum-title">הפניות</span>
+      <span class="sum-meta">${NUMBER_FORMATTER.format(counts.size)} מפנים ${createChevron()}</span>
+    </summary>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr><th>קוד</th><th>שם</th><th>הרשמות</th></tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+  </details>`;
+};
+
+export const render = ({ registrations, referrers, userRole }) => {
   const showEmail = userRole === "admin";
 
-  const lastRegistration = registrations
+  // Enrich registrations with resolved referrer name
+  const enriched = registrations.map((reg) => ({
+    ...reg,
+    referrerName: referrers.get(reg.referrer)?.name || "",
+  }));
+
+  const lastRegistration = enriched
     .map((reg) => toDate(reg.createdAt))
     .filter(Boolean)
     .sort((a, b) => b - a)[0];
 
   getById("kpi-row").innerHTML = createStatCard(
     "הרשמות",
-    NUMBER_FORMATTER.format(registrations.length),
+    NUMBER_FORMATTER.format(enriched.length),
     false,
     `אחרון: ${lastRegistration ? formatRelativeTime(lastRegistration) : "—"}`,
     "סך ההרשמות שהתקבלו דרך הטופס."
   );
 
-  getById("sections").innerHTML = renderRecentSubmissionsSection(registrations, showEmail);
+  getById("sections").innerHTML = [
+    renderReferrerSection(enriched, referrers),
+    renderRecentSubmissionsSection(enriched, showEmail),
+  ].join("");
 };
