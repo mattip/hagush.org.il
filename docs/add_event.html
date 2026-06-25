@@ -135,22 +135,79 @@
       padding: 0;
       line-height: 1;
     }
-    .add-row {
+
+    /* Region radio buttons */
+    .region-radios {
       display: flex;
+      flex-wrap: wrap;
       gap: 6px;
+      margin-top: 4px;
     }
-    .add-row input { flex: 1; }
-    .add-row button {
-      padding: .55rem .9rem;
-      background: #09366d;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font: inherit;
+    .region-radio {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      border: 1.5px solid #dde;
+      border-radius: 999px;
       font-size: .85rem;
       cursor: pointer;
-      white-space: nowrap;
+      transition: background .15s, border-color .15s;
     }
+    .region-radio:has(input:checked) {
+      background: #eaeff6;
+      border-color: #09366d;
+    }
+    .region-radio input { margin: 0; }
+
+    /* Participants dropdown */
+    .participants-dropdown { position: relative; }
+    .pd-toggle {
+      width: 100%;
+      padding: .55rem .75rem;
+      border: 1.5px solid #dde;
+      border-radius: 8px;
+      font: inherit;
+      font-size: .9rem;
+      background: #fff;
+      color: #333;
+      text-align: right;
+      cursor: pointer;
+    }
+    .pd-toggle:hover { border-color: #09366d; }
+    .pd-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      left: 0;
+      background: #fff;
+      border: 1.5px solid #dde;
+      border-radius: 0 0 8px 8px;
+      border-top: none;
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 20;
+      box-shadow: 0 4px 12px rgba(0,0,0,.1);
+    }
+    .pd-list { padding: 4px 0; }
+    .pd-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: .85rem;
+      cursor: pointer;
+    }
+    .pd-item:hover { background: #f5f6fa; }
+    .pd-item.pd-preferred { font-weight: 700; background: #f0f4ff; }
+    .pd-item input { margin: 0; }
+    .pd-other {
+      border-top: 1px solid #eee;
+      padding: 8px;
+    }
+    .pd-other .add-row { display: flex; gap: 6px; }
+    .pd-other .add-row input { flex: 1; padding: .4rem .6rem; border: 1.5px solid #dde; border-radius: 6px; font: inherit; font-size: .85rem; }
+    .pd-other .add-row button { padding: .4rem .8rem; background: #09366d; color: #fff; border: none; border-radius: 6px; font: inherit; font-size: .8rem; cursor: pointer; white-space: nowrap; }
 
     .btn-row {
       display: flex;
@@ -259,15 +316,15 @@
 
       <div class="field">
         <label>אזור *</label>
-        <select id="evRegion">
-          <option value="">בחרו אזור</option>
-          <option value="צפון">צפון</option>
-          <option value="חיפה">חיפה</option>
-          <option value="מרכז">מרכז</option>
-          <option value="תל אביב">תל אביב</option>
-          <option value="ירושלים">ירושלים</option>
-          <option value="דרום">דרום</option>
-        </select>
+        <div class="region-radios" id="evRegion">
+          <label class="region-radio"><input type="radio" name="region" value="צפון" /> צפון</label>
+          <label class="region-radio"><input type="radio" name="region" value="חיפה" /> חיפה</label>
+          <label class="region-radio"><input type="radio" name="region" value="מרכז" /> מרכז</label>
+          <label class="region-radio"><input type="radio" name="region" value="תל אביב" /> תל אביב</label>
+          <label class="region-radio"><input type="radio" name="region" value="ירושלים" /> ירושלים</label>
+          <label class="region-radio"><input type="radio" name="region" value="דרום" /> דרום</label>
+          <label class="region-radio"><input type="radio" name="region" value="וירטואלי" /> וירטואלי</label>
+        </div>
       </div>
 
       <div class="field">
@@ -283,9 +340,19 @@
 
       <div class="field">
         <label>משתתפים *</label>
-        <div class="add-row">
-          <input type="text" id="evParticipantInput" placeholder="שם מועמד/ת" />
-          <button type="button" id="addParticipant">הוסף</button>
+        <div class="participants-dropdown" id="participantsDropdown">
+          <button type="button" class="pd-toggle" id="pdToggle">בחרו משתתפים ▾</button>
+          <div class="pd-menu" id="pdMenu" style="display:none">
+            <div class="pd-list" id="pdList">
+              <!-- populated from candidates.json -->
+            </div>
+            <div class="pd-other">
+              <div class="add-row">
+                <input type="text" id="otherParticipant" placeholder="שם נוסף..." />
+                <button type="button" id="addOther">הוסף</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="participants-list" id="participantsList"></div>
       </div>
@@ -348,45 +415,126 @@
 
   document.getElementById("logout-btn").addEventListener("click", () => auth.signOut());
 
-  // ── Participants ──
-  let participants = [];
+  // ── Load candidates for participant dropdown ──
+  let candidateNames = [];
 
-  document.getElementById("addParticipant").addEventListener("click", addParticipant);
-  document.getElementById("evParticipantInput").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); addParticipant(); }
+  async function loadCandidateNames() {
+    try {
+      const resp = await fetch("candidates.json");
+      const data = await resp.json();
+      candidateNames = data.map(c => c.name).sort();
+
+      // Move preferred candidate to top if set
+      if (preferredCandidate && candidateNames.includes(preferredCandidate)) {
+        candidateNames = [
+          preferredCandidate,
+          ...candidateNames.filter(n => n !== preferredCandidate)
+        ];
+      }
+
+      const pdList = document.getElementById("pdList");
+      pdList.innerHTML = candidateNames.map(name =>
+        `<label class="pd-item${name === preferredCandidate ? ' pd-preferred' : ''}"><input type="checkbox" value="${esc(name)}" onchange="syncParticipants()" /> ${esc(name)}</label>`
+      ).join("");
+    } catch (e) {
+      console.error("Failed to load candidates.json:", e);
+    }
+  }
+
+  // ── Participants ──
+  let otherParticipants = []; // free-text additions
+
+  // Toggle dropdown
+  document.getElementById("pdToggle").addEventListener("click", () => {
+    const menu = document.getElementById("pdMenu");
+    menu.style.display = menu.style.display === "none" ? "block" : "none";
   });
 
-  function addParticipant() {
-    const input = document.getElementById("evParticipantInput");
+  // Close dropdown on outside click
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".participants-dropdown")) {
+      document.getElementById("pdMenu").style.display = "none";
+    }
+  });
+
+  // Add "other" participant
+  document.getElementById("addOther").addEventListener("click", addOtherParticipant);
+  document.getElementById("otherParticipant").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); addOtherParticipant(); }
+  });
+
+  function addOtherParticipant() {
+    const input = document.getElementById("otherParticipant");
     const name = input.value.trim();
-    if (!name) return;
-    participants.push(name);
+    if (!name || otherParticipants.includes(name)) return;
+    otherParticipants.push(name);
     input.value = "";
     renderParticipants();
   }
 
-  function removeParticipant(idx) {
-    participants.splice(idx, 1);
+  function removeOther(idx) {
+    otherParticipants.splice(idx, 1);
     renderParticipants();
   }
 
+  // Sync checkbox selections + others into the tag display
+  window.syncParticipants = function() { renderParticipants(); };
+
+  function getSelectedCandidates() {
+    return [...document.querySelectorAll("#pdList input:checked")].map(cb => cb.value);
+  }
+
+  function getAllParticipants() {
+    return [...getSelectedCandidates(), ...otherParticipants];
+  }
+
   function renderParticipants() {
+    const all = getAllParticipants();
     const list = document.getElementById("participantsList");
-    list.innerHTML = participants.map((p, i) =>
-      `<span class="participant-tag">${esc(p)}<button onclick="removeParticipant(${i})">✕</button></span>`
-    ).join("");
+    const toggle = document.getElementById("pdToggle");
+
+    toggle.textContent = all.length > 0
+      ? `${all.length} משתתפים נבחרו ▾`
+      : "בחרו משתתפים ▾";
+
+    const candidateTags = getSelectedCandidates().map(name =>
+      `<span class="participant-tag">${esc(name)}<button onclick="uncheckCandidate('${esc(name)}')">✕</button></span>`
+    );
+    const otherTags = otherParticipants.map((name, i) =>
+      `<span class="participant-tag">${esc(name)}<button onclick="removeOther(${i})">✕</button></span>`
+    );
+
+    list.innerHTML = candidateTags.join("") + otherTags.join("");
+  }
+
+  window.uncheckCandidate = function(name) {
+    const cb = document.querySelector(`#pdList input[value="${name}"]`);
+    if (cb) cb.checked = false;
+    renderParticipants();
+  };
+
+  // ── Region (radio buttons) ──
+  function getRegion() {
+    const checked = document.querySelector('input[name="region"]:checked');
+    return checked ? checked.value : "";
+  }
+
+  function setRegion(value) {
+    const radio = document.querySelector(`input[name="region"][value="${value}"]`);
+    if (radio) radio.checked = true;
+  }
+
+  function clearRegion() {
+    document.querySelectorAll('input[name="region"]').forEach(r => r.checked = false);
   }
 
   // ── Submit ──
   document.getElementById("submitBtn").addEventListener("click", async () => {
-    // Auto-add any pending participant text
-    const pendingInput = document.getElementById("evParticipantInput");
-    if (pendingInput.value.trim()) addParticipant();
-
     const date = document.getElementById("evDate").value;
     const time = document.getElementById("evTime").value;
-    const region = document.getElementById("evRegion").value;
+    const region = getRegion();
     const city = document.getElementById("evCity").value.trim();
+    const participants = getAllParticipants();
 
     if (!date || !time || !region || !city || participants.length === 0) {
       alert("נא למלא את כל שדות החובה (תאריך, שעה, אזור, עיר, משתתפים)");
@@ -404,7 +552,7 @@
         region:            region,
         city:              city,
         address:           document.getElementById("evAddress").value.trim(),
-        participants:      [...participants],
+        participants:      participants,
         description:       document.getElementById("evDesc").value.trim(),
         registration_link: document.getElementById("evLink").value.trim(),
       };
@@ -423,12 +571,13 @@
       // Reset form
       document.getElementById("evDate").value = "";
       document.getElementById("evTime").value = "";
-      document.getElementById("evRegion").value = "";
+      clearRegion();
       document.getElementById("evCity").value = "";
       document.getElementById("evAddress").value = "";
       document.getElementById("evDesc").value = "";
       document.getElementById("evLink").value = "";
-      participants = [];
+      document.querySelectorAll("#pdList input").forEach(cb => cb.checked = false);
+      otherParticipants = [];
       renderParticipants();
 
       // Toast
@@ -449,13 +598,25 @@
 
   // ── Load existing events ──
   let currentUserEmail = null;
+  let isUserAdmin = false;
+  let preferredCandidate = null;
 
-  auth.onAuthStateChanged((user) => {
+  auth.onAuthStateChanged(async (user) => {
     currentUserEmail = user ? user.email : null;
+    isUserAdmin = false;
+    preferredCandidate = null;
     if (user) {
+      try {
+        const roleDoc = await db.collection("roles").doc(user.email).get();
+        if (roleDoc.exists && roleDoc.data().active) {
+          if (roleDoc.data().role === "admin") isUserAdmin = true;
+          if (roleDoc.data().preferred_candidate) preferredCandidate = roleDoc.data().preferred_candidate;
+        }
+      } catch (e) { /* no role doc */ }
       loginScreen.style.display = "none";
       adminPanel.style.display  = "block";
       document.getElementById("userEmail").textContent = user.email;
+      loadCandidateNames();
       loadExisting();
     } else {
       loginScreen.style.display = "flex";
@@ -478,6 +639,7 @@
       const ev = doc.data();
       const names = (ev.participants || []).join(", ");
       const isOwner = ev.created_by === currentUserEmail;
+      const canEdit = isOwner || isUserAdmin;
       const createdBy = ev.created_by || "לא ידוע";
 
       return `
@@ -488,8 +650,8 @@
             <div class="ev-creator">נוסף ע״י ${esc(createdBy)}</div>
           </div>
           <div class="ev-actions">
-            ${isOwner ? `<button class="ev-edit" onclick="editEvent('${doc.id}')">ערוך</button>` : ""}
-            ${isOwner ? `<button onclick="deleteEvent('${doc.id}')">מחק</button>` : ""}
+            ${canEdit ? `<button class="ev-edit" onclick="editEvent('${doc.id}')">ערוך</button>` : ""}
+            ${canEdit ? `<button onclick="deleteEvent('${doc.id}')">מחק</button>` : ""}
           </div>
         </div>
       `;
@@ -506,13 +668,24 @@
 
     document.getElementById("evDate").value = ev.date || "";
     document.getElementById("evTime").value = ev.time || "";
-    document.getElementById("evRegion").value = ev.region || "";
+    setRegion(ev.region || "");
     document.getElementById("evCity").value = ev.city || "";
     document.getElementById("evAddress").value = ev.address || "";
     document.getElementById("evDesc").value = ev.description || "";
     document.getElementById("evLink").value = ev.registration_link || "";
 
-    participants = [...(ev.participants || [])];
+    // Restore participants: check known candidates, add rest as "others"
+    document.querySelectorAll("#pdList input").forEach(cb => cb.checked = false);
+    otherParticipants = [];
+    const eventParticipants = ev.participants || [];
+    for (const name of eventParticipants) {
+      const cb = document.querySelector(`#pdList input[value="${name}"]`);
+      if (cb) {
+        cb.checked = true;
+      } else {
+        otherParticipants.push(name);
+      }
+    }
     renderParticipants();
 
     editingId = id;
