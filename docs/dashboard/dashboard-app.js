@@ -27,7 +27,6 @@ import {
   formatPercentage,
   formatRelativeTime,
   toDate,
-  normalizePhone,
 } from "../js/utils/format.js";
 import { getById, show, hide, createHelpTooltip } from "../js/utils/dom.js";
 
@@ -80,9 +79,6 @@ const createChevron = () =>
 
 let userIdentity = null; // { email, role, scope, groupId, influencerId }
 let refreshTimer = null;
-const MODERATION_STATUSES = ["clean", "test", "duplicate", "suspicious"];
-
-let moderationFlags = {}; // { submissionId -> { status } }
 let lastFetchedData = null; // cached render input
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -155,7 +151,14 @@ const handleAuth = async (user) => {
   hide(getById("login"));
   hide(getById("noaccess"));
   show(getById("dash"));
-  initializeChrome();
+  try {
+    initializeChrome();
+  } catch (e) {
+    console.error("initializeChrome failed", e);
+    getById("loading").innerHTML =
+      '<div class="empty">שגיאת אתחול: ' + escapeHtml(e?.message || e) + "</div>";
+    return;
+  }
   loadData();
 };
 
@@ -210,14 +213,6 @@ const initializeChrome = () => {
 
   getById("filter-btn").onclick = () => loadData();
 
-  // Moderation filters: re-render from cached data (no re-fetch). Default "on" = hide
-  const reFilterFromCache = (button) => {
-    button.classList.toggle("on");
-    if (lastFetchedData) render(lastFetchedData);
-  };
-
-  getById("dup-toggle").onclick = (event) => reFilterFromCache(event.currentTarget);
-  getById("test-toggle").onclick = (event) => reFilterFromCache(event.currentTarget);
 
   const refreshToggle = getById("refresh-toggle");
   refreshToggle.onclick = () => {
@@ -235,49 +230,19 @@ const initializeChrome = () => {
 // Data transformation
 // ─────────────────────────────────────────────────────────────────────────────
 
-const buildReferrerCodeMap = (influencerSnapshot, groupSnapshot) => {
-  const map = {};
-
-  groupSnapshot.forEach((docSnapshot) => {
-    const data = docSnapshot.data() || {};
-    if (data.referrerCode != null && data.active !== false) {
-      map[String(data.referrerCode)] = {
-        influencerId: null,
-        groupId: docSnapshot.id,
-      };
-    }
-  });
-
-  influencerSnapshot.forEach((docSnapshot) => {
-    const data = docSnapshot.data() || {};
-    if (data.referrerCode != null && data.active !== false) {
-      map[String(data.referrerCode)] = {
-        influencerId: docSnapshot.id,
-        groupId: data.groupId || "default",
-      };
-    }
-  });
-
-  return map;
+const resolveReferrerCode = (code) => {
+  return { influencerId: null, groupId: code || "default" };
 };
 
-const resolveReferrerCode = (code, referrerMap) => {
-  const codeStr = String(code == null ? "" : code).trim();
-  if (codeStr && referrerMap[codeStr]) return referrerMap[codeStr];
-  return { influencerId: null, groupId: "default" };
-};
-
-const transformSubmissionToRegistration = (submission, referrerMap) => {
-  const referrer = resolveReferrerCode(submission.referrer, referrerMap);
-  const phone = normalizePhone(submission.phone);
+const transformSubmissionToRegistration = (submission) => {
+  const referrer = resolveReferrerCode(submission.referrer);
   const fullName =
     ((submission.firstName || "") + " " + (submission.lastName || "")).trim();
 
   return {
     id: submission.id,
     name: fullName || "—",
-    phoneLast3: phone ? phone.slice(-3) : "",
-    phoneCanon: phone || null, // client dedup key (normalized, unsalted)
+    phoneLast3: String(submission.phone || "").replace(/\D/g, "").slice(-3),
     email: submission.email || "",
     city: submission.city || "",
     source: submission.source || "",
@@ -289,7 +254,7 @@ const transformSubmissionToRegistration = (submission, referrerMap) => {
         : submission.registered === "no"
           ? false
           : null,
-    status: "clean", // overridden by submission_flags overlay or phone-dup detection
+    status: "clean",
     createdAt: submission.ts,
   };
 };
@@ -313,19 +278,6 @@ const fetchJoinFormSubmissions = async () => {
   }
 };
 
-const fetchModerationFlags = async () => {
-  try {
-    const snapshot = await getDocs(collection(db, "submission_flags"));
-    const flagsMap = {};
-    snapshot.forEach((docSnapshot) => {
-      flagsMap[docSnapshot.id] = docSnapshot.data() || {};
-    });
-    return flagsMap;
-  } catch (e) {
-    console.warn("submission_flags read skipped", e?.code || e);
-    return {};
-  }
-};
 
 const getDateRange = () => {
   const fromDate = getById("from-date").value
@@ -395,74 +347,22 @@ const loadData = async () => {
 
   try {
     const dateRange = getDateRange();
-    const isAdmin = userIdentity.role === "admin";
-    const [
-      submissionsRaw,
-      flags,
-      registrationsRaw,
-      pageViewsAll,
-      interactionsAll,
-      influencerSnapshot,
-      groupSnapshot,
-    ] = await Promise.all([
-      isAdmin ? fetchJoinFormSubmissions() : Promise.resolve([]),
-      isAdmin ? fetchModerationFlags() : Promise.resolve({}),
-      isAdmin ? Promise.resolve([]) : fetchScopedData("registrations", "createdAt"),
-      fetchScopedData("page_views", "ts"),
+    const [submissionsRaw, interactionsAll] = await Promise.all([
+      fetchJoinFormSubmissions(),
       fetchScopedData("interactions", "ts"),
-      getDocs(collection(db, "influencers")),
-      getDocs(collection(db, "groups")),
     ]);
 
-    moderationFlags = flags;
-
-    const influencerNames = {};
-    const groupNames = {};
-
-    influencerSnapshot.forEach((docSnapshot) => {
-      influencerNames[docSnapshot.id] =
-        docSnapshot.data().name || docSnapshot.id;
-    });
-
-    groupSnapshot.forEach((docSnapshot) => {
-      groupNames[docSnapshot.id] = docSnapshot.data().name || docSnapshot.id;
-    });
-
-    const activeInfluencersCount = influencerSnapshot.docs.filter(
-      (d) => d.data().active !== false
-    ).length;
-
-    // Admins: transform join_form submissions (raw client captures, no scope fields).
-    // Managers/influencers: use registrations (processed by Apps Script, already shaped + scoped server-side).
-    let allRegistrations;
-    if (isAdmin) {
-      const referrerMap = buildReferrerCodeMap(influencerSnapshot, groupSnapshot);
-      allRegistrations = submissionsRaw.map((submission) =>
-        transformSubmissionToRegistration(submission, referrerMap)
-      );
-    } else {
-      allRegistrations = registrationsRaw;
-    }
+    const allRegistrations = submissionsRaw.map(transformSubmissionToRegistration);
 
     // Apply date filter (client-side)
     const registrations = allRegistrations.filter((reg) =>
       isInDateRange(toDate(reg.createdAt), dateRange)
     );
-    const pageViews = pageViewsAll.filter((pv) =>
-      isInDateRange(toDate(pv.ts), dateRange)
-    );
     const interactions = interactionsAll.filter((interaction) =>
       isInDateRange(toDate(interaction.ts), dateRange)
     );
 
-    lastFetchedData = {
-      registrations,
-      pageViews,
-      interactions,
-      influencerNames,
-      groupNames,
-      activeInfluencersCount,
-    };
+    lastFetchedData = { registrations, interactions };
 
     render(lastFetchedData);
     getById("updated").textContent =
@@ -512,7 +412,7 @@ const createPartyChips = (registration) => {
   return chips.join(" ") || '<span class="muted">—</span>';
 };
 
-const renderRecentSubmissionsSection = (registrations, groupNames) => {
+const renderRecentSubmissionsSection = (registrations) => {
   const sortedRows = registrations
     .slice()
     .sort(
@@ -532,13 +432,12 @@ const renderRecentSubmissionsSection = (registrations, groupNames) => {
           <td>${escapeHtml(reg.name || "—")}</td>
           <td class="num">…${escapeHtml(reg.phoneLast3 || "")}</td>
           ${emailColumn}
-          <td>${escapeHtml(groupNames[reg.groupId] || "כללי")}</td>
           <td>${createPartyChips(reg)}</td>
           <td class="muted">${formatRelativeTime(toDate(reg.createdAt))}</td>
         </tr>`;
         })
         .join("")
-    : `<tr><td colspan="${shouldShowEmail() ? 6 : 5}"><div class="empty">אין הרשמות בטווח שנבחר</div></td></tr>`;
+    : `<tr><td colspan="${shouldShowEmail() ? 5 : 4}"><div class="empty">אין הרשמות בטווח שנבחר</div></td></tr>`;
 
   const emailHeader = shouldShowEmail() ? "<th>אימייל</th>" : "";
 
@@ -554,7 +453,6 @@ const renderRecentSubmissionsSection = (registrations, groupNames) => {
             <th>שם</th>
             <th>טלפון</th>
             ${emailHeader}
-            <th>קבוצה</th>
             <th>התפקדות למפלגה</th>
             <th>נרשם/ה</th>
           </tr>
@@ -565,177 +463,12 @@ const renderRecentSubmissionsSection = (registrations, groupNames) => {
   </details>`;
 };
 
-const renderLeadersSection = (registrations, pageViews, interactions, influencerNames) => {
-  const stats = {};
 
-  const ensureInfluencerStats = (influencerId) => {
-    if (!stats[influencerId]) {
-      stats[influencerId] = { clicks: 0, forms: 0, party: 0 };
-    }
-    return stats[influencerId];
-  };
-
-  pageViews.forEach((pv) => {
-    if (pv.influencerId) {
-      ensureInfluencerStats(pv.influencerId).clicks++;
-    }
-  });
-
-  registrations.forEach((reg) => {
-    if (reg.influencerId) {
-      const influencerStats = ensureInfluencerStats(reg.influencerId);
-      influencerStats.forms++;
-      if (reg.partyRegistered) influencerStats.party++;
-    }
-  });
-
-  const influencerIds = Object.keys(stats).sort(
-    (a, b) => stats[b].forms - stats[a].forms
-  );
-
-  const maxConversion = Math.max(
-    1,
-    ...influencerIds.map((id) =>
-      stats[id].clicks ? stats[id].forms / stats[id].clicks : 0
-    )
-  );
-
-  const tableBody = influencerIds.length
-    ? influencerIds
-        .map((id) => {
-          const influencerStats = stats[id];
-          const conversion = influencerStats.clicks
-            ? influencerStats.forms / influencerStats.clicks
-            : 0;
-
-          return `<tr>
-          <td>${escapeHtml(influencerNames[id] || id)}</td>
-          <td class="num">${NUMBER_FORMATTER.format(influencerStats.clicks)}</td>
-          <td class="num">${NUMBER_FORMATTER.format(influencerStats.forms)}</td>
-          <td class="num">${NUMBER_FORMATTER.format(influencerStats.party)}</td>
-          <td>
-            <div class="bar-mini">
-              <i style="width:${Math.round((conversion / maxConversion) * 100)}%"></i>
-            </div>
-          </td>
-        </tr>`;
-        })
-        .join("")
-    : `<tr><td colspan="5"><div class="empty">אין נתוני מובילים בטווח</div></td></tr>`;
-
-  return `<details>
-    <summary>
-      <span class="sum-title">סטטיסטיקות לפי מוביל כוח</span>
-      <span class="sum-meta">קליקים · טופס · התפקדות ${createChevron()}</span>
-    </summary>
-    <div class="panel">
-      <table>
-        <thead>
-          <tr>
-            <th>מוביל</th>
-            <th>קליקים</th>
-            <th>טופס</th>
-            <th>התפקדות</th>
-            <th>המרה</th>
-          </tr>
-        </thead>
-        <tbody>${tableBody}</tbody>
-      </table>
-    </div>
-  </details>`;
-};
-
-const renderPageViewsSection = (pageViews, influencerNames) => {
-  const uniqueVisitors = pageViews.length;
-
-  const sortedRows = pageViews
-    .slice()
-    .sort((a, b) => (toDate(b.ts) || 0) - (toDate(a.ts) || 0))
-    .slice(0, RECENT_ROWS_LIMIT);
-
-  const tableBody = sortedRows.length
-    ? sortedRows
-        .map((pv) => `<tr>
-        <td>${escapeHtml(pv.page || "—")}</td>
-        <td class="muted">${escapeHtml(pv.channel || "ישיר")}</td>
-        <td>${escapeHtml(influencerNames[pv.influencerId] || "—")}</td>
-        <td class="muted">${formatRelativeTime(toDate(pv.ts))}</td>
-      </tr>`)
-        .join("")
-    : `<tr><td colspan="4"><div class="empty">אין צפיות בטווח</div></td></tr>`;
-
-  return `<details>
-    <summary>
-      <span class="sum-title">צפיות בעמוד</span>
-      <span class="sum-meta">${NUMBER_FORMATTER.format(pageViews.length)} צפיות · ${NUMBER_FORMATTER.format(uniqueVisitors)} מבקרים ייחודיים ${createChevron()}</span>
-    </summary>
-    <div class="panel">
-      <table>
-        <thead>
-          <tr>
-            <th>עמוד</th>
-            <th>ערוץ</th>
-            <th>מוביל</th>
-            <th>זמן</th>
-          </tr>
-        </thead>
-        <tbody>${tableBody}</tbody>
-      </table>
-    </div>
-  </details>`;
-};
 
 const render = (data) => {
-  const {
-    registrations,
-    pageViews: pageViewsRaw,
-    interactions,
-    influencerNames,
-    groupNames,
-    activeInfluencersCount,
-  } = data;
+  const { registrations, interactions } = data;
 
-  // Apply the admin moderation overlay (submission_flags) onto each submission.
-  registrations.forEach((reg) => {
-    const flags = moderationFlags[reg.id];
-    if (flags?.status && MODERATION_STATUSES.includes(flags.status)) {
-      reg.status = flags.status;
-    }
-  });
-
-  // Filter state: "on" = hide that category (default).
-  const hideDuplicates = !!getById("dup-toggle") &&
-    getById("dup-toggle").classList.contains("on");
-  const hideTests = !!getById("test-toggle") &&
-    getById("test-toggle").classList.contains("on");
-
-  const pageViews = pageViewsRaw;
-  const realRegistrations = registrations.filter((reg) => reg.status !== "test");
-  const uniqueVisitors = pageViews.length;
-  const influencerClicks = pageViews.filter((pv) => pv.influencerId).length;
-
-  // Phone duplicate detection — only promote to duplicate if not already manually flagged
-  const phoneCount = {};
-  realRegistrations.forEach((reg) => {
-    if (reg.phoneCanon) {
-      phoneCount[reg.phoneCanon] = (phoneCount[reg.phoneCanon] || 0) + 1;
-    }
-  });
-
-  const duplicatePhoneCount = Object.values(phoneCount).filter(
-    (n) => n > 1
-  ).length;
-
-  realRegistrations.forEach((reg) => {
-    if (reg.status === "clean" && reg.phoneCanon && phoneCount[reg.phoneCanon] > 1) {
-      reg.status = "duplicate";
-    }
-  });
-
-  // Counted = real registrations that aren't filtered out by toggles
-  const countedRegistrations = hideDuplicates
-    ? realRegistrations.filter((reg) => reg.status !== "duplicate")
-    : realRegistrations;
+  const countedRegistrations = registrations;
 
   const partyRegisteredCount = countedRegistrations.filter(
     (reg) => reg.partyRegistered
@@ -749,103 +482,22 @@ const render = (data) => {
     .filter(Boolean)
     .sort((a, b) => b - a)[0];
 
-  const lastPageView = pageViews
-    .map((pv) => toDate(pv.ts))
-    .filter(Boolean)
-    .sort((a, b) => b - a)[0];
-
   // KPI cards
-  const isInfluencer = userIdentity.role === "influencer";
   const kpiCards = [];
-
-  if (!isInfluencer) {
-    kpiCards.push(
-      createStatCard(
-        "מובילים",
-        NUMBER_FORMATTER.format(activeInfluencersCount),
-        false,
-        "",
-        "מספר המובילים (משפיענים) הפעילים שמפיצים לינקים."
-      )
-    );
-  }
-
-  kpiCards.push(
-    createStatCard(
-      "מבקרים ייחודיים",
-      NUMBER_FORMATTER.format(uniqueVisitors),
-      true,
-      `תנועה: ${NUMBER_FORMATTER.format(influencerClicks)} קליקים · ${NUMBER_FORMATTER.format(pageViews.length)} צפיות<br>אחרון: ${lastPageView ? "צפייה " + formatRelativeTime(lastPageView) : "—"}`,
-      "מספר הצפיות בעמוד."
-    )
-  );
 
   kpiCards.push(
     createStatCard(
       "הרשמות",
       NUMBER_FORMATTER.format(countedRegistrations.length),
       false,
-      `${formatPercentage(countedRegistrations.length, uniqueVisitors)} המרה<br>אחרון: ${lastRegistration ? formatRelativeTime(lastRegistration) : "—"}`,
-      hideDuplicates
-        ? "סך ההרשמות התקינות (לא כולל בדיקות וכפילויות)."
-        : "סך ההרשמות שהתקבלו דרך הטופס (לא כולל בדיקות)."
+      `אחרון: ${lastRegistration ? formatRelativeTime(lastRegistration) : "—"}`,
+      "סך ההרשמות שהתקבלו דרך הטופס."
     )
   );
 
-  if (!isInfluencer) {
-    kpiCards.push(
-      createStatCard(
-        "כפילויות",
-        NUMBER_FORMATTER.format(duplicatePhoneCount),
-        false,
-        "",
-        "מספרי טלפון שמופיעים ביותר מהרשמה אחת."
-      )
-    );
-  }
+  getById("kpi-row").innerHTML = kpiCards.join("");
 
-  // Party section
-  getById("party-row").innerHTML = [
-    createStatCard(
-      "סימנו שכבר התפקדו למפלגה",
-      NUMBER_FORMATTER.format(partyRegisteredCount),
-      true,
-      "",
-      "נרשמים שדיווחו בעצמם שהם כבר חברי מפלגה. דיווח עצמי — לא מאומת."
-    ),
-    createStatCard(
-      "סימנו שלא התפקדו",
-      NUMBER_FORMATTER.format(notRegisteredCount),
-      false,
-      "",
-      "נרשמים שדיווחו בעצמם שעדיין אינם חברי מפלגה."
-    ),
-  ].join("");
-
-  // Sections — the recent table shows every submission but drops the categories
-  // hidden by the active toggles (tests / duplicates).
-  const visibleRegistrations = registrations.filter(
-    (reg) => !(hideTests && reg.status === "test") && !(hideDuplicates && reg.status === "duplicate")
-  );
-
-  const sections = [];
-  sections.push(
-    renderRecentSubmissionsSection(visibleRegistrations, groupNames)
-  );
-
-  if (!isInfluencer) {
-    sections.push(
-      renderLeadersSection(
-        countedRegistrations,
-        pageViews,
-        interactions,
-        influencerNames
-      )
-    );
-  }
-
-  sections.push(renderPageViewsSection(pageViews, influencerNames));
-  getById("sections").innerHTML = sections.join("");
+  getById("sections").innerHTML = renderRecentSubmissionsSection(registrations);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -867,72 +519,27 @@ const startDemoMode = () => {
   initializeChrome();
   getById("role-badge").textContent = "מנהל·ת (תצוגה)";
 
-  const leaderNames = [
-    "צפי שומר",
-    "נופר בן צור",
-    "עמוס דורון",
-    "טל קורנט",
-    "דורית זמיר",
-    "ראובן קוסט",
-    "הילה גולן",
-    "גיא אדוט",
-    "דפנה מילר",
-    "נורית מלניק",
-  ];
-
-  const influencerNames = {};
-  leaderNames.forEach((name, index) => {
-    influencerNames["infl_" + (index + 1)] = name;
-  });
-
-  const groupNames = { default: "כללי", g_tzipi: "צפי שומר" };
+  const names = ["צפי שומר", "נופר בן צור", "עמוס דורון", "טל קורנט", "דורית זמיר",
+    "ראובן קוסט", "הילה גולן", "גיא אדוט", "דפנה מילר", "נורית מלניק"];
   const now = Date.now();
   const ago = (hours) => new Date(now - hours * 3600 * 1000);
 
-  // 28 registrations: 16 party-registered, 4 explicitly not, rest unknown; 2 dup phones
   const registrations = [];
   for (let i = 0; i < 28; i++) {
-    const partyStatus =
-      i < 16 ? true : i < 20 ? false : null;
-
     registrations.push({
       id: "r" + i,
-      name:
-        leaderNames[i % leaderNames.length].replace(/ .*/, " " + "אבגדהוזחטי"[i % 10]),
+      name: names[i % names.length].replace(/ .*/, " " + "אבגדהוזחטי"[i % 10]),
       phoneLast3: String(100 + ((i % 9) * 7)).slice(-3),
       email: "user" + i + "@example.com",
-      phoneCanon: i < 2 ? "DUP_A" : i < 4 ? "DUP_B" : "p" + i, // → 2 duplicate phones
-      groupId: i % 6 === 0 ? "g_tzipi" : "default",
-      influencerId: "infl_" + ((i % 5) + 1),
-      partyRegistered: partyStatus,
+      phoneCanon: i < 2 ? "DUP_A" : i < 4 ? "DUP_B" : "p" + i,
+      partyRegistered: i < 16 ? true : i < 20 ? false : null,
       status: i < 4 ? "duplicate" : i === 27 ? "test" : "clean",
       createdAt: ago(i * 5 + 1),
     });
   }
 
-  // 179 page views, 122 with an influencer (clicks)
-  const pageViews = [];
-  for (let i = 0; i < 179; i++) {
-    pageViews.push({
-      id: "v" + i,
-      page: i % 3 ? "/candidates" : "/",
-      channel: ["WhatsApp", "ישיר", "QR", "Facebook"][i % 4],
-      influencerId: i < 122 ? "infl_" + ((i % 5) + 1) : null,
-      ts: ago(i % 72),
-    });
-  }
-
-  const interactions = [];
-
   try {
-    lastFetchedData = {
-      registrations,
-      pageViews,
-      interactions,
-      influencerNames,
-      groupNames,
-      activeInfluencersCount: leaderNames.length,
-    };
+    lastFetchedData = { registrations, interactions: [] };
 
     render(lastFetchedData);
   } catch (e) {
