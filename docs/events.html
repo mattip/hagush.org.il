@@ -74,15 +74,7 @@
       </section>
 
       <!-- Filter dropdowns (hidden by default) -->
-      <div class="filter-dropdown" id="regionDropdown" style="display:none">
-        <button class="filter-option" data-value="">הכל</button>
-        <button class="filter-option" data-value="צפון">צפון</button>
-        <button class="filter-option" data-value="חיפה">חיפה</button>
-        <button class="filter-option" data-value="מרכז">מרכז</button>
-        <button class="filter-option" data-value="תל אביב">תל אביב</button>
-        <button class="filter-option" data-value="ירושלים">ירושלים</button>
-        <button class="filter-option" data-value="דרום">דרום</button>
-      </div>
+      <div class="filter-dropdown" id="regionDropdown" style="display:none"></div>
       <div class="filter-dropdown" id="participantDropdown" style="display:none"></div>
 
       <!-- Events list -->
@@ -126,9 +118,21 @@
           .map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
-      // Build participant filter options
+      // Only future events for filters
+      const today = new Date().toISOString().slice(0, 10);
+      const futureEvents = allEvents.filter(ev => ev.date >= today);
+
+      // Build region filter from future events
+      const regions = [...new Set(futureEvents.map(ev => ev.region).filter(Boolean))];
+      const regionDropdown = document.getElementById("regionDropdown");
+      regionDropdown.innerHTML = '<button class="filter-option" data-value="">הכל</button>'
+        + regions.sort().map(r =>
+          `<button class="filter-option" data-value="${esc(r)}">${esc(r)}</button>`
+        ).join("");
+
+      // Build participant filter from future events
       const participants = new Set();
-      allEvents.forEach(ev => (ev.participants || []).forEach(p => participants.add(p)));
+      futureEvents.forEach(ev => (ev.participants || []).forEach(p => participants.add(p)));
       const dropdown = document.getElementById("participantDropdown");
       dropdown.innerHTML = '<button class="filter-option" data-value="">הכל</button>'
         + [...participants].sort().map(p =>

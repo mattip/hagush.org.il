@@ -19,11 +19,11 @@
 </head>
 <body>
   <h1>הוספת event_adder הרשאות</h1>
-  <p class="info">התחברו כ-admin, הדביקו רשימת אימיילים (אחד בכל שורה), ולחצו "צור הרשאות".</p>
+  <p class="info">התחברו כ-admin, הדביקו רשימת אימיילים עם מועמד.ת מועדף.ת (tab-separated, אפשר להדביק מ-Google Sheets).</p>
   <button id="login-btn">כניסה עם Google</button>
   <span id="user-status" style="margin-right:8px; font-size:.85rem; color:#666"></span>
   <br><br>
-  <textarea id="emails" placeholder="one@gmail.com&#10;two@gmail.com&#10;three@gmail.com"></textarea>
+  <textarea id="emails" placeholder="one@gmail.com&#9;נמרוד שפר&#10;two@gmail.com&#9;נאווה רוזוליו&#10;three@gmail.com"></textarea>
   <br>
   <button id="run-btn" disabled>צור הרשאות</button>
   <div id="log"></div>
@@ -54,30 +54,43 @@
 
   document.getElementById("run-btn").addEventListener("click", async () => {
     const raw = document.getElementById("emails").value;
-    const emails = raw.split("\n")
-      .map(e => e.trim().toLowerCase())
-      .filter(e => e && e.includes("@"));
+    const rows = raw.split("\n")
+      .map(line => {
+        const parts = line.split("\t");
+        const email = (parts[0] || "").trim().toLowerCase();
+        const candidate = (parts[1] || "").trim();
+        return { email, candidate };
+      })
+      .filter(r => r.email && r.email.includes("@"));
 
-    if (!emails.length) { log.textContent = "No valid emails found"; return; }
+    if (!rows.length) { log.textContent = "No valid emails found"; return; }
 
-    log.textContent = `Found ${emails.length} emails. Creating roles...\n`;
+    log.textContent = `Found ${rows.length} emails. Creating roles...\n`;
     document.getElementById("run-btn").disabled = true;
 
     let ok = 0, skip = 0, fail = 0;
-    for (const email of emails) {
+    for (const { email, candidate } of rows) {
       try {
         const ref = db.collection("roles").doc(email);
         const existing = await ref.get();
         if (existing.exists) {
-          log.textContent += `⏭ ${email} — already has role: ${existing.data().role}\n`;
-          skip++;
+          if (candidate && existing.data().preferred_candidate !== candidate) {
+            await ref.update({ preferred_candidate: candidate });
+            log.textContent += `✏ ${email} — updated preferred: ${candidate}\n`;
+            ok++;
+          } else {
+            log.textContent += `⏭ ${email} — already has role: ${existing.data().role}${existing.data().preferred_candidate ? ' (' + existing.data().preferred_candidate + ')' : ''}\n`;
+            skip++;
+          }
         } else {
-          await ref.set({
+          const roleData = {
             role: "event_adder",
             active: true,
             created_at: firebase.firestore.FieldValue.serverTimestamp(),
-          });
-          log.textContent += `✓ ${email} — event_adder created\n`;
+          };
+          if (candidate) roleData.preferred_candidate = candidate;
+          await ref.set(roleData);
+          log.textContent += `✓ ${email} — event_adder${candidate ? ` (${candidate})` : ""}\n`;
           ok++;
         }
       } catch (err) {
