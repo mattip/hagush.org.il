@@ -16,8 +16,8 @@ export const formatPercentage = (numerator, denominator) =>
  */
 export const formatRelativeTime = (date) => {
   if (!date) return "—";
-
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  const d = typeof date.toDate === "function" ? date.toDate() : date instanceof Date ? date : new Date(date);
+  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
 
   if (seconds < 60) return "לפני " + seconds + " שנ׳";
   if (seconds < 3600) return "לפני " + Math.floor(seconds / 60) + " דק׳";
