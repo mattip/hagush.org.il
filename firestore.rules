@@ -1,140 +1,94 @@
 rules_version = '2';
 
-// hagush.org.il dashboard — Firestore Security Rules (Stage A)
-// Architecture: Option A (rules-gated SPA writes), Spark/free tier.
-//   - PII + audit (registrations, questions, login_events, aggregates):
-//       NEVER client-written. Written only by the Apps Script service account
-//       and the local backfill (both bypass these rules via the Admin SDK).
-//   - Management (groups, influencers, roles): admin-only client writes.
-//
-// Doc id convention: roles/{email} — the doc id IS the user's Google email.
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ───────────────────────── helpers ─────────────────────────
     function authed()  { return request.auth != null; }
     function email()   { return request.auth.token.email; }
-
-    function roleDoc() {
-      return get(/databases/$(database)/documents/roles/$(email())).data;
-    }
-    // An active role doc must exist for the signed-in email.
+    function roleDoc() { return get(/databases/$(database)/documents/roles/$(email())).data; }
     function hasRole() {
       return authed()
         && exists(/databases/$(database)/documents/roles/$(email()))
         && roleDoc().active == true;
     }
-    function isAdmin() { return hasRole() && roleDoc().role == 'admin'; }
-    function isEventAdder() { return hasRole() && roleDoc().role == 'event_adder'; }
+    function isAdmin()         { return hasRole() && roleDoc().role == 'admin'; }
+    function isEventAdder()    { return hasRole() && roleDoc().role == 'event_adder'; }
     function canManageEvents() { return isAdmin() || isEventAdder(); }
-
-    // Role/scope helpers for per-row read scoping.
-    function mgrFull()        { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'full'; }
-    function mgrGroup()       { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'group'; }
-    function influencerRole() { return hasRole() && roleDoc().role == 'influencer'; }
-    // A row is readable if you're admin / full-manager, or it falls inside your
-    // group (group-manager) or your own influencer scope. Queries MUST carry the
-    // matching where() filter so Firestore can prove the query is in-scope.
+    function mgrFull()         { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'full'; }
+    function mgrGroup()        { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'group'; }
+    function influencerRole()  { return hasRole() && roleDoc().role == 'influencer'; }
     function canReadScoped(res) {
       return isAdmin() || mgrFull()
-        || (mgrGroup()       && res.data.groupId == roleDoc().groupId)
+        || (mgrGroup()       && res.data.groupId      == roleDoc().groupId)
         || (influencerRole() && res.data.influencerId == roleDoc().influencerId);
     }
 
-    // the allow-list, hasOnly() makes it impossible to smuggle PII into a write.
-      return d.sessionId is string && d.sessionId.size() > 0 && d.sessionId.size() <= 64
-          && d.dailyId   is string && d.dailyId.size()   > 0 && d.dailyId.size()   <= 64;
-    }
-    function smallStr(v) { return v is string && v.size() <= 512; }
-
-
-    // ───────────────────────── PII / audit (server-only) ─────────────────────────
+    // ── PII / audit (server-only writes) ──────────────────────────────────────
     match /registrations/{id} {
-      allow read:           if canReadScoped(resource);   // per-row group/influencer scope
-      allow create, delete: if false;    // Apps Script SA + backfill only
-      // Admin backoffice may flag a registration — ONLY moderation flags (bool), never PII.
-      allow update: if isAdmin()
+      allow read:           if canReadScoped(resource);
+      allow create, delete: if false;
+      allow update:         if isAdmin()  // admin may set moderation flags only
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['isTest','isDuplicate','isSuspicious'])
-        && request.resource.data.isTest is bool
-        && request.resource.data.isDuplicate is bool
-        && (!('isSuspicious' in request.resource.data) || request.resource.data.isSuspicious is bool);
+             .hasOnly(['isTest','isDuplicate','isSuspicious']);
     }
-    match /questions/{id} {
-      allow read:  if isAdmin() || mgrFull();   // questions carry no group/influencer scope
-      allow write: if false;
-    }
-    match /login_events/{id} {
-      allow read:  if isAdmin();
-      // Access audit: a signed-in user may record ONLY their own login event
-      // (create-only, fixed shape).
-      allow create: if authed()
-        && request.resource.data.email == email()
-        && request.resource.data.status in ['success','forbidden','failed']
-        && request.resource.data.keys().hasOnly(['email','status','ts'])
-        && request.resource.data.ts is timestamp;
-      allow update, delete: if false;
-    }
-    match /campaign_events/{id} {
-      allow read: if true;
-      allow create: if canManageEvents()
-        && request.resource.data.created_by == email();
-      allow update, delete: if isAdmin()
-        || (canManageEvents() && resource.data.created_by == email());
-    }
-    match /aggregates/{id} {
+    match /questions/{id}    { allow read: if isAdmin() || mgrFull(); allow write: if false; }
+    match /aggregates/{id}   {
       allow read: if isAdmin() || mgrFull()
         || (mgrGroup()       && resource.data.scope == 'group'      && resource.data.key == roleDoc().groupId)
         || (influencerRole() && resource.data.scope == 'influencer' && resource.data.key == roleDoc().influencerId);
-      allow write: if false;             // nightly Apps Script job (SA)
+      allow write: if false;
     }
-    match /meta/{id} {
-      allow read:  if isAdmin();
-      allow write: if false;             // import bookkeeping (SA / backfill)
+    match /meta/{id}         { allow read: if isAdmin(); allow write: if false; }
+
+    // ── telemetry (anonymous client create) ───────────────────────────────────
+    match /page_views/{id} {
+      allow create:         if request.resource.data.ts is timestamp;
+      allow read:           if canReadScoped(resource);
+      allow update, delete: if false;
+    }
+    match /interactions/{id} {
+      allow create:         if request.resource.data.ts is timestamp
+        && request.resource.data.type is string;
+      allow read:           if canReadScoped(resource);
+      allow update, delete: if false;
     }
 
-
-    // ───────────────────────── legacy form collections (read-only, no new writes) ──────
-    // Pre-consolidation collections — kept for dashboard reads of existing data.
-    // New submissions go to form_submissions; these are append-only from the old client.
+    // ── join form (anonymous create, PII, admin-read) ─────────────────────────
     match /join_form/{id} {
+      allow create:         if request.resource.data.ts is timestamp;
       allow read:           if isAdmin();
-      allow create, update, delete: if false;
+      allow update, delete: if false;
     }
-    match /ask_candidate_form/{id} {
-      allow read:           if isAdmin();
-      allow create, update, delete: if false;
-    }
-    // Moderation flags overlay for join_form docs (keyed by join_form doc id).
+    match /ask_candidate_form/{id} { allow read: if isAdmin(); allow write: if false; }
     match /submission_flags/{id} {
       allow read:  if hasRole();
-      allow write: if isAdmin()
-        && request.resource.data.keys().hasOnly(['isTest','isDuplicate','updatedAt','by'])
-        && request.resource.data.isTest is bool
-        && request.resource.data.isDuplicate is bool
-        && (!('by' in request.resource.data) || smallStr(request.resource.data.by));
-    }
-
-    // ───────────────────────── management (admin-only writes) ─────────────────────────
-    match /groups/{id} {
-      allow read:  if hasRole();
-      allow write: if isAdmin();
-    }
-    match /influencers/{id} {
-      allow read:  if hasRole();
       allow write: if isAdmin();
     }
 
-    // roles: a user may read their own role doc; admins read/write all.
+    // ── login audit ───────────────────────────────────────────────────────────
+    match /login_events/{id} {
+      allow read:           if isAdmin();
+      allow create:         if authed()
+        && request.resource.data.email == email()
+        && request.resource.data.ts is timestamp;
+      allow update, delete: if false;
+    }
+
+    // ── events ────────────────────────────────────────────────────────────────
+    match /campaign_events/{id} {
+      allow read:           if true;
+      allow create:         if canManageEvents() && request.resource.data.created_by == email();
+      allow update, delete: if isAdmin() || (canManageEvents() && resource.data.created_by == email());
+    }
+
+    // ── management ────────────────────────────────────────────────────────────
+    match /groups/{id}     { allow read: if hasRole(); allow write: if isAdmin(); }
+    match /influencers/{id}{ allow read: if hasRole(); allow write: if isAdmin(); }
     match /roles/{userEmail} {
       allow read:  if isAdmin() || (authed() && email() == userEmail);
       allow write: if isAdmin();
     }
 
-    // ───────────────────────── default deny ─────────────────────────
-    match /{document=**} {
-      allow read, write: if false;
-    }
+    match /{document=**} { allow read, write: if false; }
   }
 }

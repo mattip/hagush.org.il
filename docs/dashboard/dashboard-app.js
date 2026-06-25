@@ -22,13 +22,14 @@ import {
   setDoc,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { escapeHtml } from "../js/utils/html-escape.js";
 import {
-  escapeHtml,
   formatPercentage,
   formatRelativeTime,
   toDate,
   normalizePhone,
 } from "../js/utils/format.js";
+import { getById, show, hide, createHelpTooltip } from "../js/utils/dom.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -57,16 +58,6 @@ const DATE_RANGE_LIMIT = 2000;
 const RECENT_ROWS_LIMIT = 50;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DOM shortcuts
-// ─────────────────────────────────────────────────────────────────────────────
-
-const getById = (id) => document.getElementById(id);
-
-const show = (element) => element.classList.remove("hidden");
-
-const hide = (element) => element.classList.add("hidden");
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Firebase initialization
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -79,9 +70,6 @@ const db = getFirestore(app);
 // ─────────────────────────────────────────────────────────────────────────────
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("he-IL");
-
-const createHelpTooltip = (text) =>
-  `<span class="help" tabindex="0">?<span class="tip">${escapeHtml(text)}</span></span>`;
 
 const createChevron = () =>
   '<svg class="chev" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -164,12 +152,19 @@ const handleAuth = async (user) => {
 };
 
 getById("login-btn").addEventListener("click", async () => {
+  const btn = getById("login-btn");
+  if (btn.disabled) return;
+  btn.disabled = true;
   getById("login-err").textContent = "";
   try {
     await signInWithPopup(auth, new GoogleAuthProvider());
   } catch (err) {
-    console.error(err);
-    getById("login-err").textContent = "שגיאה בכניסה: " + (err?.code || err);
+    if (err?.code !== "auth/cancelled-popup-request") {
+      console.error(err);
+      getById("login-err").textContent = "שגיאה בכניסה: " + (err?.code || err);
+    }
+  } finally {
+    btn.disabled = false;
   }
 });
 
@@ -297,18 +292,27 @@ const transformSubmissionToRegistration = (submission, referrerMap) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const fetchJoinFormSubmissions = async () => {
-  try {
-    const snapshot = await getDocs(
-      query(collection(db, "join_form"), orderBy("ts", "desc"), limit(SUBMISSION_LIMIT))
-    );
-    return snapshot.docs.map((docSnapshot) => ({
+  const toRows = (snapshot) =>
+    snapshot.docs.map((docSnapshot) => ({
       id: docSnapshot.id,
       ...docSnapshot.data(),
     }));
-  } catch (e) {
-    console.warn("join_form read skipped", e?.code || e);
-    return [];
-  }
+
+  const [legacyResult, newResult] = await Promise.allSettled([
+    getDocs(query(collection(db, "join_form"), orderBy("ts", "desc"), limit(SUBMISSION_LIMIT))),
+    getDocs(query(collection(db, "form_submissions"), orderBy("ts", "desc"), limit(SUBMISSION_LIMIT))),
+  ]);
+
+  const legacy = legacyResult.status === "fulfilled" ? toRows(legacyResult.value) : [];
+  const newSubs = newResult.status === "fulfilled" ? toRows(newResult.value) : [];
+
+  if (legacyResult.status === "rejected") console.warn("join_form read skipped", legacyResult.reason?.code || legacyResult.reason);
+  if (newResult.status === "rejected") console.warn("form_submissions read skipped", newResult.reason?.code || newResult.reason);
+
+  // Merge and sort by ts descending; keep most recent SUBMISSION_LIMIT entries
+  return [...legacy, ...newSubs]
+    .sort((a, b) => (toDate(b.ts) || 0) - (toDate(a.ts) || 0))
+    .slice(0, SUBMISSION_LIMIT);
 };
 
 const fetchModerationFlags = async () => {
@@ -662,7 +666,7 @@ const renderPageViewsSection = (pageViews, influencerNames) => {
     ? sortedRows
         .map((pv) => `<tr>
         <td>${escapeHtml(pv.page || "—")}</td>
-        <td class="muted">${escapeHtml(pv.channel || pv.medium || "ישיר")}</td>
+        <td class="muted">${escapeHtml(pv.channel || "ישיר")}</td>
         <td class="muted">${escapeHtml(pv.deviceClass || "—")}</td>
         <td>${escapeHtml(influencerNames[pv.influencerId] || "—")}</td>
         <td class="muted">${formatRelativeTime(toDate(pv.ts))}</td>
@@ -946,7 +950,6 @@ const startDemoMode = () => {
       sessionId: "s" + i,
       page: i % 3 ? "/candidates" : "/",
       channel: ["WhatsApp", "ישיר", "QR", "Facebook"][i % 4],
-      medium: i % 4 === 2 ? "qr" : "web",
       deviceClass: i % 2 ? "Mobile" : "Desktop",
       influencerId: i < 122 ? "infl_" + ((i % 5) + 1) : null,
       ts: ago(i % 72),

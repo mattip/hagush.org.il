@@ -225,7 +225,19 @@
                 city:       form.city.value.trim(),
                 idNumber:   form.idNumber.value.trim(),
                 referrer:   form.referrer.value,
+                // anonymous visit ids — let the dashboard stitch signups to traffic.
+                // Guarded: if the tracker didn't load, these are empty strings and ignored.
+                ...( window.hagushIds ? window.hagushIds() : { sessionId: "", dailyId: "" } ),
               };
+
+              // Lightweight funnel event — no PII, writes to interactions collection.
+              try { if (window.hagushTrack) window.hagushTrack("submit_attempt"); } catch (e) { /* ignore */ }
+
+              // UI-only capture: record this submission in Firestore BEFORE the
+              // backend call, so it is saved even if the Apps Script write fails.
+              try {
+                if (window.hagushFormSubmit) window.hagushFormSubmit(data);
+              } catch (e) { /* never block the submit */ }
 
               // With mode: no-cors the browser can't read the response,
               // but the request goes through. A thrown error means a real
@@ -348,5 +360,7 @@
       <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
       כל הזכויות שמורות לעכשיו באות! 2026
     </footer>
+    <!-- anonymous, privacy-minimal telemetry (page_views / interactions) -->
+    <script type="module" src="js/tracker.js"></script>
   </body>
 </html>
