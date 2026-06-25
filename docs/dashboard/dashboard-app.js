@@ -80,7 +80,9 @@ const createChevron = () =>
 
 let userIdentity = null; // { email, role, scope, groupId, influencerId }
 let refreshTimer = null;
-let moderationFlags = {}; // { submissionId -> { isTest, isDuplicate } }
+const MODERATION_STATUSES = ["clean", "test", "duplicate", "suspicious"];
+
+let moderationFlags = {}; // { submissionId -> { status } }
 let lastFetchedData = null; // cached render input
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,9 +93,13 @@ const auditLogin = async (email, status) => {
   try {
     // Readable, sortable doc ID: "2026-06-24T21-03-47_user@example.com"
     const now = new Date();
-    const p = (n) => String(n).padStart(2, "0");
-    const il = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
-    const ts = `${il.getFullYear()}-${p(il.getMonth()+1)}-${p(il.getDate())}T${p(il.getHours())}-${p(il.getMinutes())}-${p(il.getSeconds())}`;
+    const fmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jerusalem",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    });
+    const parts = Object.fromEntries(fmt.formatToParts(now).map((p) => [p.type, p.value]));
+    const ts = `${parts.year}-${parts.month}-${parts.day}T${parts.hour}-${parts.minute}-${parts.second}`;
     const docId = `${ts}_${email}`;
     await setDoc(doc(db, "login_events", docId), {
       email,
@@ -283,8 +289,7 @@ const transformSubmissionToRegistration = (submission, referrerMap) => {
         : submission.registered === "no"
           ? false
           : null,
-    isTest: false, // no server moderation flag on join_form
-    isDuplicate: false, // computed in render() from phoneCanon
+    status: "clean", // overridden by submission_flags overlay or phone-dup detection
     createdAt: submission.ts,
   };
 };
@@ -349,6 +354,7 @@ const fetchScopedData = async (collectionName, dateField) => {
     queryObject = query(
       collection(db, collectionName),
       where("influencerId", "==", userIdentity.influencerId),
+      orderBy(dateField, "desc"),
       limit(DATE_RANGE_LIMIT)
     );
   } else if (
@@ -359,6 +365,7 @@ const fetchScopedData = async (collectionName, dateField) => {
     queryObject = query(
       collection(db, collectionName),
       where("groupId", "==", userIdentity.groupId),
+      orderBy(dateField, "desc"),
       limit(DATE_RANGE_LIMIT)
     );
   } else {
@@ -494,12 +501,12 @@ const createPartyChips = (registration) => {
     chips.push('<span class="chip amber">סימנ/ה שלא התפקד/ה</span>');
   }
 
-  if (registration.isDuplicate) {
+  if (registration.status === "duplicate") {
     chips.push('<span class="chip rose">חשד לכפילות</span>');
-  }
-
-  if (registration.isTest) {
+  } else if (registration.status === "test") {
     chips.push('<span class="chip violet">בדיקה</span>');
+  } else if (registration.status === "suspicious") {
+    chips.push('<span class="chip amber">חשוד</span>');
   }
 
   return chips.join(" ") || '<span class="muted">—</span>';
@@ -531,7 +538,7 @@ const renderRecentSubmissionsSection = (registrations, groupNames) => {
         </tr>`;
         })
         .join("")
-    : `<tr><td colspan="6"><div class="empty">אין הרשמות בטווח שנבחר</div></td></tr>`;
+    : `<tr><td colspan="${shouldShowEmail() ? 6 : 5}"><div class="empty">אין הרשמות בטווח שנבחר</div></td></tr>`;
 
   const emailHeader = shouldShowEmail() ? "<th>אימייל</th>" : "";
 
@@ -691,9 +698,8 @@ const render = (data) => {
   // Apply the admin moderation overlay (submission_flags) onto each submission.
   registrations.forEach((reg) => {
     const flags = moderationFlags[reg.id];
-    if (flags) {
-      if (flags.isTest) reg.isTest = true;
-      if (flags.isDuplicate) reg.isDuplicate = true;
+    if (flags?.status && MODERATION_STATUSES.includes(flags.status)) {
+      reg.status = flags.status;
     }
   });
 
@@ -704,11 +710,11 @@ const render = (data) => {
     getById("test-toggle").classList.contains("on");
 
   const pageViews = pageViewsRaw;
-  const realRegistrations = registrations.filter((reg) => !reg.isTest);
+  const realRegistrations = registrations.filter((reg) => reg.status !== "test");
   const uniqueVisitors = pageViews.length;
   const influencerClicks = pageViews.filter((pv) => pv.influencerId).length;
 
-  // Phone duplicate detection
+  // Phone duplicate detection — only promote to duplicate if not already manually flagged
   const phoneCount = {};
   realRegistrations.forEach((reg) => {
     if (reg.phoneCanon) {
@@ -720,16 +726,15 @@ const render = (data) => {
     (n) => n > 1
   ).length;
 
-  // Mutates shared reg objects in place; callers must not assume immutability
   realRegistrations.forEach((reg) => {
-    if (reg.phoneCanon && phoneCount[reg.phoneCanon] > 1) {
-      reg.isDuplicate = true;
+    if (reg.status === "clean" && reg.phoneCanon && phoneCount[reg.phoneCanon] > 1) {
+      reg.status = "duplicate";
     }
   });
 
   // Counted = real registrations that aren't filtered out by toggles
   const countedRegistrations = hideDuplicates
-    ? realRegistrations.filter((reg) => !reg.isDuplicate)
+    ? realRegistrations.filter((reg) => reg.status !== "duplicate")
     : realRegistrations;
 
   const partyRegisteredCount = countedRegistrations.filter(
@@ -820,7 +825,7 @@ const render = (data) => {
   // Sections — the recent table shows every submission but drops the categories
   // hidden by the active toggles (tests / duplicates).
   const visibleRegistrations = registrations.filter(
-    (reg) => !(hideTests && reg.isTest) && !(hideDuplicates && reg.isDuplicate)
+    (reg) => !(hideTests && reg.status === "test") && !(hideDuplicates && reg.status === "duplicate")
   );
 
   const sections = [];
@@ -900,8 +905,7 @@ const startDemoMode = () => {
       groupId: i % 6 === 0 ? "g_tzipi" : "default",
       influencerId: "infl_" + ((i % 5) + 1),
       partyRegistered: partyStatus,
-      isDuplicate: i < 4,
-      isTest: i === 27,
+      status: i < 4 ? "duplicate" : i === 27 ? "test" : "clean",
       createdAt: ago(i * 5 + 1),
     });
   }

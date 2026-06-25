@@ -27,9 +27,9 @@ service cloud.firestore {
     match /registrations/{id} {
       allow read:           if canReadScoped(resource);
       allow create, delete: if false;
-      allow update:         if isAdmin()  // admin may set moderation flags only
-        && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['isTest','isDuplicate','isSuspicious']);
+      allow update:         if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['clean','test','duplicate','suspicious'];
     }
     match /questions/{id}    { allow read: if isAdmin() || mgrFull(); allow write: if false; }
     match /aggregates/{id}   {
@@ -40,37 +40,45 @@ service cloud.firestore {
     }
     match /meta/{id}         { allow read: if isAdmin(); allow write: if false; }
 
-    // ── telemetry (anonymous client create) ───────────────────────────────────
+    // ── telemetry (server-written only) ──────────────────────────────────────
     match /page_views/{id} {
-      allow create:         if request.resource.data.ts is timestamp;
-      allow read:           if canReadScoped(resource);
-      allow update, delete: if false;
+      allow read:   if canReadScoped(resource);
+      allow write:  if false;
     }
     match /interactions/{id} {
-      allow create:         if request.resource.data.ts is timestamp
-        && request.resource.data.type is string;
-      allow read:           if canReadScoped(resource);
-      allow update, delete: if false;
+      allow read:   if canReadScoped(resource);
+      allow write:  if false;
     }
 
     // ── join form (anonymous create, PII, admin-read) ─────────────────────────
     match /join_form/{id} {
-      allow create:         if request.resource.data.ts is timestamp;
+      allow create: if request.resource.data.ts is timestamp
+        && request.resource.data.keys().hasOnly([
+             'ts','firstName','lastName','phone','email',
+             'city','idNumber','registered','referrer'])
+        && request.resource.data.firstName is string
+        && request.resource.data.lastName  is string
+        && request.resource.data.phone     is string
+        && request.resource.data.referrer  is string;
       allow read:           if isAdmin();
       allow update, delete: if false;
     }
     match /ask_candidate_form/{id} { allow read: if isAdmin(); allow write: if false; }
     match /submission_flags/{id} {
       allow read:  if hasRole();
-      allow write: if isAdmin();
+      allow write: if isAdmin()
+        && request.resource.data.status in ['clean','test','duplicate','suspicious']
+        && request.resource.data.keys().hasOnly(['status']);
     }
 
     // ── login audit ───────────────────────────────────────────────────────────
     match /login_events/{id} {
-      allow read:           if isAdmin();
-      allow create:         if authed()
+      allow read:   if isAdmin();
+      allow create: if authed()
         && request.resource.data.email == email()
-        && request.resource.data.ts is timestamp;
+        && request.resource.data.ts is timestamp
+        && request.resource.data.status in ['success', 'forbidden']
+        && request.resource.data.keys().hasOnly(['email', 'status', 'ts']);
       allow update, delete: if false;
     }
 
