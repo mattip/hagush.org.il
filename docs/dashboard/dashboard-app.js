@@ -16,6 +16,7 @@ import {
   setDoc,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { FIREBASE_CONFIG } from "../js/utils/firebase-config.js";
 import { escapeHtml } from "../js/utils/html-escape.js";
 import { formatRelativeTime } from "../js/utils/format.js";
 import { getById, show, hide } from "../js/utils/dom.js";
@@ -29,15 +30,6 @@ import { REFERRERS_MAP } from "./referrers.js";
 // ─────────────────────────────────────────────────────────────────────────────
 // Config
 // ─────────────────────────────────────────────────────────────────────────────
-
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyC7hQs04G8U0BMs9UXrHEurQnxgxN7jmLw",
-  authDomain: "hagush-org-il.firebaseapp.com",
-  projectId: "hagush-org-il",
-  storageBucket: "hagush-org-il.firebasestorage.app",
-  messagingSenderId: "674306617225",
-  appId: "1:674306617225:web:7f84e8f09bc35222e77b58",
-};
 
 const ROLE_LABELS = {
   admin: "מנהל·ת",
@@ -165,7 +157,7 @@ const initializeChrome = () => {
   getById("dash-title").textContent =
     userIdentity.role === "influencer" ? "הדף שלי" : "לוח ניהול כללי";
 
-  getById("refresh-btn").onclick = () => loadData();
+  getById("refresh-btn").addEventListener("click", loadData);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

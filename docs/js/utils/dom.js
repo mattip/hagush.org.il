@@ -13,13 +13,13 @@ export const getById = (id) => document.getElementById(id);
  * Show an element by removing "hidden" class.
  * @param {HTMLElement} element
  */
-export const show = (element) => element.classList.remove("hidden");
+export const show = (element) => element && element.classList.remove("hidden");
 
 /**
  * Hide an element by adding "hidden" class.
  * @param {HTMLElement} element
  */
-export const hide = (element) => element.classList.add("hidden");
+export const hide = (element) => element && element.classList.add("hidden");
 
 /**
  * Create a help/info tooltip span with question mark.

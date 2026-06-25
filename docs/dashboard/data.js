@@ -10,7 +10,6 @@ import {
   limit,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const SUBMISSION_LIMIT = 2000;
-const DATE_RANGE_LIMIT = 2000;
 
 export const transformSubmissionToRegistration = (submission) => {
   const fullName =
