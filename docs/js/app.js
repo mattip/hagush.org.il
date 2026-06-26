@@ -762,3 +762,56 @@ function resetChoices() {
   // Exit select mode and return to initial state
   exitSelectMode();
 }
+
+// ── Click-hint animation (mobile, 3 cycles) ─────────────────────
+function initClickHint() {
+  if (!new URLSearchParams(window.location.search).has("animation")) return;
+  if (window.matchMedia("(min-width: 768px)").matches) return;
+
+  const HINT_SVG = `
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g filter="url(#hs)">
+        <path d="M33.5 18v16.8l5.3-3.1a3 3 0 0 1 4.1 1.1l.5.8a3 3 0 0 1-.8 3.9L30.8 46a8 8 0 0 1-4.6 1.5H24a8 8 0 0 1-8-8v-7.2a3 3 0 0 1 1.8-2.8l1.4-.6a3 3 0 0 1 3.8 1.3l1-1.7V18a3 3 0 0 1 6 0z" fill="#fff"/>
+        <path d="M33.5 18v16.8l5.3-3.1a3 3 0 0 1 4.1 1.1l.5.8a3 3 0 0 1-.8 3.9L30.8 46a8 8 0 0 1-4.6 1.5H24a8 8 0 0 1-8-8v-7.2a3 3 0 0 1 1.8-2.8l1.4-.6a3 3 0 0 1 3.8 1.3l1-1.7V18a3 3 0 0 1 6 0z" stroke="#09366d" stroke-width="1.5"/>
+      </g>
+      <defs><filter id="hs" x="12" y="13" width="40" height="40" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity=".2"/>
+      </filter></defs>
+    </svg>
+    <span class="ch-ring"></span>
+    <span class="ch-ring"></span>
+    <span class="ch-ring"></span>`;
+
+  const TOTAL_CYCLES = 3;
+  // Per cycle: appear(0.4) + pulse(3×1s) + ripple(~1s) + fadeout(0.5) ≈ 4.9s
+  const RIPPLE_AT  = 4100;   // ms after element inserted: trigger fadeout
+  const CYCLE_GAP  = 1000;   // pause between cycles
+
+  function runCycle(stage, n) {
+    const hint = document.createElement("div");
+    hint.className = "click-hint";
+    hint.innerHTML = HINT_SVG;
+    stage.appendChild(hint);
+
+    setTimeout(() => {
+      hint.classList.add("ch-done");
+      hint.addEventListener("animationend", () => {
+        hint.remove();
+        if (n + 1 < TOTAL_CYCLES) {
+          setTimeout(() => runCycle(stage, n + 1), CYCLE_GAP);
+        }
+      }, { once: true });
+    }, RIPPLE_AT);
+  }
+
+  const observer = new MutationObserver(() => {
+    const cards = document.querySelectorAll("#grid > .card:not(.promo-card)");
+    if (cards.length < 3) return;
+    observer.disconnect();
+
+    const stage = cards[2].querySelector(".photo-stage");
+    setTimeout(() => runCycle(stage, 0), 3000); // initial 3s delay
+  });
+
+  observer.observe(document.getElementById("grid"), { childList: true });
+}
