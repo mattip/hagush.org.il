@@ -1,0 +1,317 @@
+/* ── Ask page — "עכשיו שואלות!" ─────────────────────────────────── */
+
+/* ── Hero ─────────────────────────────────────────────────────────── */
+.ask-hero {
+  padding: 2rem 2rem 1rem;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.ask-title {
+  color: var(--orange, #e47f09);
+  font-size: clamp(2rem, 8vw, 3rem);
+  font-weight: 800;
+  margin-bottom: 0.3em;
+}
+
+.ask-desc {
+  font-size: 0.9rem;
+  color: var(--nav, #09366d);
+  line-height: 1.7;
+}
+
+.ask-section {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.ask-empty {
+  text-align: center;
+  color: #999;
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+/* ── Upcoming interview cards ─────────────────────────────────────── */
+.upcoming-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.upcoming-card {
+  background: #fff;
+  border: 1.5px solid var(--light, #eaeff6);
+  border-radius: 12px;
+  padding: 1.2rem 1rem;
+  text-align: center;
+}
+
+.uc-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--nav, #09366d);
+  margin-bottom: 0.4em;
+}
+
+.uc-time {
+  font-size: 0.8rem;
+  color: var(--nav, #09366d);
+  line-height: 1.5;
+}
+
+/* Single card — center it, don't stretch full width */
+.upcoming-grid:has(.upcoming-card:only-child) {
+  grid-template-columns: 1fr;
+  max-width: 260px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Links row ────────────────────────────────────────────────────── */
+.ask-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  padding-top: 0.5rem;
+  padding-bottom: 1.5rem;
+}
+
+.ask-prev-link {
+  display: inline-block;
+  padding: 8px 22px;
+  border: 1.5px solid var(--nav, #09366d);
+  border-radius: 999px;
+  color: var(--nav, #09366d);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.ask-prev-link:hover {
+  background: var(--light, #eaeff6);
+}
+
+.ask-wa-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--nav, #09366d);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ask-wa-icon {
+  width: 28px;
+  height: 28px;
+}
+
+/* ── Form section ─────────────────────────────────────────────────── */
+.ask-form-section {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.ask-form-banner {
+  background: var(--blue, #1a6aff);
+  color: #fff;
+  text-align: center;
+  padding: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: 8px 8px 0 0;
+  margin: 0 1.5rem;
+}
+
+.ask-form-wrap {
+  background: #fff;
+  margin: 0 1.5rem;
+  padding: 1.5rem;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+
+.ask-form-intro {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--nav, #09366d);
+  margin-bottom: 1.2rem;
+}
+
+/* ── Form fields ──────────────────────────────────────────────────── */
+.af-field {
+  margin-bottom: 1rem;
+}
+
+.af-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--nav, #09366d);
+  margin-bottom: 0.3rem;
+}
+
+.af-req {
+  color: var(--orange, #e47f09);
+}
+
+.af-input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1.5px solid #dde;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.af-input:focus {
+  outline: none;
+  border-color: var(--nav, #09366d);
+}
+
+.af-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.af-radio {
+  display: block;
+  padding: 0.3rem 0;
+  font-size: 0.9rem;
+  color: var(--nav, #09366d);
+  cursor: pointer;
+}
+
+.af-radio input[type="radio"] {
+  margin-inline-end: 6px;
+}
+
+.af-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 0.3rem;
+}
+
+.af-error {
+  color: #c0392b;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.af-submit {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--orange, #e47f09);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.af-submit:hover {
+  filter: brightness(1.08);
+}
+
+.af-submit:disabled {
+  background: #999;
+  cursor: default;
+}
+
+.af-success {
+  text-align: center;
+  color: #27ae60;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 2rem 0;
+}
+
+/* ── Past interviews ──────────────────────────────────────────────── */
+.ask-past {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.ask-past-title {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--nav, #09366d);
+  margin-bottom: 1rem;
+}
+
+.past-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.past-card {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #235ba6, #09366d);
+  border-radius: 12px;
+  padding: 12px 14px;
+  gap: 12px;
+  color: #fff;
+}
+
+.pc-date {
+  font-size: 0.85rem;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.pc-info {
+  flex: 1;
+}
+
+.pc-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.pc-type {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.pc-photo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,.3);
+}
+
+/* ── Mobile ───────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .ask-hero {
+    padding: 1.5rem 1.5rem 0.5rem;
+  }
+  .ask-form-banner,
+  .ask-form-wrap {
+    margin: 0 1rem;
+  }
+  .upcoming-grid {
+    gap: 8px;
+  }
+  .upcoming-card {
+    padding: 1rem 0.7rem;
+  }
+  .uc-name {
+    font-size: 0.85rem;
+  }
+}
