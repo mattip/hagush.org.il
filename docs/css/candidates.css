@@ -755,3 +755,64 @@ html.no-scroll {
 
 @media (min-width: 1024px) { /* desktop — add overrides here */ }
 @media (min-width: 1280px) { /* wide desktop — add overrides here */ }
+
+/* ── 12. Click-hint animation (mobile only, once per session) ──── */
+@media (max-width: 767px) {
+  .click-hint {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    animation: ch-appear 0.4s ease-out forwards;
+  }
+
+  .click-hint svg {
+    display: block;
+    width: 44px;
+    height: 44px;
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+    animation: ch-pulse 1s ease-in-out 3;
+  }
+
+  .click-hint .ch-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border-radius: 50%;
+    border: 2.5px solid var(--orange, #e47f09);
+    opacity: 0;
+  }
+  .click-hint .ch-ring:nth-child(2) { animation: ch-ripple 0.8s 3s ease-out forwards; }
+  .click-hint .ch-ring:nth-child(3) { animation: ch-ripple 0.8s 3.15s ease-out forwards; }
+  .click-hint .ch-ring:nth-child(4) { animation: ch-ripple 0.8s 3.3s ease-out forwards; }
+
+  .click-hint.ch-done {
+    animation: ch-fadeout 0.5s ease-in forwards;
+  }
+
+  @keyframes ch-appear {
+    to { opacity: 1; }
+  }
+
+  @keyframes ch-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.12); }
+  }
+
+  @keyframes ch-ripple {
+    0%   { opacity: 0.7; transform: scale(1); }
+    100% { opacity: 0;   transform: scale(4.5); }
+  }
+
+  @keyframes ch-fadeout {
+    to { opacity: 0; }
+  }
+}
