@@ -104,8 +104,8 @@
     const db = firebase.firestore();
 
     let allEvents = [];
-    let activeRegion = "";
-    let activeParticipant = "";
+    let activeRegions = new Set();
+    let activeParticipants = new Set();
 
     // ── Load events ──
     async function loadEvents() {
@@ -156,12 +156,12 @@
       const today = new Date().toISOString().slice(0, 10);
       filtered = filtered.filter(ev => ev.date >= today);
 
-      if (activeRegion) {
-        filtered = filtered.filter(ev => ev.region === activeRegion);
+      if (activeRegions.size > 0) {
+        filtered = filtered.filter(ev => activeRegions.has(ev.region));
       }
-      if (activeParticipant) {
+      if (activeParticipants.size > 0) {
         filtered = filtered.filter(ev =>
-          (ev.participants || []).includes(activeParticipant)
+          (ev.participants || []).some(p => activeParticipants.has(p))
         );
       }
 
@@ -214,10 +214,25 @@
         const dropdown = document.getElementById(
           filter === "region" ? "regionDropdown" : "participantDropdown"
         );
-        // Toggle dropdown
         const isOpen = dropdown.style.display !== "none";
+        const defaultLabel = filter === "region" ? "איפה?" : "מי מופיע?";
+        const activeSet = filter === "region" ? activeRegions : activeParticipants;
+
+        // Close all dropdowns and reset all pills
         document.querySelectorAll(".filter-dropdown").forEach(d => d.style.display = "none");
-        if (!isOpen) dropdown.style.display = "flex";
+        document.querySelectorAll(".filter-pill").forEach(p => {
+          p.classList.remove("open");
+        });
+
+        if (!isOpen) {
+          dropdown.style.display = "flex";
+          btn.classList.add("open");
+          btn.textContent = "סגור ✕";
+        } else {
+          btn.textContent = activeSet.size > 0
+            ? `${defaultLabel} (${activeSet.size})`
+            : defaultLabel;
+        }
       });
     });
 
@@ -227,18 +242,34 @@
 
       const dropdown = option.closest(".filter-dropdown");
       const value = option.dataset.value;
+      const isRegion = dropdown.id === "regionDropdown";
+      const activeSet = isRegion ? activeRegions : activeParticipants;
+      const pillSelector = isRegion ? '[data-filter="region"]' : '[data-filter="participant"]';
+      const defaultLabel = isRegion ? "איפה?" : "מי מופיע?";
 
-      if (dropdown.id === "regionDropdown") {
-        activeRegion = value;
-        const pill = document.querySelector('[data-filter="region"]');
-        pill.textContent = value || "איפה?";
+      if (!value) {
+        // "הכל" — clear selection
+        activeSet.clear();
+        dropdown.querySelectorAll(".filter-option").forEach(o => o.classList.remove("selected"));
       } else {
-        activeParticipant = value;
-        const pill = document.querySelector('[data-filter="participant"]');
-        pill.textContent = value || "מי מופיע?";
+        // Toggle
+        if (activeSet.has(value)) {
+          activeSet.delete(value);
+          option.classList.remove("selected");
+        } else {
+          activeSet.add(value);
+          option.classList.add("selected");
+        }
       }
 
-      dropdown.style.display = "none";
+      const pill = document.querySelector(pillSelector);
+      // Keep "סגור ✕" while dropdown is open
+      if (dropdown.style.display === "none") {
+        pill.textContent = activeSet.size > 0
+          ? `${defaultLabel} (${activeSet.size})`
+          : defaultLabel;
+      }
+
       renderEvents();
     });
 
@@ -246,6 +277,16 @@
     document.addEventListener("click", (e) => {
       if (!e.target.closest(".filter-pill") && !e.target.closest(".filter-dropdown")) {
         document.querySelectorAll(".filter-dropdown").forEach(d => d.style.display = "none");
+        // Reset pill text
+        document.querySelectorAll(".filter-pill").forEach(pill => {
+          pill.classList.remove("open");
+          const filter = pill.dataset.filter;
+          const defaultLabel = filter === "region" ? "איפה?" : "מי מופיע?";
+          const activeSet = filter === "region" ? activeRegions : activeParticipants;
+          pill.textContent = activeSet.size > 0
+            ? `${defaultLabel} (${activeSet.size})`
+            : defaultLabel;
+        });
       }
     });
 

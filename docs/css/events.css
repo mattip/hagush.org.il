@@ -90,6 +90,12 @@ body {
   background: rgb(200, 210, 222);
 }
 
+.filter-pill.open {
+  background: var(--nav, #09366d);
+  color: #fff;
+  border-color: var(--nav, #09366d);
+}
+
 .filter-dropdown {
   display: flex;
   flex-wrap: wrap;
@@ -114,6 +120,12 @@ body {
 
 .filter-option:hover {
   background: var(--light, #eaeff6);
+}
+
+.filter-option.selected {
+  background: var(--nav, #09366d);
+  color: #fff;
+  border-color: var(--nav, #09366d);
 }
 
 /* ── Event cards ─────────────────────────────────────────────────── */

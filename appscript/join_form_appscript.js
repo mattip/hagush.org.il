@@ -137,6 +137,27 @@ function appendRow(sheetId, columns, values) {
   sheet.appendRow(values);
 }
 
+// ── Helper: log rejected submissions to a "rejections" tab ────────
+function logRejection(reason, data) {
+  try {
+    const ss = SpreadsheetApp.openById(JOIN_SHEET_ID);
+    let sheet = ss.getSheetByName('rejections');
+    if (!sheet) {
+      sheet = ss.insertSheet('rejections');
+      sheet.appendRow(['timestamp', 'reason', 'formType', 'firstName', 'phone', 'raw']);
+      sheet.getRange(1, 1, 1, 6).setFontWeight('bold');
+    }
+    sheet.appendRow([
+      new Date(),
+      reason,
+      data.formType || 'join',
+      data.firstName || data.name || '',
+      data.phone || '',
+      JSON.stringify(data).substring(0, 500),
+    ]);
+  } catch (e) { Logger.log('logRejection error: ' + e); }
+}
+
 // ── Main POST handler ─────────────────────────────────────────────
 function doPost(e) {
   const output = ContentService.createTextOutput();
@@ -152,16 +173,19 @@ function doPost(e) {
   try {
     data = JSON.parse(e.postData.contents);
   } catch (_) {
+    logRejection('parse_error', { raw: (e.postData.contents || '').substring(0, 200) });
     return respond(false, 'invalid request');
   }
 
   // 1. Token check
   if (data._token !== SECRET_TOKEN) {
+    logRejection('bad_token', data);
     return respond(false, 'forbidden');
   }
 
   // 2. Honeypot — field named "website" should be empty (filled by bots)
   if (data.website) {
+    logRejection('honeypot', data);
     return respond(true, 'received');  // silently accept
   }
 
@@ -174,6 +198,7 @@ function doPost(e) {
 
   // 3. Rate limit (forms only)
   if (!checkRateLimit()) {
+    logRejection('rate_limit', data);
     return respond(false, 'too many requests');
   }
 
@@ -186,6 +211,7 @@ function doPost(e) {
     return handleJoin(data, respond);
   } catch (err) {
     Logger.log('Sheet error: ' + err.toString());
+    logRejection('sheet_error: ' + err.toString(), data);
     return respond(false, 'sheet error');
   }
 }
@@ -195,6 +221,7 @@ function handleJoin(data, respond) {
   const required = ['firstName', 'lastName', 'phone', 'registered', 'source'];
   for (const field of required) {
     if (!data[field] || String(data[field]).trim() === '') {
+      logRejection('missing: ' + field, data);
       return respond(false, `missing field: ${field}`);
     }
   }
@@ -241,6 +268,7 @@ function handleQuestion(data, respond) {
   const required = ['name', 'phone', 'question'];
   for (const field of required) {
     if (!data[field] || String(data[field]).trim() === '') {
+      logRejection('missing: ' + field, data);
       return respond(false, `missing field: ${field}`);
     }
   }
