@@ -6,6 +6,7 @@
   <title>הוספת אירוע | עכשיו באות!</title>
   <link rel="icon" href="favicon.ico" />
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/main.css?v=4" />
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -295,6 +296,22 @@
   </style>
 </head>
 <body>
+  <header>
+    <input type="checkbox" id="nav-toggle" />
+    <nav>
+      <a class="nav-logo" href="index.html"><img src="images/logo_white.svg" alt="עכשיו באות!" /></a>
+      <a class="nav-cta" href="index.html#signup">הצטרפו &gt;</a>
+      <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
+        <span></span><span></span><span></span>
+      </label>
+      <ul>
+        <li><a href="index.html">דף בית</a></li>
+        <li><a href="about.html">אודות</a></li>
+        <li><a href="candidates.html">בחירות בדמוקרטים!</a></li>
+        <li><a href="events.html">יומן אירועים</a></li>
+      </ul>
+    </nav>
+  </header>
 
   <!-- Login -->
   <div id="login-screen">
@@ -332,13 +349,13 @@
       <div class="field">
         <label>אזור *</label>
         <div class="region-radios" id="evRegion">
-          <label class="region-radio"><input type="radio" name="region" value="צפון" /> צפון</label>
-          <label class="region-radio"><input type="radio" name="region" value="חיפה" /> חיפה</label>
-          <label class="region-radio"><input type="radio" name="region" value="מרכז" /> מרכז</label>
-          <label class="region-radio"><input type="radio" name="region" value="תל אביב" /> תל אביב</label>
-          <label class="region-radio"><input type="radio" name="region" value="ירושלים" /> ירושלים</label>
-          <label class="region-radio"><input type="radio" name="region" value="דרום" /> דרום</label>
-          <label class="region-radio"><input type="radio" name="region" value="וירטואלי" /> וירטואלי</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="צפון" /> צפון</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="חיפה" /> חיפה</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="מרכז" /> מרכז</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="תל אביב" /> תל אביב</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="ירושלים" /> ירושלים</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="דרום" /> דרום</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="וירטואלי" /> וירטואלי</label>
         </div>
       </div>
 
@@ -399,6 +416,13 @@
       </div>
     </div>
   </div>
+
+  <footer>
+    <a href="index.html" aria-label="עכשיו באות! — לדף הבית">
+      <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
+    </a>
+    כל הזכויות שמורות לעכשיו באות! 2026
+  </footer>
 
   <div class="toast" id="toast">האירוע נוסף בהצלחה!</div>
 
@@ -546,19 +570,21 @@
     renderParticipants();
   };
 
-  // ── Region (radio buttons) ──
+  // ── Region (checkboxes, returns array) ──
   function getRegion() {
-    const checked = document.querySelector('input[name="region"]:checked');
-    return checked ? checked.value : "";
+    return [...document.querySelectorAll('input[name="region"]:checked')].map(cb => cb.value);
   }
 
   function setRegion(value) {
-    const radio = document.querySelector(`input[name="region"][value="${value}"]`);
-    if (radio) radio.checked = true;
+    // value can be a string (legacy) or array
+    const values = Array.isArray(value) ? value : [value];
+    document.querySelectorAll('input[name="region"]').forEach(cb => {
+      cb.checked = values.includes(cb.value);
+    });
   }
 
   function clearRegion() {
-    document.querySelectorAll('input[name="region"]').forEach(r => r.checked = false);
+    document.querySelectorAll('input[name="region"]').forEach(cb => cb.checked = false);
   }
 
   // ── Submit ──
@@ -569,7 +595,7 @@
     const city = document.getElementById("evCity").value.trim();
     const participants = getAllParticipants();
 
-    if (!date || !time || !region || !city || participants.length === 0) {
+    if (!date || !time || region.length === 0 || !city || participants.length === 0) {
       alert("נא למלא את כל שדות החובה (תאריך, שעה, אזור, עיר, משתתפים)");
       return;
     }

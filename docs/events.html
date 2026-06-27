@@ -123,10 +123,15 @@
       const futureEvents = allEvents.filter(ev => ev.date >= today);
 
       // Build region filter from future events
-      const regions = [...new Set(futureEvents.map(ev => ev.region).filter(Boolean))];
+      const regions = new Set();
+      futureEvents.forEach(ev => {
+        const r = ev.region;
+        if (Array.isArray(r)) r.forEach(v => regions.add(v));
+        else if (r) regions.add(r);
+      });
       const regionDropdown = document.getElementById("regionDropdown");
       regionDropdown.innerHTML = '<button class="filter-option" data-value="">הכל</button>'
-        + regions.sort().map(r =>
+        + [...regions].sort().map(r =>
           `<button class="filter-option" data-value="${esc(r)}">${esc(r)}</button>`
         ).join("");
 
@@ -157,7 +162,11 @@
       filtered = filtered.filter(ev => ev.date >= today);
 
       if (activeRegions.size > 0) {
-        filtered = filtered.filter(ev => activeRegions.has(ev.region));
+        filtered = filtered.filter(ev => {
+          const r = ev.region;
+          if (Array.isArray(r)) return r.some(v => activeRegions.has(v));
+          return activeRegions.has(r);
+        });
       }
       if (activeParticipants.size > 0) {
         filtered = filtered.filter(ev =>

@@ -76,8 +76,6 @@ fetch("candidates.json")
     allPeople = people;
     buildGrid(people);
     restoreFromCookies();
-    console.log("[hagush] init: allPeople loaded, count =", allPeople.length,
-                "location.href =", location.href);
     // Open popup from URL: ?id=emily_m or ?name=אמיר
     // (We don't rewrite the address bar here — doing so changes how the
     // browser resolves relative URLs on the page, breaking nav links and
@@ -86,53 +84,36 @@ fetch("candidates.json")
     // Also resync on back/forward — otherwise the DOM keeps whatever popup
     // was last drawn, even when the URL says a different candidate.
     window.addEventListener("popstate", (e) => {
-      console.log("[hagush] popstate fired. location.href =", location.href,
-                  "  event.state =", e.state);
       syncPopupToUrl("popstate");
     });
     // pageshow also fires on bfcache restore (back from another origin / tab).
     // popstate doesn't always fire in that case, so this is a belt-and-braces.
     window.addEventListener("pageshow", (e) => {
-      console.log("[hagush] pageshow fired. persisted =", e.persisted,
-                  "  location.href =", location.href);
       if (e.persisted) syncPopupToUrl("pageshow-bfcache");
     });
   });
 
 function syncPopupToUrl(reason) {
-  console.log("[hagush] syncPopupToUrl(", reason, ") start. href =", location.href,
-              "  popup.open =", popup.classList.contains("open"),
-              "  popup.dataset.personId =", popup.dataset.personId);
   if (!allPeople.length) {
-    console.log("[hagush]   bail: allPeople empty");
     return;
   }
   const params    = new URLSearchParams(window.location.search);
   const idParam   = params.get("id");
   const nameParam = params.get("name");
-  console.log("[hagush]   params: id =", idParam, "  name =", nameParam);
   if (!(idParam || nameParam)) {
     if (popup.classList.contains("open")) {
-      console.log("[hagush]   no selector in URL → closing open popup");
       closePopup();
-    } else {
-      console.log("[hagush]   no selector and no popup open → nothing to do");
-    }
     return;
   }
   const match = allPeople.find((p) =>
     idParam ? p.id === idParam : p.name === nameParam,
   );
   if (!match) {
-    console.log("[hagush]   no match found for that id/name in allPeople");
     return;
   }
-  console.log("[hagush]   match: id =", match.id, "  name =", match.name);
   if (popup.classList.contains("open") && popup.dataset.personId === match.id) {
-    console.log("[hagush]   popup already shows this person → no-op");
     return;
   }
-  console.log("[hagush]   calling openPopup for", match.id);
   openPopup(match, document.body, false, "deeplink");
 }
 
