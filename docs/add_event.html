@@ -191,16 +191,31 @@
     }
     .pd-list { padding: 4px 0; }
     .pd-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
+      display: block;
+      padding: 8px 12px 8px 40px;
       font-size: .85rem;
       cursor: pointer;
+      position: relative;
     }
     .pd-item:hover { background: #f5f6fa; }
     .pd-item.pd-preferred { font-weight: 700; background: #f0f4ff; }
-    .pd-item input { margin: 0; }
+    .pd-item input {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      margin: 0;
+    }
+    .pd-search {
+      width: 100%;
+      padding: 8px 12px;
+      border: none;
+      border-bottom: 1px solid #eee;
+      font: inherit;
+      font-size: .85rem;
+      outline: none;
+    }
+    .pd-search::placeholder { color: #bbb; }
     .pd-other {
       border-top: 1px solid #eee;
       padding: 8px;
@@ -343,6 +358,7 @@
         <div class="participants-dropdown" id="participantsDropdown">
           <button type="button" class="pd-toggle" id="pdToggle">בחרו משתתפים ▾</button>
           <div class="pd-menu" id="pdMenu" style="display:none">
+            <input type="text" class="pd-search" id="pdSearch" placeholder="חיפוש שם..." autocomplete="off" />
             <div class="pd-list" id="pdList">
               <!-- populated from candidates.json -->
             </div>
@@ -434,7 +450,7 @@
 
       const pdList = document.getElementById("pdList");
       pdList.innerHTML = candidateNames.map(name =>
-        `<label class="pd-item${name === preferredCandidate ? ' pd-preferred' : ''}"><input type="checkbox" value="${esc(name)}" onchange="syncParticipants()" /> ${esc(name)}</label>`
+        `<label class="pd-item${name === preferredCandidate ? ' pd-preferred' : ''}"><span>${esc(name)}</span><input type="checkbox" value="${esc(name)}" onchange="syncParticipants()" /></label>`
       ).join("");
     } catch (e) {
       console.error("Failed to load candidates.json:", e);
@@ -447,7 +463,24 @@
   // Toggle dropdown
   document.getElementById("pdToggle").addEventListener("click", () => {
     const menu = document.getElementById("pdMenu");
-    menu.style.display = menu.style.display === "none" ? "block" : "none";
+    const isOpen = menu.style.display !== "none";
+    menu.style.display = isOpen ? "none" : "block";
+    if (!isOpen) {
+      const search = document.getElementById("pdSearch");
+      search.value = "";
+      search.focus();
+      // Show all items
+      document.querySelectorAll("#pdList .pd-item").forEach(item => item.style.display = "");
+    }
+  });
+
+  // Type-ahead search
+  document.getElementById("pdSearch").addEventListener("input", (e) => {
+    const query = e.target.value.trim();
+    document.querySelectorAll("#pdList .pd-item").forEach(item => {
+      const name = item.textContent.trim();
+      item.style.display = !query || name.includes(query) ? "" : "none";
+    });
   });
 
   // Close dropdown on outside click
@@ -562,10 +595,13 @@
         await db.collection("campaign_events").doc(editingId).update(eventData);
         editingId = null;
       } else {
-        // Create new
-        eventData.created_at = firebase.firestore.FieldValue.serverTimestamp();
-        eventData.created_by = auth.currentUser.email;
-        await db.collection("campaign_events").add(eventData);
+        // Create new — event + owner as separate docs sharing same ID
+        const docRef = db.collection("campaign_events").doc();
+        await docRef.set(eventData);
+        await db.collection("campaign_event_owner").doc(docRef.id).set({
+          email: auth.currentUser.email,
+          created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        });
       }
 
       // Reset form
@@ -635,19 +671,44 @@
       return;
     }
 
+    // Load ownership info
+    let ownerMap = {}; // eventId → email
+    try {
+      if (isUserAdmin) {
+        // Admins can read all owners
+        const ownerSnap = await db.collection("campaign_event_owner").get();
+        ownerSnap.docs.forEach(d => {
+          ownerMap[d.id] = d.data().email;
+        });
+      } else {
+        // Non-admins can only query their own
+        const ownerSnap = await db.collection("campaign_event_owner")
+          .where("email", "==", currentUserEmail)
+          .get();
+        ownerSnap.docs.forEach(d => ownerMap[d.id] = d.data().email);
+      }
+    } catch (e) {
+      console.error("Failed to load owners:", e.message);
+    }
+
+    // Debug: log event IDs vs owner IDs
+    const eventIds = snap.docs.map(d => d.id);
+    const missing = eventIds.filter(id => !ownerMap[id]);
+    if (missing.length) console.warn("Events without owners:", missing);
+
     wrap.innerHTML = snap.docs.map(doc => {
       const ev = doc.data();
       const names = (ev.participants || []).join(", ");
-      const isOwner = ev.created_by === currentUserEmail;
+      const ownerEmail = ownerMap[doc.id] || "";
+      const isOwner = ownerEmail === currentUserEmail;
       const canEdit = isOwner || isUserAdmin;
-      const createdBy = ev.created_by || "לא ידוע";
 
       return `
         <div class="existing-event">
           <div>
             <div class="ev-info">${esc(names)}</div>
             <div class="ev-date">${esc(ev.date)} ${esc(ev.time)} — ${esc(ev.city || "")}</div>
-            <div class="ev-creator">נוסף ע״י ${esc(createdBy)}</div>
+            <div class="ev-creator">${isUserAdmin && ownerEmail ? 'נוסף ע״י ' + esc(ownerEmail) : ''}</div>
           </div>
           <div class="ev-actions">
             ${canEdit ? `<button class="ev-edit" onclick="editEvent('${doc.id}')">ערוך</button>` : ""}
@@ -712,6 +773,7 @@
   async function deleteEvent(id) {
     if (!confirm("למחוק את האירוע?")) return;
     await db.collection("campaign_events").doc(id).delete();
+    try { await db.collection("campaign_event_owner").doc(id).delete(); } catch (e) { /* may not exist or no permission */ }
     loadExisting();
   }
 
