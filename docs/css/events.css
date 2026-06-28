@@ -1,38 +1,67 @@
 /* ── Events page ─────────────────────────────────────────────────── */
 
 body {
-  background: rgb(235, 231, 245);
+  background: var(--light, #eaeff6);
 }
 
 .events-hero {
-  padding: 1.5rem 2rem 0.5rem;
+  padding: 1rem 2rem 0;
   text-align: center;
   max-width: 700px;
   margin: 0 auto;
 }
 
+/* ── Group 1 (turquoise): title block — tight spacing ──────────── */
 .hero-eyebrow {
   font-size: 0.9rem;
   color: var(--nav);
   margin-bottom: 0;
 }
-
-.hero-disclaimer {
-  font-size: 0.78rem;
-  color: #7890a6;
-  line-height: 1.5;
-  margin-bottom: 0.3em;
+.events-hero .hero-h1 {
+  margin-bottom: 0.05em;
+}
+.events-hero .hero-h2 {
+  margin-top: 0;
+  margin-bottom: 0.2em;
+}
+.events-hero .hero-date {
+  margin-bottom: 0.4em;
+}
+.events-hero .cta-pill {
+  margin-bottom: 0;
 }
 
-/* ── Filters ─────────────────────────────────────────────────────── */
+/* ── Group 2 (orange): disclaimer — darker, readable ───────────── */
+.hero-disclaimer-group {
+  margin-top: 1.2em;
+  margin-bottom: 1.5em;
+}
+.hero-disclaimer-group .muted {
+  color: var(--nav);
+  font-size: 0.82rem;
+  margin-bottom: 0.2em;
+}
+.hero-disclaimer {
+  font-size: 0.82rem;
+  color: var(--nav);
+  line-height: 1.6;
+  margin-bottom: 0.2em;
+  opacity: 0.7;
+}
+
+/* ── Group 3 (blue): filters — sticky ──────────────────────────── */
 .filters-bar {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 0 1rem 0.5rem;
+  padding: 0.6rem 1rem;
   max-width: 700px;
   margin: 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--light, #eaeff6);
 }
 
 .filter-label {
@@ -61,6 +90,12 @@ body {
   background: rgb(200, 210, 222);
 }
 
+.filter-pill.open {
+  background: var(--nav, #09366d);
+  color: #fff;
+  border-color: var(--nav, #09366d);
+}
+
 .filter-dropdown {
   display: flex;
   flex-wrap: wrap;
@@ -85,6 +120,12 @@ body {
 
 .filter-option:hover {
   background: var(--light, #eaeff6);
+}
+
+.filter-option.selected {
+  background: var(--nav, #09366d);
+  color: #fff;
+  border-color: var(--nav, #09366d);
 }
 
 /* ── Event cards ─────────────────────────────────────────────────── */

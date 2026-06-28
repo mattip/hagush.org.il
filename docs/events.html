@@ -4,6 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>יומן אירועים | עכשיו באות!</title>
+    <meta name="description" content="יומן אירועים — פריימריז בדמוקרטים. הבחירות המקדימות ב-20 ליולי! מצאו אירועים באזור שלכם." />
+
+    <!-- WhatsApp / social preview -->
+    <meta property="og:title" content="יומן אירועים — עכשיו באות!" />
+    <meta property="og:description" content="פריימריז בדמוקרטים — הבחירות המקדימות ב-20 ליולי! מצאו אירועים באזור שלכם והצטרפו." />
+    <meta property="og:image" content="https://hagush.org.il/images/og-events.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="https://hagush.org.il/events.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="he_IL" />
+    <meta property="og:site_name" content="עכשיו באות!" />
     <link rel="icon" href="favicon.ico" />
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./css/main.css?v=4" />
@@ -37,18 +49,20 @@
           <h1 class="hero-h1">יומן אירועים</h1>
           <h2 class="hero-h2">הבחירות המקדימות ב-20 ליולי!</h2>
           <p class="hero-date">תאריך אחרון להתפקדות: 12.7</p>
-          <p style="margin-bottom:1em">
+          <p style="margin-bottom:0.3em">
             <a class="cta-pill" href="https://l.democrats.org.il/baot" target="_blank" rel="noreferrer">הצטרפו והתפקדו עכשיו &gt;</a>
           </p>
-          <p class="muted hero-small">(*העמוד לא רשמי ולא מפלגתי)</p>
-          <p class="hero-disclaimer">
-            שימו לב - זו רשימה חלקית, לא רשמית ומתעדכנת מעת לעת. הפרסום
-            והאחריות לתוכן הוא על המועמדים ששלחו לנו את המידע. הלינק
-            מפנה לאתר/טופס של המועמד.
-          </p>
-          <p class="hero-disclaimer">
-            מוזמנים.ות להפנות אלינו מועמדים.ות לפרסם פה אירועים שלהם
-          </p>
+          <div class="hero-disclaimer-group">
+            <p class="muted">(*העמוד לא רשמי ולא מפלגתי)</p>
+            <p class="hero-disclaimer">
+              שימו לב - זו רשימה חלקית, לא רשמית ומתעדכנת מעת לעת. הפרסום
+              והאחריות לתוכן הוא על המועמדים ששלחו לנו את המידע. הלינק
+              מפנה לאתר/טופס של המועמד.
+            </p>
+            <p class="hero-disclaimer">
+              מוזמנים.ות להפנות אלינו מועמדים.ות לפרסם פה אירועים שלהם
+            </p>
+          </div>
         </div>
       </section>
 
@@ -60,15 +74,7 @@
       </section>
 
       <!-- Filter dropdowns (hidden by default) -->
-      <div class="filter-dropdown" id="regionDropdown" style="display:none">
-        <button class="filter-option" data-value="">הכל</button>
-        <button class="filter-option" data-value="צפון">צפון</button>
-        <button class="filter-option" data-value="חיפה">חיפה</button>
-        <button class="filter-option" data-value="מרכז">מרכז</button>
-        <button class="filter-option" data-value="תל אביב">תל אביב</button>
-        <button class="filter-option" data-value="ירושלים">ירושלים</button>
-        <button class="filter-option" data-value="דרום">דרום</button>
-      </div>
+      <div class="filter-dropdown" id="regionDropdown" style="display:none"></div>
       <div class="filter-dropdown" id="participantDropdown" style="display:none"></div>
 
       <!-- Events list -->
@@ -98,8 +104,8 @@
     const db = firebase.firestore();
 
     let allEvents = [];
-    let activeRegion = "";
-    let activeParticipant = "";
+    let activeRegions = new Set();
+    let activeParticipants = new Set();
 
     // ── Load events ──
     async function loadEvents() {
@@ -112,9 +118,26 @@
           .map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
-      // Build participant filter options
+      // Only future events for filters
+      const today = new Date().toISOString().slice(0, 10);
+      const futureEvents = allEvents.filter(ev => ev.date >= today);
+
+      // Build region filter from future events
+      const regions = new Set();
+      futureEvents.forEach(ev => {
+        const r = ev.region;
+        if (Array.isArray(r)) r.forEach(v => regions.add(v));
+        else if (r) regions.add(r);
+      });
+      const regionDropdown = document.getElementById("regionDropdown");
+      regionDropdown.innerHTML = '<button class="filter-option" data-value="">הכל</button>'
+        + [...regions].sort().map(r =>
+          `<button class="filter-option" data-value="${esc(r)}">${esc(r)}</button>`
+        ).join("");
+
+      // Build participant filter from future events
       const participants = new Set();
-      allEvents.forEach(ev => (ev.participants || []).forEach(p => participants.add(p)));
+      futureEvents.forEach(ev => (ev.participants || []).forEach(p => participants.add(p)));
       const dropdown = document.getElementById("participantDropdown");
       dropdown.innerHTML = '<button class="filter-option" data-value="">הכל</button>'
         + [...participants].sort().map(p =>
@@ -138,12 +161,16 @@
       const today = new Date().toISOString().slice(0, 10);
       filtered = filtered.filter(ev => ev.date >= today);
 
-      if (activeRegion) {
-        filtered = filtered.filter(ev => ev.region === activeRegion);
+      if (activeRegions.size > 0) {
+        filtered = filtered.filter(ev => {
+          const r = ev.region;
+          if (Array.isArray(r)) return r.some(v => activeRegions.has(v));
+          return activeRegions.has(r);
+        });
       }
-      if (activeParticipant) {
+      if (activeParticipants.size > 0) {
         filtered = filtered.filter(ev =>
-          (ev.participants || []).includes(activeParticipant)
+          (ev.participants || []).some(p => activeParticipants.has(p))
         );
       }
 
@@ -196,10 +223,25 @@
         const dropdown = document.getElementById(
           filter === "region" ? "regionDropdown" : "participantDropdown"
         );
-        // Toggle dropdown
         const isOpen = dropdown.style.display !== "none";
+        const defaultLabel = filter === "region" ? "איפה?" : "מי מופיע?";
+        const activeSet = filter === "region" ? activeRegions : activeParticipants;
+
+        // Close all dropdowns and reset all pills
         document.querySelectorAll(".filter-dropdown").forEach(d => d.style.display = "none");
-        if (!isOpen) dropdown.style.display = "flex";
+        document.querySelectorAll(".filter-pill").forEach(p => {
+          p.classList.remove("open");
+        });
+
+        if (!isOpen) {
+          dropdown.style.display = "flex";
+          btn.classList.add("open");
+          btn.textContent = "סגור ✕";
+        } else {
+          btn.textContent = activeSet.size > 0
+            ? `${defaultLabel} (${activeSet.size})`
+            : defaultLabel;
+        }
       });
     });
 
@@ -209,18 +251,34 @@
 
       const dropdown = option.closest(".filter-dropdown");
       const value = option.dataset.value;
+      const isRegion = dropdown.id === "regionDropdown";
+      const activeSet = isRegion ? activeRegions : activeParticipants;
+      const pillSelector = isRegion ? '[data-filter="region"]' : '[data-filter="participant"]';
+      const defaultLabel = isRegion ? "איפה?" : "מי מופיע?";
 
-      if (dropdown.id === "regionDropdown") {
-        activeRegion = value;
-        const pill = document.querySelector('[data-filter="region"]');
-        pill.textContent = value || "איפה?";
+      if (!value) {
+        // "הכל" — clear selection
+        activeSet.clear();
+        dropdown.querySelectorAll(".filter-option").forEach(o => o.classList.remove("selected"));
       } else {
-        activeParticipant = value;
-        const pill = document.querySelector('[data-filter="participant"]');
-        pill.textContent = value || "מי מופיע?";
+        // Toggle
+        if (activeSet.has(value)) {
+          activeSet.delete(value);
+          option.classList.remove("selected");
+        } else {
+          activeSet.add(value);
+          option.classList.add("selected");
+        }
       }
 
-      dropdown.style.display = "none";
+      const pill = document.querySelector(pillSelector);
+      // Keep "סגור ✕" while dropdown is open
+      if (dropdown.style.display === "none") {
+        pill.textContent = activeSet.size > 0
+          ? `${defaultLabel} (${activeSet.size})`
+          : defaultLabel;
+      }
+
       renderEvents();
     });
 
@@ -228,6 +286,16 @@
     document.addEventListener("click", (e) => {
       if (!e.target.closest(".filter-pill") && !e.target.closest(".filter-dropdown")) {
         document.querySelectorAll(".filter-dropdown").forEach(d => d.style.display = "none");
+        // Reset pill text
+        document.querySelectorAll(".filter-pill").forEach(pill => {
+          pill.classList.remove("open");
+          const filter = pill.dataset.filter;
+          const defaultLabel = filter === "region" ? "איפה?" : "מי מופיע?";
+          const activeSet = filter === "region" ? activeRegions : activeParticipants;
+          pill.textContent = activeSet.size > 0
+            ? `${defaultLabel} (${activeSet.size})`
+            : defaultLabel;
+        });
       }
     });
 

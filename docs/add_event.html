@@ -6,6 +6,7 @@
   <title>הוספת אירוע | עכשיו באות!</title>
   <link rel="icon" href="favicon.ico" />
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/main.css?v=4" />
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -135,22 +136,94 @@
       padding: 0;
       line-height: 1;
     }
-    .add-row {
+
+    /* Region radio buttons */
+    .region-radios {
       display: flex;
+      flex-wrap: wrap;
       gap: 6px;
+      margin-top: 4px;
     }
-    .add-row input { flex: 1; }
-    .add-row button {
-      padding: .55rem .9rem;
-      background: #09366d;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font: inherit;
+    .region-radio {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      border: 1.5px solid #dde;
+      border-radius: 999px;
       font-size: .85rem;
       cursor: pointer;
-      white-space: nowrap;
+      transition: background .15s, border-color .15s;
     }
+    .region-radio:has(input:checked) {
+      background: #eaeff6;
+      border-color: #09366d;
+    }
+    .region-radio input { margin: 0; }
+
+    /* Participants dropdown */
+    .participants-dropdown { position: relative; }
+    .pd-toggle {
+      width: 100%;
+      padding: .55rem .75rem;
+      border: 1.5px solid #dde;
+      border-radius: 8px;
+      font: inherit;
+      font-size: .9rem;
+      background: #fff;
+      color: #333;
+      text-align: right;
+      cursor: pointer;
+    }
+    .pd-toggle:hover { border-color: #09366d; }
+    .pd-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      left: 0;
+      background: #fff;
+      border: 1.5px solid #dde;
+      border-radius: 0 0 8px 8px;
+      border-top: none;
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 20;
+      box-shadow: 0 4px 12px rgba(0,0,0,.1);
+    }
+    .pd-list { padding: 4px 0; }
+    .pd-item {
+      display: block;
+      padding: 8px 12px 8px 40px;
+      font-size: .85rem;
+      cursor: pointer;
+      position: relative;
+    }
+    .pd-item:hover { background: #f5f6fa; }
+    .pd-item.pd-preferred { font-weight: 700; background: #f0f4ff; }
+    .pd-item input {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      margin: 0;
+    }
+    .pd-search {
+      width: 100%;
+      padding: 8px 12px;
+      border: none;
+      border-bottom: 1px solid #eee;
+      font: inherit;
+      font-size: .85rem;
+      outline: none;
+    }
+    .pd-search::placeholder { color: #bbb; }
+    .pd-other {
+      border-top: 1px solid #eee;
+      padding: 8px;
+    }
+    .pd-other .add-row { display: flex; gap: 6px; }
+    .pd-other .add-row input { flex: 1; padding: .4rem .6rem; border: 1.5px solid #dde; border-radius: 6px; font: inherit; font-size: .85rem; }
+    .pd-other .add-row button { padding: .4rem .8rem; background: #09366d; color: #fff; border: none; border-radius: 6px; font: inherit; font-size: .8rem; cursor: pointer; white-space: nowrap; }
 
     .btn-row {
       display: flex;
@@ -223,6 +296,22 @@
   </style>
 </head>
 <body>
+  <header>
+    <input type="checkbox" id="nav-toggle" />
+    <nav>
+      <a class="nav-logo" href="index.html"><img src="images/logo_white.svg" alt="עכשיו באות!" /></a>
+      <a class="nav-cta" href="index.html#signup">הצטרפו &gt;</a>
+      <label class="nav-burger" for="nav-toggle" aria-label="תפריט">
+        <span></span><span></span><span></span>
+      </label>
+      <ul>
+        <li><a href="index.html">דף בית</a></li>
+        <li><a href="about.html">אודות</a></li>
+        <li><a href="candidates.html">בחירות בדמוקרטים!</a></li>
+        <li><a href="events.html">יומן אירועים</a></li>
+      </ul>
+    </nav>
+  </header>
 
   <!-- Login -->
   <div id="login-screen">
@@ -259,15 +348,15 @@
 
       <div class="field">
         <label>אזור *</label>
-        <select id="evRegion">
-          <option value="">בחרו אזור</option>
-          <option value="צפון">צפון</option>
-          <option value="חיפה">חיפה</option>
-          <option value="מרכז">מרכז</option>
-          <option value="תל אביב">תל אביב</option>
-          <option value="ירושלים">ירושלים</option>
-          <option value="דרום">דרום</option>
-        </select>
+        <div class="region-radios" id="evRegion">
+          <label class="region-radio"><input type="checkbox" name="region" value="צפון" /> צפון</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="חיפה" /> חיפה</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="מרכז" /> מרכז</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="תל אביב" /> תל אביב</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="ירושלים" /> ירושלים</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="דרום" /> דרום</label>
+          <label class="region-radio"><input type="checkbox" name="region" value="וירטואלי" /> וירטואלי</label>
+        </div>
       </div>
 
       <div class="field">
@@ -283,9 +372,20 @@
 
       <div class="field">
         <label>משתתפים *</label>
-        <div class="add-row">
-          <input type="text" id="evParticipantInput" placeholder="שם מועמד/ת" />
-          <button type="button" id="addParticipant">הוסף</button>
+        <div class="participants-dropdown" id="participantsDropdown">
+          <button type="button" class="pd-toggle" id="pdToggle">בחרו משתתפים ▾</button>
+          <div class="pd-menu" id="pdMenu" style="display:none">
+            <input type="text" class="pd-search" id="pdSearch" placeholder="חיפוש שם..." autocomplete="off" />
+            <div class="pd-list" id="pdList">
+              <!-- populated from candidates.json -->
+            </div>
+            <div class="pd-other">
+              <div class="add-row">
+                <input type="text" id="otherParticipant" placeholder="שם נוסף..." />
+                <button type="button" id="addOther">הוסף</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="participants-list" id="participantsList"></div>
       </div>
@@ -316,6 +416,13 @@
       </div>
     </div>
   </div>
+
+  <footer>
+    <a href="index.html" aria-label="עכשיו באות! — לדף הבית">
+      <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
+    </a>
+    כל הזכויות שמורות לעכשיו באות! 2026
+  </footer>
 
   <div class="toast" id="toast">האירוע נוסף בהצלחה!</div>
 
@@ -348,47 +455,147 @@
 
   document.getElementById("logout-btn").addEventListener("click", () => auth.signOut());
 
-  // ── Participants ──
-  let participants = [];
+  // ── Load candidates for participant dropdown ──
+  let candidateNames = [];
 
-  document.getElementById("addParticipant").addEventListener("click", addParticipant);
-  document.getElementById("evParticipantInput").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); addParticipant(); }
+  async function loadCandidateNames() {
+    try {
+      const resp = await fetch("candidates.json");
+      const data = await resp.json();
+      candidateNames = data.map(c => c.name).sort();
+
+      // Move preferred candidate to top if set
+      if (preferredCandidate && candidateNames.includes(preferredCandidate)) {
+        candidateNames = [
+          preferredCandidate,
+          ...candidateNames.filter(n => n !== preferredCandidate)
+        ];
+      }
+
+      const pdList = document.getElementById("pdList");
+      pdList.innerHTML = candidateNames.map(name =>
+        `<label class="pd-item${name === preferredCandidate ? ' pd-preferred' : ''}"><span>${esc(name)}</span><input type="checkbox" value="${esc(name)}" onchange="syncParticipants()" /></label>`
+      ).join("");
+    } catch (e) {
+      console.error("Failed to load candidates.json:", e);
+    }
+  }
+
+  // ── Participants ──
+  let otherParticipants = []; // free-text additions
+
+  // Toggle dropdown
+  document.getElementById("pdToggle").addEventListener("click", () => {
+    const menu = document.getElementById("pdMenu");
+    const isOpen = menu.style.display !== "none";
+    menu.style.display = isOpen ? "none" : "block";
+    if (!isOpen) {
+      const search = document.getElementById("pdSearch");
+      search.value = "";
+      search.focus();
+      // Show all items
+      document.querySelectorAll("#pdList .pd-item").forEach(item => item.style.display = "");
+    }
   });
 
-  function addParticipant() {
-    const input = document.getElementById("evParticipantInput");
+  // Type-ahead search
+  document.getElementById("pdSearch").addEventListener("input", (e) => {
+    const query = e.target.value.trim();
+    document.querySelectorAll("#pdList .pd-item").forEach(item => {
+      const name = item.textContent.trim();
+      item.style.display = !query || name.includes(query) ? "" : "none";
+    });
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".participants-dropdown")) {
+      document.getElementById("pdMenu").style.display = "none";
+    }
+  });
+
+  // Add "other" participant
+  document.getElementById("addOther").addEventListener("click", addOtherParticipant);
+  document.getElementById("otherParticipant").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); addOtherParticipant(); }
+  });
+
+  function addOtherParticipant() {
+    const input = document.getElementById("otherParticipant");
     const name = input.value.trim();
-    if (!name) return;
-    participants.push(name);
+    if (!name || otherParticipants.includes(name)) return;
+    otherParticipants.push(name);
     input.value = "";
     renderParticipants();
   }
 
-  function removeParticipant(idx) {
-    participants.splice(idx, 1);
+  function removeOther(idx) {
+    otherParticipants.splice(idx, 1);
     renderParticipants();
   }
 
+  // Sync checkbox selections + others into the tag display
+  window.syncParticipants = function() { renderParticipants(); };
+
+  function getSelectedCandidates() {
+    return [...document.querySelectorAll("#pdList input:checked")].map(cb => cb.value);
+  }
+
+  function getAllParticipants() {
+    return [...getSelectedCandidates(), ...otherParticipants];
+  }
+
   function renderParticipants() {
+    const all = getAllParticipants();
     const list = document.getElementById("participantsList");
-    list.innerHTML = participants.map((p, i) =>
-      `<span class="participant-tag">${esc(p)}<button onclick="removeParticipant(${i})">✕</button></span>`
-    ).join("");
+    const toggle = document.getElementById("pdToggle");
+
+    toggle.textContent = all.length > 0
+      ? `${all.length} משתתפים נבחרו ▾`
+      : "בחרו משתתפים ▾";
+
+    const candidateTags = getSelectedCandidates().map(name =>
+      `<span class="participant-tag">${esc(name)}<button onclick="uncheckCandidate('${esc(name)}')">✕</button></span>`
+    );
+    const otherTags = otherParticipants.map((name, i) =>
+      `<span class="participant-tag">${esc(name)}<button onclick="removeOther(${i})">✕</button></span>`
+    );
+
+    list.innerHTML = candidateTags.join("") + otherTags.join("");
+  }
+
+  window.uncheckCandidate = function(name) {
+    const cb = document.querySelector(`#pdList input[value="${name}"]`);
+    if (cb) cb.checked = false;
+    renderParticipants();
+  };
+
+  // ── Region (checkboxes, returns array) ──
+  function getRegion() {
+    return [...document.querySelectorAll('input[name="region"]:checked')].map(cb => cb.value);
+  }
+
+  function setRegion(value) {
+    // value can be a string (legacy) or array
+    const values = Array.isArray(value) ? value : [value];
+    document.querySelectorAll('input[name="region"]').forEach(cb => {
+      cb.checked = values.includes(cb.value);
+    });
+  }
+
+  function clearRegion() {
+    document.querySelectorAll('input[name="region"]').forEach(cb => cb.checked = false);
   }
 
   // ── Submit ──
   document.getElementById("submitBtn").addEventListener("click", async () => {
-    // Auto-add any pending participant text
-    const pendingInput = document.getElementById("evParticipantInput");
-    if (pendingInput.value.trim()) addParticipant();
-
     const date = document.getElementById("evDate").value;
     const time = document.getElementById("evTime").value;
-    const region = document.getElementById("evRegion").value;
+    const region = getRegion();
     const city = document.getElementById("evCity").value.trim();
+    const participants = getAllParticipants();
 
-    if (!date || !time || !region || !city || participants.length === 0) {
+    if (!date || !time || region.length === 0 || !city || participants.length === 0) {
       alert("נא למלא את כל שדות החובה (תאריך, שעה, אזור, עיר, משתתפים)");
       return;
     }
@@ -404,7 +611,7 @@
         region:            region,
         city:              city,
         address:           document.getElementById("evAddress").value.trim(),
-        participants:      [...participants],
+        participants:      participants,
         description:       document.getElementById("evDesc").value.trim(),
         registration_link: document.getElementById("evLink").value.trim(),
       };
@@ -414,21 +621,25 @@
         await db.collection("campaign_events").doc(editingId).update(eventData);
         editingId = null;
       } else {
-        // Create new
-        eventData.created_at = firebase.firestore.FieldValue.serverTimestamp();
-        eventData.created_by = auth.currentUser.email;
-        await db.collection("campaign_events").add(eventData);
+        // Create new — event + owner as separate docs sharing same ID
+        const docRef = db.collection("campaign_events").doc();
+        await docRef.set(eventData);
+        await db.collection("campaign_event_owner").doc(docRef.id).set({
+          email: auth.currentUser.email,
+          created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        });
       }
 
       // Reset form
       document.getElementById("evDate").value = "";
       document.getElementById("evTime").value = "";
-      document.getElementById("evRegion").value = "";
+      clearRegion();
       document.getElementById("evCity").value = "";
       document.getElementById("evAddress").value = "";
       document.getElementById("evDesc").value = "";
       document.getElementById("evLink").value = "";
-      participants = [];
+      document.querySelectorAll("#pdList input").forEach(cb => cb.checked = false);
+      otherParticipants = [];
       renderParticipants();
 
       // Toast
@@ -449,13 +660,25 @@
 
   // ── Load existing events ──
   let currentUserEmail = null;
+  let isUserAdmin = false;
+  let preferredCandidate = null;
 
-  auth.onAuthStateChanged((user) => {
+  auth.onAuthStateChanged(async (user) => {
     currentUserEmail = user ? user.email : null;
+    isUserAdmin = false;
+    preferredCandidate = null;
     if (user) {
+      try {
+        const roleDoc = await db.collection("roles").doc(user.email).get();
+        if (roleDoc.exists && roleDoc.data().active) {
+          if (roleDoc.data().role === "admin") isUserAdmin = true;
+          if (roleDoc.data().preferred_candidate) preferredCandidate = roleDoc.data().preferred_candidate;
+        }
+      } catch (e) { /* no role doc */ }
       loginScreen.style.display = "none";
       adminPanel.style.display  = "block";
       document.getElementById("userEmail").textContent = user.email;
+      loadCandidateNames();
       loadExisting();
     } else {
       loginScreen.style.display = "flex";
@@ -474,22 +697,48 @@
       return;
     }
 
+    // Load ownership info
+    let ownerMap = {}; // eventId → email
+    try {
+      if (isUserAdmin) {
+        // Admins can read all owners
+        const ownerSnap = await db.collection("campaign_event_owner").get();
+        ownerSnap.docs.forEach(d => {
+          ownerMap[d.id] = d.data().email;
+        });
+      } else {
+        // Non-admins can only query their own
+        const ownerSnap = await db.collection("campaign_event_owner")
+          .where("email", "==", currentUserEmail)
+          .get();
+        ownerSnap.docs.forEach(d => ownerMap[d.id] = d.data().email);
+      }
+    } catch (e) {
+      console.error("Failed to load owners:", e.message);
+    }
+
+    // Debug: log event IDs vs owner IDs
+    const eventIds = snap.docs.map(d => d.id);
+    const missing = eventIds.filter(id => !ownerMap[id]);
+    if (missing.length) console.warn("Events without owners:", missing);
+
     wrap.innerHTML = snap.docs.map(doc => {
       const ev = doc.data();
       const names = (ev.participants || []).join(", ");
-      const isOwner = ev.created_by === currentUserEmail;
-      const createdBy = ev.created_by || "לא ידוע";
+      const ownerEmail = ownerMap[doc.id] || "";
+      const isOwner = ownerEmail === currentUserEmail;
+      const canEdit = isOwner || isUserAdmin;
 
       return `
         <div class="existing-event">
           <div>
             <div class="ev-info">${esc(names)}</div>
             <div class="ev-date">${esc(ev.date)} ${esc(ev.time)} — ${esc(ev.city || "")}</div>
-            <div class="ev-creator">נוסף ע״י ${esc(createdBy)}</div>
+            <div class="ev-creator">${isUserAdmin && ownerEmail ? 'נוסף ע״י ' + esc(ownerEmail) : ''}</div>
           </div>
           <div class="ev-actions">
-            ${isOwner ? `<button class="ev-edit" onclick="editEvent('${doc.id}')">ערוך</button>` : ""}
-            ${isOwner ? `<button onclick="deleteEvent('${doc.id}')">מחק</button>` : ""}
+            ${canEdit ? `<button class="ev-edit" onclick="editEvent('${doc.id}')">ערוך</button>` : ""}
+            ${canEdit ? `<button onclick="deleteEvent('${doc.id}')">מחק</button>` : ""}
           </div>
         </div>
       `;
@@ -506,13 +755,24 @@
 
     document.getElementById("evDate").value = ev.date || "";
     document.getElementById("evTime").value = ev.time || "";
-    document.getElementById("evRegion").value = ev.region || "";
+    setRegion(ev.region || "");
     document.getElementById("evCity").value = ev.city || "";
     document.getElementById("evAddress").value = ev.address || "";
     document.getElementById("evDesc").value = ev.description || "";
     document.getElementById("evLink").value = ev.registration_link || "";
 
-    participants = [...(ev.participants || [])];
+    // Restore participants: check known candidates, add rest as "others"
+    document.querySelectorAll("#pdList input").forEach(cb => cb.checked = false);
+    otherParticipants = [];
+    const eventParticipants = ev.participants || [];
+    for (const name of eventParticipants) {
+      const cb = document.querySelector(`#pdList input[value="${name}"]`);
+      if (cb) {
+        cb.checked = true;
+      } else {
+        otherParticipants.push(name);
+      }
+    }
     renderParticipants();
 
     editingId = id;
@@ -539,6 +799,7 @@
   async function deleteEvent(id) {
     if (!confirm("למחוק את האירוע?")) return;
     await db.collection("campaign_events").doc(id).delete();
+    try { await db.collection("campaign_event_owner").doc(id).delete(); } catch (e) { /* may not exist or no permission */ }
     loadExisting();
   }
 

@@ -76,8 +76,6 @@ fetch("candidates.json")
     allPeople = people;
     buildGrid(people);
     restoreFromCookies();
-    console.log("[hagush] init: allPeople loaded, count =", allPeople.length,
-                "location.href =", location.href);
     // Open popup from URL: ?id=emily_m or ?name=אמיר
     // (We don't rewrite the address bar here — doing so changes how the
     // browser resolves relative URLs on the page, breaking nav links and
@@ -86,53 +84,36 @@ fetch("candidates.json")
     // Also resync on back/forward — otherwise the DOM keeps whatever popup
     // was last drawn, even when the URL says a different candidate.
     window.addEventListener("popstate", (e) => {
-      console.log("[hagush] popstate fired. location.href =", location.href,
-                  "  event.state =", e.state);
       syncPopupToUrl("popstate");
     });
     // pageshow also fires on bfcache restore (back from another origin / tab).
     // popstate doesn't always fire in that case, so this is a belt-and-braces.
     window.addEventListener("pageshow", (e) => {
-      console.log("[hagush] pageshow fired. persisted =", e.persisted,
-                  "  location.href =", location.href);
       if (e.persisted) syncPopupToUrl("pageshow-bfcache");
     });
   });
 
 function syncPopupToUrl(reason) {
-  console.log("[hagush] syncPopupToUrl(", reason, ") start. href =", location.href,
-              "  popup.open =", popup.classList.contains("open"),
-              "  popup.dataset.personId =", popup.dataset.personId);
   if (!allPeople.length) {
-    console.log("[hagush]   bail: allPeople empty");
     return;
   }
   const params    = new URLSearchParams(window.location.search);
   const idParam   = params.get("id");
   const nameParam = params.get("name");
-  console.log("[hagush]   params: id =", idParam, "  name =", nameParam);
   if (!(idParam || nameParam)) {
     if (popup.classList.contains("open")) {
-      console.log("[hagush]   no selector in URL → closing open popup");
       closePopup();
-    } else {
-      console.log("[hagush]   no selector and no popup open → nothing to do");
-    }
     return;
   }
   const match = allPeople.find((p) =>
     idParam ? p.id === idParam : p.name === nameParam,
   );
   if (!match) {
-    console.log("[hagush]   no match found for that id/name in allPeople");
     return;
   }
-  console.log("[hagush]   match: id =", match.id, "  name =", match.name);
   if (popup.classList.contains("open") && popup.dataset.personId === match.id) {
-    console.log("[hagush]   popup already shows this person → no-op");
     return;
   }
-  console.log("[hagush]   calling openPopup for", match.id);
   openPopup(match, document.body, false, "deeplink");
 }
 
@@ -761,4 +742,57 @@ function resetChoices() {
 
   // Exit select mode and return to initial state
   exitSelectMode();
+}
+
+// ── Click-hint animation (mobile, 3 cycles) ─────────────────────
+function initClickHint() {
+  if (!new URLSearchParams(window.location.search).has("animation")) return;
+  if (window.matchMedia("(min-width: 768px)").matches) return;
+
+  const HINT_SVG = `
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g filter="url(#hs)">
+        <path d="M33.5 18v16.8l5.3-3.1a3 3 0 0 1 4.1 1.1l.5.8a3 3 0 0 1-.8 3.9L30.8 46a8 8 0 0 1-4.6 1.5H24a8 8 0 0 1-8-8v-7.2a3 3 0 0 1 1.8-2.8l1.4-.6a3 3 0 0 1 3.8 1.3l1-1.7V18a3 3 0 0 1 6 0z" fill="#fff"/>
+        <path d="M33.5 18v16.8l5.3-3.1a3 3 0 0 1 4.1 1.1l.5.8a3 3 0 0 1-.8 3.9L30.8 46a8 8 0 0 1-4.6 1.5H24a8 8 0 0 1-8-8v-7.2a3 3 0 0 1 1.8-2.8l1.4-.6a3 3 0 0 1 3.8 1.3l1-1.7V18a3 3 0 0 1 6 0z" stroke="#09366d" stroke-width="1.5"/>
+      </g>
+      <defs><filter id="hs" x="12" y="13" width="40" height="40" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity=".2"/>
+      </filter></defs>
+    </svg>
+    <span class="ch-ring"></span>
+    <span class="ch-ring"></span>
+    <span class="ch-ring"></span>`;
+
+  const TOTAL_CYCLES = 3;
+  // Per cycle: appear(0.4) + pulse(3×1s) + ripple(~1s) + fadeout(0.5) ≈ 4.9s
+  const RIPPLE_AT  = 4100;   // ms after element inserted: trigger fadeout
+  const CYCLE_GAP  = 1000;   // pause between cycles
+
+  function runCycle(stage, n) {
+    const hint = document.createElement("div");
+    hint.className = "click-hint";
+    hint.innerHTML = HINT_SVG;
+    stage.appendChild(hint);
+
+    setTimeout(() => {
+      hint.classList.add("ch-done");
+      hint.addEventListener("animationend", () => {
+        hint.remove();
+        if (n + 1 < TOTAL_CYCLES) {
+          setTimeout(() => runCycle(stage, n + 1), CYCLE_GAP);
+        }
+      }, { once: true });
+    }, RIPPLE_AT);
+  }
+
+  const observer = new MutationObserver(() => {
+    const cards = document.querySelectorAll("#grid > .card:not(.promo-card)");
+    if (cards.length < 3) return;
+    observer.disconnect();
+
+    const stage = cards[2].querySelector(".photo-stage");
+    setTimeout(() => runCycle(stage, 0), 3000); // initial 3s delay
+  });
+
+  observer.observe(document.getElementById("grid"), { childList: true });
 }
