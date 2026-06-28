@@ -26,7 +26,7 @@ import {
   saveGroup,
   deleteReferrer,
   deleteGroup,
-} from "./referrers.js";
+} from "./referrers.api.js";
 import {
   transformSubmissionToRegistration,
   fetchJoinFormSubmissions,

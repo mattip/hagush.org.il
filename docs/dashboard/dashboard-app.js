@@ -25,7 +25,7 @@ import {
   fetchJoinFormSubmissions,
 } from "./data.js";
 import { render } from "./render.js";
-import { fetchReferrers } from "./referrers/referrers.js";
+import { fetchReferrers } from "./referrers/referrers.api.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config

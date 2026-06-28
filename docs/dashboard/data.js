@@ -12,8 +12,6 @@
  * @property {string}           city
  * @property {string}           source
  * @property {string}           referrer     - Raw referrer code from the form (e.g. "18", "clm-123").
- * @property {string}           referrerName - Resolved display name, enriched before render.
- * @property {string|null}      referrerId   - Referrer code for access control (same as referrer).
  * @property {string|null}      groupId      - Group ID, resolved from referrer dimension at load time.
  * @property {boolean|null}     partyRegistered
  * @property {'clean'|'duplicate'|'test'|'suspicious'} status
@@ -41,9 +39,7 @@ export const transformSubmissionToRegistration = (submission) => {
     city: submission.city || "",
     source: submission.source || "",
     referrer:     submission.referrer || "",
-    referrerName: "",   // enriched in dashboard-app.js after referrers are loaded
-    referrerId:   submission.referrer || null,  // referrer code for access control
-    groupId:      null, // resolved from referrer dimension at load time
+    groupId:      null,
     partyRegistered:
       submission.registered === "yes"
         ? true
