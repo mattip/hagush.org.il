@@ -213,7 +213,7 @@ document.addEventListener("click", async (e) => {
               <option value="individual" ${type === "individual" ? "selected" : ""}>פרטי</option>
               <option value="organizer" ${type === "organizer" ? "selected" : ""}>מנהל·ת</option>
             </select>
-            <select name="groupId" style="flex: 1;" data-current="${currentGroupId}">
+            <select name="groupId" style="flex: 1;">
               <option value="">ללא קבוצה</option>
               ${groupOptions}
             </select>
