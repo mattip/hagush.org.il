@@ -36,7 +36,7 @@ const createPartyChips = (reg) => {
   return chips.join(" ") || '<span class="muted">—</span>';
 };
 
-const renderSubmissionsTable = (registrations, showEmail) => {
+const renderSubmissionsTable = (registrations, referrers, showEmail) => {
   const rows = registrations
     .slice()
     .sort((a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0))
@@ -55,14 +55,14 @@ const renderSubmissionsTable = (registrations, showEmail) => {
       <td>${escapeHtml(reg.name || "—")}</td>
       <td class="num">${escapeHtml(reg.phoneMasked || "")}</td>
       ${emailCell}
-      <td class="muted">${escapeHtml(reg.referrerName || reg.referrer || "—")}</td>
+      <td class="muted">${escapeHtml(referrers.get(reg.referrer)?.name || reg.referrer || "—")}</td>
       <td>${createPartyChips(reg)}</td>
       <td class="muted">${formatRelativeTime(toDate(reg.createdAt))}</td>
     </tr>`;
   }).join("");
 };
 
-const renderRecentSubmissionsSection = (registrations, showEmail) => {
+const renderRecentSubmissionsSection = (registrations, referrers, showEmail) => {
   const emailHeader = showEmail ? "<th>אימייל</th>" : "";
 
   return `<details open>
@@ -82,7 +82,7 @@ const renderRecentSubmissionsSection = (registrations, showEmail) => {
             <th>נרשם/ה</th>
           </tr>
         </thead>
-        <tbody>${renderSubmissionsTable(registrations, showEmail)}</tbody>
+        <tbody>${renderSubmissionsTable(registrations, referrers, showEmail)}</tbody>
       </table>
     </div>
   </details>`;
@@ -129,27 +129,21 @@ const renderReferrerSection = (registrations, referrers) => {
 export const render = ({ registrations, referrers, userRole }) => {
   const showEmail = userRole === "admin";
 
-  // Enrich registrations with resolved referrer name
-  const enriched = registrations.map((reg) => ({
-    ...reg,
-    referrerName: referrers.get(reg.referrer)?.name || "",
-  }));
-
-  const lastRegistration = enriched
+  const lastRegistration = registrations
     .map((reg) => toDate(reg.createdAt))
     .filter(Boolean)
     .sort((a, b) => b - a)[0];
 
   getById("kpi-row").innerHTML = createStatCard(
     "הרשמות",
-    NUMBER_FORMATTER.format(enriched.length),
+    NUMBER_FORMATTER.format(registrations.length),
     false,
     `אחרון: ${lastRegistration ? formatRelativeTime(lastRegistration) : "—"}`,
     "סך ההרשמות שהתקבלו דרך הטופס."
   );
 
   getById("sections").innerHTML = [
-    renderReferrerSection(enriched, referrers),
-    renderRecentSubmissionsSection(enriched, showEmail),
+    renderReferrerSection(registrations, referrers),
+    renderRecentSubmissionsSection(registrations, referrers, showEmail),
   ].join("");
 };

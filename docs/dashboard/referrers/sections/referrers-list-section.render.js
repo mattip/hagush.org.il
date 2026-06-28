@@ -11,6 +11,7 @@ export const renderReferrersListSection = (
   }
 
   const rows = Array.from(referrers.values())
+    .filter((ref) => ref.active)
     .map((ref) => {
       const count = referrerCounts?.get(ref.code) || 0;
       const groupName = ref.groupId ? groups?.get(ref.groupId)?.name || "—" : "—";
