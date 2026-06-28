@@ -19,7 +19,6 @@ import {
   saveGroup,
 } from "./referrers.js";
 import { initAuthGate } from "./auth-gate.js";
-import { initSeedImport, setSeedImportDb } from "./seed-import.js";
 
 // State set once the user is authorized.
 let db = null;
@@ -227,17 +226,10 @@ const reloadData = async () => {
 
     renderReferrers({ referrers, groups, groupCounts, referrerCounts, userRole: userIdentity.role });
     getById(SEL.dashboard.updated).textContent = "עודכן " + formatRelativeTime(new Date());
-    initializeSeedUpload();
     initializeReferrerSearch();
   } catch (err) {
     console.error("Reload failed", err);
   }
-};
-
-const initializeSeedUpload = () => {
-  if (userIdentity?.role !== "admin") return;
-  setSeedImportDb(db);
-  initSeedImport({ onImportComplete: reloadData });
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -290,7 +282,6 @@ initAuthGate({
     try {
       getById(SEL.dashboard.refreshBtn).addEventListener("click", loadData);
       initializeReferrerResolve();
-      initializeSeedUpload();
     } catch (e) {
       console.error("referrer page init failed", e);
       getById(SEL.dashboard.loading).innerHTML =
