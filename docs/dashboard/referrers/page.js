@@ -202,7 +202,6 @@ document.addEventListener("click", async (e) => {
 
     // Get current referrer from the data we have
     const referrersRoot = getById("referrers-root");
-    const referrersMap = new Map(); // Build map from visible table
     const allRows = referrersRoot?.querySelectorAll("tr[data-ref-code]") || [];
 
     // Get current values from table

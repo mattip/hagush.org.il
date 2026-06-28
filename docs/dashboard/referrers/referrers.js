@@ -55,16 +55,6 @@ import { SEED_ENTRIES, buildSeedMap, buildGroupId } from "./utils.js";
  * @property {ReferrerAggregateRow[]} members    - Individual rows that belong to this group.
  */
 
-/**
- * Full result of aggregateRegistrationsByReferrer — everything the renderer needs.
- *
- * @typedef {Object} ReferrerAggregation
- * @property {ReferrerAggregateRow[]} individualRows - All referrers (known + unknown), sorted by count desc.
- * @property {GroupAggregateRow[]}    groupRows      - Per-group rollup rows, sorted by totalCount desc.
- * @property {number}                 directCount    - Registrations with no referrer code (direct traffic).
- * @property {number}                 unknownCount   - Registrations with a code not found in the dimension.
- */
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Firestore data layer
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,89 +113,6 @@ export const fetchReferrerGroups = async (db) => {
     console.warn("referrer_groups read skipped", e?.code || e);
     return new Map();
   }
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Pure aggregation
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Aggregates registrations against the referrer dimension.
- * Pure function — no I/O, no side effects.
- *
- * @param {{
- *   registrations: import('./data.js').Registration[],
- *   referrers:     Map<string, Referrer>,
- *   groups:        Map<string, ReferrerGroup>,
- * }} params
- * @returns {ReferrerAggregation}
- */
-export const aggregateRegistrationsByReferrer = ({ registrations, referrers, groups }) => {
-  // 1. Count per raw code
-  const countByCode = new Map();
-  for (const reg of registrations) {
-    const code = reg.referrer || "";
-    countByCode.set(code, (countByCode.get(code) || 0) + 1);
-  }
-
-  // 2. Join against dimension
-  let directCount  = 0; // no code provided at all (direct / organic traffic)
-  let unknownCount = 0; // code present but not in dimension (data quality issue)
-  const individualRows = [];
-  const groupTotals    = new Map(); // groupId → GroupAggregateRow (partial, built incrementally)
-
-  for (const [code, count] of countByCode) {
-    if (code === "") {
-      directCount += count;
-      continue; // direct traffic: skip the table entirely, surfaced separately
-    }
-
-    const ref   = referrers.get(code);
-    const group = ref?.groupId ? groups.get(ref.groupId) : null;
-
-    const row = ref
-      ? {
-          code,
-          name:      ref.name,
-          count,
-          groupId:   ref.groupId || null,
-          groupName: group?.name || null,
-          type:      ref.type || "individual",
-          isKnown:   true,
-        }
-      : {
-          code,
-          name:      code, // show raw code so an admin can spot and fix the bad code
-          count,
-          groupId:   null,
-          groupName: null,
-          type:      "individual",
-          isKnown:   false,
-        };
-
-    individualRows.push(row);
-    if (!ref) { unknownCount += count; continue; }
-
-    if (ref.groupId) {
-      if (!groupTotals.has(ref.groupId)) {
-        groupTotals.set(ref.groupId, {
-          groupId:    ref.groupId,
-          groupName:  group?.name || ref.groupId,
-          totalCount: 0,
-          members:    [],
-        });
-      }
-      const g = groupTotals.get(ref.groupId);
-      g.members.push(row);
-      g.totalCount += count;
-    }
-  }
-
-  // 3. Sort
-  individualRows.sort((a, b) => b.count - a.count);
-  const groupRows = [...groupTotals.values()].sort((a, b) => b.totalCount - a.totalCount);
-
-  return { individualRows, groupRows, directCount, unknownCount };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
