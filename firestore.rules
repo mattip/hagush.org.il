@@ -112,6 +112,7 @@ service cloud.firestore {
     // All authenticated dashboard users can read; only admins can write.
     match /referrers/{code} {
       allow read:  if hasRole();
+      allow delete: if isAdmin();
       allow write: if isAdmin()
         && validStr(request.resource.data.name, 200)
         && request.resource.data.active is bool
@@ -120,6 +121,7 @@ service cloud.firestore {
     }
     match /referrer_groups/{groupId} {
       allow read:  if hasRole();
+      allow delete: if isAdmin();
       allow write: if isAdmin()
         && validStr(request.resource.data.name, 200)
         && request.resource.data.active is bool;

@@ -7,7 +7,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 import { SEED_ENTRIES, buildSeedMap, buildGroupId } from "./utils.js";
-export { bulkSeedReferrers } from "./bulk-seed.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types (JSDoc)
@@ -252,6 +251,20 @@ export const saveGroup = async (db, { name }) => {
     createdAt: serverTimestamp(),
   });
   return groupId;
+};
+
+export const deleteReferrer = async (db, code) => {
+  const { doc, deleteDoc } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  await deleteDoc(doc(db, "referrers", code));
+};
+
+export const deleteGroup = async (db, groupId) => {
+  const { doc, deleteDoc } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  await deleteDoc(doc(db, "referrer_groups", groupId));
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

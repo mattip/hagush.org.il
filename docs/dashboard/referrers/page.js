@@ -1,295 +1,460 @@
-// Referrer management page entry point.
-// Auth + role gating live in auth-gate.js; this module owns the referrer page's
-// own chrome, data loading, and the inline resolve form (admin only).
+// Referrer management page - minimal standalone version
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore,
+  getDoc,
+  doc,
+  setDoc,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { FIREBASE_CONFIG } from "../../js/utils/firebase-config.js";
 import { escapeHtml } from "../../js/utils/html-escape.js";
 import { formatRelativeTime } from "../../js/utils/format.js";
 import { getById, show, hide } from "../../js/utils/dom.js";
-import { SEL } from "../dashboard-selectors.js";
+import {
+  fetchReferrers,
+  fetchReferrerGroups,
+  saveReferrer,
+  saveGroup,
+  deleteReferrer,
+  deleteGroup,
+} from "./referrers.js";
 import {
   transformSubmissionToRegistration,
   fetchJoinFormSubmissions,
 } from "../data.js";
-import { renderReferrers } from "../dashboard.render.js";
-import {
-  fetchReferrers,
-  fetchReferrerGroups,
-  aggregateRegistrationsByReferrer,
-  saveReferrer,
-  saveGroup,
-} from "./referrers.js";
-import { initAuthGate } from "../auth/auth-gate.js";
+import { renderReferrers } from "./render.js";
 
-// State set once the user is authorized.
-let db = null;
-let userIdentity = null;
-let currentGroups = new Map(); // latest groups, for name→id resolution on save
+const app = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Data loading
+// Auth
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ROLE_LABELS = {
+  admin: "מנהל·ת",
+  manager: "מנהל·ת תוכן",
+  referrer: "מפנה",
+  groupLeader: "מנהל·ת קבוצה",
+};
+
+const loginBtn = getById("login-btn");
+const logoutBtn = getById("logout-btn");
+const naLogout = getById("na-logout");
+const loginScreen = getById("login");
+const naScreen = getById("noaccess");
+const dashScreen = getById("dash");
+const loadingEl = getById("loading");
+const contentEl = getById("content");
+const naEmail = getById("na-email");
+const roleBadge = getById("role-badge");
+const userEmail = getById("user-email");
+const refreshBtn = getById("refresh-btn");
+const updatedEl = getById("updated");
+
+let userIdentity = null;
+
+loginBtn?.addEventListener("click", async () => {
+  loginBtn.disabled = true;
+  getById("login-err").textContent = "";
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (err) {
+    if (err?.code !== "auth/cancelled-popup-request") {
+      getById("login-err").textContent = "שגיאה בכניסה: " + (err?.code || err);
+    }
+  } finally {
+    loginBtn.disabled = false;
+  }
+});
+
+logoutBtn?.addEventListener("click", () => signOut(auth));
+naLogout?.addEventListener("click", () => signOut(auth));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Data Loading
 // ─────────────────────────────────────────────────────────────────────────────
 
 const loadData = async () => {
   if (!userIdentity) return;
-  show(getById(SEL.dashboard.loading));
-  hide(getById(SEL.dashboard.content));
 
   try {
+    show(loadingEl);
+    hide(contentEl);
+
     const [submissionsRaw, referrers, groups] = await Promise.all([
       fetchJoinFormSubmissions(db),
       fetchReferrers(db),
       fetchReferrerGroups(db),
     ]);
 
-    currentGroups = groups;
-
-    // Calculate counts
-    const registrations = submissionsRaw.map((raw) =>
-      transformSubmissionToRegistration(raw)
-    );
+    const registrations = submissionsRaw.map(transformSubmissionToRegistration);
     const referrerCounts = new Map();
-    const groupCounts = new Map();
 
     for (const reg of registrations) {
       const code = reg.referrer || "";
       if (code) {
         referrerCounts.set(code, (referrerCounts.get(code) || 0) + 1);
       }
-      const ref = referrers.get(code);
-      if (ref?.groupId) {
-        groupCounts.set(ref.groupId, (groupCounts.get(ref.groupId) || 0) + 1);
-      }
     }
 
-    renderReferrers({ referrers, groups, groupCounts, referrerCounts, userRole: userIdentity.role });
-    getById(SEL.dashboard.updated).textContent = "עודכן " + formatRelativeTime(new Date());
-    hide(getById(SEL.dashboard.loading));
-    show(getById(SEL.dashboard.content));
+    renderReferrers({
+      referrers,
+      groups,
+      groupCounts: new Map(),
+      referrerCounts,
+      userRole: userIdentity.role,
+    });
+
+    updatedEl.textContent = "עודכן " + formatRelativeTime(new Date());
+
+    hide(loadingEl);
+    show(contentEl);
   } catch (e) {
-    console.error(e);
-    getById(SEL.dashboard.loading).innerHTML =
-      '<div class="empty">שגיאה בטעינת הנתונים: ' +
-      escapeHtml(e?.code || e?.message || e) +
-      "</div>";
+    console.error("Load failed:", e);
+    loadingEl.innerHTML = '<div class="empty">שגיאה בטעינת הנתונים: ' + escapeHtml(e?.message || e) + "</div>";
   }
 };
 
+refreshBtn?.addEventListener("click", loadData);
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Resolve unknown referrer codes (admin only)
+// Event Handlers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const initializeReferrerResolve = () => {
-  if (userIdentity?.role !== "admin") return;
-
-  // Single delegated listener on #referrers-root handles all resolve interactions
-  // regardless of how many times the table re-renders.
-  getById(SEL.referrers.root).addEventListener("click", (e) => {
-    // Toggle expand for referrer edit
-    const btn = e.target.closest('[data-action="resolve"]');
-    if (btn) {
-      const code    = btn.dataset.code;
-      const formRow = document.getElementById(`resolve-${code}`);
-      if (!formRow) return;
-      const open = !formRow.hidden;
-      formRow.hidden = open;
-      btn.setAttribute("aria-expanded", String(!open));
-      if (!open) formRow.querySelector("[name=name]")?.focus();
-      return;
-    }
-
-    // Toggle expand for group edit
-    const groupBtn = e.target.closest('[data-action="edit-group"]');
-    if (groupBtn) {
-      const groupId = groupBtn.dataset.groupId;
-      const formRow = document.getElementById(`edit-group-${groupId}`);
-      if (!formRow) return;
-      const open = !formRow.hidden;
-      formRow.hidden = open;
-      groupBtn.setAttribute("aria-expanded", String(!open));
-      if (!open) formRow.querySelector("[name=name]")?.focus();
-      return;
-    }
-
-    // Cancel
-    const cancel = e.target.closest('[data-action="resolve-cancel"]');
-    if (cancel) {
-      const formRow = cancel.closest('[data-action="resolve-row"]');
-      if (!formRow) return;
-      formRow.hidden = true;
-      const code = formRow.id.replace("resolve-", "").replace("edit-group-", "");
-      document.querySelector(
-        `[data-action="resolve"][data-code="${CSS.escape(code)}"], [data-action="edit-group"][data-group-id="${CSS.escape(code)}"]`
-      )?.setAttribute("aria-expanded", "false");
-      return;
-    }
-
-    // Add group button
-    if (e.target.closest(SEL.referrers.addGroupBtn)) {
-      e.preventDefault();
-      const groupName = prompt("שם הקבוצה:");
-      if (!groupName?.trim()) return;
-
-      saveGroup(db, { name: groupName.trim() }).then(() => {
-        loadData();
-      }).catch((err) => {
-        alert(`שגיאה: ${err?.message || err}`);
-      });
-      return;
-    }
-  });
-
-  getById(SEL.referrers.root).addEventListener("submit", async (e) => {
-    const form = e.target.closest('[data-action="resolve-form"]');
-    if (!form) return;
+// Add referrer button - use event delegation
+document.addEventListener("click", async (e) => {
+  const addReferrerBtn = e.target.closest("#add-referrer-btn");
+  if (addReferrerBtn) {
     e.preventDefault();
 
-    const submitBtn = form.querySelector("[type=submit]");
-    submitBtn.disabled = true;
-    submitBtn.textContent = "שומר…";
+    const referrersRoot = getById("referrers-root");
+    const table = referrersRoot?.querySelector("table tbody");
+    if (!table) return;
 
-    try {
-      // Handle referrer edit
-      if (form.dataset.code) {
-        const code      = form.dataset.code;
-        const name      = form.elements.name.value.trim();
-        const groupName = form.elements.group.value.trim();
-        const type      = form.elements.type.value;
+    const tempId = `new-referrer-${Date.now()}`;
+    const newRow = document.createElement("tr");
+    newRow.setAttribute("data-action", "resolve-row");
+    newRow.setAttribute("data-code", tempId);
+    newRow.innerHTML = `
+      <td colspan="6" style="padding: 0;">
+        <form data-action="resolve-form-new-referrer" data-code="${tempId}" style="display: flex; gap: 8px; padding: 8px;">
+          <input name="code" placeholder="קוד" required autocomplete="off" style="flex: 1;" autofocus />
+          <input name="name" placeholder="שם" required autocomplete="off" style="flex: 2;" />
+          <button type="submit" style="min-width: 80px;">שמור</button>
+          <button type="button" data-action="resolve-cancel" style="min-width: 80px;">ביטול</button>
+        </form>
+      </td>
+    `;
 
-        // Resolve the typed group name to an existing group, or create a new one.
-        let groupId = null;
-        if (groupName) {
-          const existing = [...currentGroups.values()].find(
-            (g) => g.name.trim().toLowerCase() === groupName.toLowerCase()
-          );
-          groupId = existing ? existing.id : await saveGroup(db, { name: groupName });
-        }
-
-        await saveReferrer(db, { code, name, groupId, type });
-      }
-      // Handle group edit
-      else if (form.dataset.groupId) {
-        const groupId = form.dataset.groupId;
-        const name = form.elements.name.value.trim();
-
-        const { doc, setDoc } = await import(
-          "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-        );
-        await setDoc(doc(db, "referrer_groups", groupId), { name, active: true }, { merge: true });
-      }
-
-      await loadData(); // re-fetch everything
-    } catch (err) {
-      console.error("save failed", err);
-      submitBtn.disabled = false;
-      submitBtn.textContent = "שמור";
-      const errEl = form.querySelector(".resolve-err") || (() => {
-        const el = document.createElement("span");
-        el.className = "resolve-err";
-        form.appendChild(el);
-        return el;
-      })();
-      errEl.textContent = `שגיאה: ${err?.code || err?.message || err}`;
-    }
-  });
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Bulk seed import (handled by dedicated module)
-// ─────────────────────────────────────────────────────────────────────────────
-
-const reloadData = async () => {
-  try {
-    const [submissionsRaw, referrers, groups] = await Promise.all([
-      fetchJoinFormSubmissions(db),
-      fetchReferrers(db),
-      fetchReferrerGroups(db),
-    ]);
-
-    currentGroups = groups;
-
-    const registrations = submissionsRaw.map((raw) =>
-      transformSubmissionToRegistration(raw)
-    );
-    const referrerCounts = new Map();
-    const groupCounts = new Map();
-
-    for (const reg of registrations) {
-      const code = reg.referrer || "";
-      if (code) {
-        referrerCounts.set(code, (referrerCounts.get(code) || 0) + 1);
-      }
-      const ref = referrers.get(code);
-      if (ref?.groupId) {
-        groupCounts.set(ref.groupId, (groupCounts.get(ref.groupId) || 0) + 1);
-      }
-    }
-
-    renderReferrers({ referrers, groups, groupCounts, referrerCounts, userRole: userIdentity.role });
-    getById(SEL.dashboard.updated).textContent = "עודכן " + formatRelativeTime(new Date());
-    initializeReferrerSearch();
-  } catch (err) {
-    console.error("Reload failed", err);
-  }
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Search filter
-// ─────────────────────────────────────────────────────────────────────────────
-
-const initializeReferrerSearch = () => {
-  const searchInput = getById(SEL.referrers.search);
-
-  if (!searchInput) {
-    setTimeout(initializeReferrerSearch, 300);
+    table.insertBefore(newRow, table.firstChild);
+    newRow.querySelector("[name=code]")?.focus();
     return;
   }
 
-  const performSearch = () => {
-    const q = (searchInput.value || "").toLowerCase().trim();
-    const allDataRows = document.querySelectorAll("tr[data-ref-code]");
+  // Add group button - use event delegation
+  const addGroupBtn = e.target.closest("#add-group-btn");
+  if (addGroupBtn) {
+    e.preventDefault();
 
-    allDataRows.forEach((row) => {
-      const code = row.getAttribute("data-ref-code") || "";
-      const cells = row.querySelectorAll("td");
+    // Find the groups table and add a new row with form
+    const groupsSection = addGroupBtn.closest(".panel");
+    if (!groupsSection) return;
 
-      if (cells.length < 3) return;
+    const table = groupsSection.querySelector("table tbody");
+    if (!table) return;
 
-      const name = cells[1]?.textContent?.toLowerCase() || "";
-      const group = cells[2]?.textContent?.toLowerCase() || "";
-      const codeLC = code.toLowerCase();
+    const tempId = `new-group-${Date.now()}`;
+    const newRow = document.createElement("tr");
+    newRow.setAttribute("data-action", "resolve-row");
+    newRow.setAttribute("data-group-id", tempId);
+    newRow.innerHTML = `
+      <td colspan="4" style="padding: 0;">
+        <form data-action="resolve-form" data-group-id="${tempId}" data-is-new="true">
+          <input name="name" placeholder="שם קבוצה" required autocomplete="off" autofocus />
+          <button type="submit">שמור</button>
+          <button type="button" data-action="resolve-cancel">ביטול</button>
+        </form>
+      </td>
+    `;
 
-      const matches =
-        !q ||
-        codeLC.includes(q) ||
-        name.includes(q) ||
-        group.includes(q);
+    table.insertBefore(newRow, table.firstChild);
+    newRow.querySelector("[name=name]")?.focus();
+    return;
+  }
 
-      row.style.display = matches ? "" : "none";
-    });
+  // Edit referrer - show inline form with all fields
+  const editBtn = e.target.closest('[data-action="edit"]');
+  if (editBtn) {
+    e.preventDefault();
+    const code = editBtn.dataset.code;
+    const row = editBtn.closest("tr");
+
+    // Get current referrer from the data we have
+    const referrersRoot = getById("referrers-root");
+    const referrersMap = new Map(); // Build map from visible table
+    const allRows = referrersRoot?.querySelectorAll("tr[data-ref-code]") || [];
+
+    // Get current values from table
+    const cells = row?.querySelectorAll("td") || [];
+    const name = cells[1]?.textContent || "";
+    const type = cells[2]?.textContent?.includes("מנהל") ? "organizer" : "individual";
+    const groupName = cells[3]?.textContent || "";
+
+    // Get group options and find matching groupId for current group
+    const groupOptionsEl = getById("referrer-group-options");
+    const groupOptions = groupOptionsEl?.innerHTML || "";
+    let currentGroupId = "";
+    if (groupName && groupName !== "—") {
+      // Find the group ID that matches the current group name
+      const allOptions = groupOptionsEl?.querySelectorAll("option") || [];
+      for (const option of allOptions) {
+        if (option.textContent.trim() === groupName.trim()) {
+          currentGroupId = option.value;
+          break;
+        }
+      }
+    }
+
+    // Create or show edit form
+    let editRow = document.getElementById(`edit-referrer-${code}`);
+    if (!editRow) {
+      editRow = document.createElement("tr");
+      editRow.id = `edit-referrer-${code}`;
+      editRow.setAttribute("data-action", "resolve-row");
+      editRow.setAttribute("data-code", code);
+      editRow.innerHTML = `
+        <td colspan="6" style="padding: 0;">
+          <form data-action="resolve-form-referrer" data-code="${code}" style="display: flex; gap: 8px; padding: 8px;">
+            <input name="name" placeholder="שם" required autocomplete="off" value="${name}" style="flex: 2;" />
+            <select name="type" style="flex: 1;">
+              <option value="individual" ${type === "individual" ? "selected" : ""}>פרטי</option>
+              <option value="organizer" ${type === "organizer" ? "selected" : ""}>מנהל·ת</option>
+            </select>
+            <select name="groupId" style="flex: 1;" data-current="${currentGroupId}">
+              <option value="">ללא קבוצה</option>
+              ${groupOptions}
+            </select>
+            <button type="submit" style="min-width: 80px;">שמור</button>
+            <button type="button" data-action="resolve-cancel" style="min-width: 80px;">ביטול</button>
+          </form>
+        </td>
+      `;
+      row?.parentNode.insertBefore(editRow, row.nextSibling);
+
+      // Set the correct selected value after creating the form
+      const groupSelect = editRow.querySelector("[name=groupId]");
+      if (currentGroupId) {
+        groupSelect.value = currentGroupId;
+      }
+    }
+
+    editRow.hidden = false;
+    editRow.querySelector("[name=name]")?.focus();
+    return;
+  }
+
+  // Delete referrer
+  const deleteBtn = e.target.closest('[data-action="delete"]');
+  if (deleteBtn) {
+    e.preventDefault();
+    const code = deleteBtn.dataset.code;
+    if (!confirm(`האם אתה בטוח שברצונך למחוק את המפנה ${code}?`)) return;
+
+    try {
+      deleteBtn.disabled = true;
+      await deleteReferrer(db, code);
+      loadData();
+    } catch (err) {
+      alert(`שגיאה: ${err?.message || err}`);
+      deleteBtn.disabled = false;
+    }
+    return;
+  }
+
+  // Delete group
+  const deleteGroupBtn = e.target.closest('[data-action="delete-group"]');
+  if (deleteGroupBtn) {
+    e.preventDefault();
+    const groupId = deleteGroupBtn.dataset.groupId;
+    if (!confirm("האם אתה בטוח שברצונך למחוק את הקבוצה?")) return;
+
+    try {
+      deleteGroupBtn.disabled = true;
+      await deleteGroup(db, groupId);
+      loadData();
+    } catch (err) {
+      alert(`שגיאה: ${err?.message || err}`);
+      deleteGroupBtn.disabled = false;
+    }
+    return;
+  }
+
+  // Toggle edit group form
+  const editGroupBtn = e.target.closest('[data-action="edit-group"]');
+  if (editGroupBtn) {
+    e.preventDefault();
+    const groupId = editGroupBtn.dataset.groupId;
+    const formRow = getById(`edit-group-${groupId}`);
+    if (!formRow) return;
+    const open = !formRow.hidden;
+    formRow.hidden = open;
+    editGroupBtn.setAttribute("aria-expanded", String(!open));
+    if (!open) formRow.querySelector("[name=name]")?.focus();
+    return;
+  }
+
+  // Cancel edit
+  const cancelBtn = e.target.closest('[data-action="resolve-cancel"]');
+  if (cancelBtn) {
+    e.preventDefault();
+    const formRow = cancelBtn.closest('[data-action="resolve-row"]');
+    if (formRow) {
+      formRow.hidden = true;
+      const groupId = formRow.dataset.groupId;
+      const btn = getById("referrers-root")?.querySelector(
+        `[data-action="edit-group"][data-group-id="${groupId}"]`
+      );
+      if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+    return;
+  }
+});
+
+// Form submission - groups and referrers
+document.addEventListener("submit", async (e) => {
+  const form = e.target;
+  e.preventDefault();
+
+  // New referrer form
+  if (form.dataset.action === "resolve-form-new-referrer") {
+    const code = form.querySelector("[name=code]")?.value;
+    const name = form.querySelector("[name=name]")?.value;
+    if (!code?.trim() || !name?.trim()) return;
+
+    const row = form.closest("tr");
+    try {
+      await saveReferrer(db, {
+        code: code.trim(),
+        name: name.trim(),
+        active: true,
+        type: "individual",
+        groupId: null,
+      });
+      row?.remove();
+      loadData();
+    } catch (err) {
+      alert(`שגיאה: ${err?.message || err}`);
+      row?.remove();
+    }
+    return;
+  }
+
+  // Existing referrer edit form
+  if (form.dataset.action === "resolve-form-referrer") {
+    const code = form.dataset.code;
+    const name = form.querySelector("[name=name]")?.value;
+    const type = form.querySelector("[name=type]")?.value || "individual";
+    const groupId = form.querySelector("[name=groupId]")?.value || null;
+    if (!name?.trim()) return;
+
+    try {
+      await saveReferrer(db, {
+        code,
+        name: name.trim(),
+        active: true,
+        type,
+        groupId: groupId || null,
+      });
+      loadData();
+    } catch (err) {
+      alert(`שגיאה: ${err?.message || err}`);
+    }
+    return;
+  }
+
+  // Group form
+  if (form.dataset.action === "resolve-form") {
+    const name = form.querySelector("[name=name]")?.value;
+    if (!name?.trim()) return;
+
+    const isNew = form.dataset.isNew === "true";
+    const groupId = form.dataset.groupId;
+    const row = form.closest("tr");
+
+    try {
+      if (isNew) {
+        // For new groups, don't pass an id - let Firestore generate one
+        await saveGroup(db, { name: name.trim() });
+      } else {
+        // For existing groups, update with merge
+        const { updateDoc } = await import(
+          "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+        );
+        await updateDoc(doc(db, "referrer_groups", groupId), { name: name.trim() });
+      }
+      row?.remove();
+      loadData();
+    } catch (err) {
+      alert(`שגיאה: ${err?.message || err}`);
+      if (isNew) row?.remove();
+    }
+    return;
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth State
+// ─────────────────────────────────────────────────────────────────────────────
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    hide(dashScreen);
+    hide(naScreen);
+    show(loginScreen);
+    return;
+  }
+
+  let roleData = null;
+  try {
+    const snapshot = await getDoc(doc(db, "roles", user.email));
+    if (snapshot.exists()) roleData = snapshot.data();
+  } catch (e) {
+    console.error("role read failed", e);
+  }
+
+  if (!roleData || roleData.active !== true) {
+    naEmail.textContent = user.email;
+    hide(loginScreen);
+    hide(dashScreen);
+    show(naScreen);
+    return;
+  }
+
+  userIdentity = {
+    email: user.email,
+    role: roleData.role,
+    scope: roleData.scope || "full",
+    groupId: roleData.groupId || null,
+    referrerId: roleData.referrerId || null,
   };
 
-  searchInput.addEventListener("input", performSearch);
-};
+  roleBadge && (roleBadge.textContent = ROLE_LABELS[userIdentity.role] || userIdentity.role);
+  userEmail && (userEmail.textContent = userIdentity.email);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Boot
-// ─────────────────────────────────────────────────────────────────────────────
+  hide(loginScreen);
+  hide(naScreen);
+  show(dashScreen);
 
-initAuthGate({
-  onReady: (ctx) => {
-    db = ctx.db;
-    userIdentity = ctx.userIdentity;
-    try {
-      getById(SEL.dashboard.refreshBtn).addEventListener("click", loadData);
-      initializeReferrerResolve();
-    } catch (e) {
-      console.error("referrer page init failed", e);
-      getById(SEL.dashboard.loading).innerHTML =
-        '<div class="empty">שגיאת אתחול: ' + escapeHtml(e?.message || e) + "</div>";
-      return;
-    }
-    loadData();
-    // Initialize search after loadData renders the form
-    setTimeout(initializeReferrerSearch, 500);
-  },
+  loadData();
 });

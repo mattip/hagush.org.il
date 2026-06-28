@@ -24,8 +24,11 @@ export const renderGroupsSection = (
 
       const editAction = isAdmin
         ? `<td>
-            <button data-action="edit-group" data-group-id="${escapeHtml(group.id)}" aria-expanded="false">
+            <button data-action="edit-group" data-group-id="${escapeHtml(group.id)}" aria-expanded="false" style="margin-right: 8px;">
               ערוך
+            </button>
+            <button data-action="delete-group" data-group-id="${escapeHtml(group.id)}" style="color: #d32f2f;">
+              מחק
             </button>
            </td>`
         : "";
