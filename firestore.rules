@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -19,13 +20,13 @@ service cloud.firestore {
     function canManageInterviews() { return isAdmin() || isAskAdmin(); }
     function mgrFull()         { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'full'; }
     function mgrGroup()        { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'group'; }
-    function influencerRole()  { return hasRole() && roleDoc().role == 'influencer'; }
+    function isReferrer()      { return hasRole() && roleDoc().role in ['referrer', 'groupLeader']; }
     function validStr(val, max) { return val is string && val.size() <= max; }
 
     function canReadScoped(res) {
       return isAdmin() || mgrFull()
-        || (mgrGroup()       && res.data.groupId      == roleDoc().groupId)
-        || (influencerRole() && res.data.influencerId == roleDoc().influencerId);
+        || (mgrGroup()    && res.data.groupId    == roleDoc().groupId)
+        || (isReferrer()  && res.data.referrerId == roleDoc().referrerId);
     }
 
     // ── PII / audit (server-only writes) ──────────────────────────────────────
@@ -98,6 +99,32 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if canManageInterviews();
     }
+    
+    match /interview_content/{id} {
+      allow read: if true;
+  		allow create, update, delete: if canManageInterviews();
+		}
+
+		match /parsing_config/{id} {
+  		allow read, write: if canManageInterviews();
+		}
+
+    // ── referrer dimension (non-PII metadata) ────────────────────────────────
+    // All authenticated dashboard users can read; only admins can write.
+    match /referrers/{code} {
+      allow read:  if hasRole();
+      allow write: if isAdmin()
+        && validStr(request.resource.data.name, 200)
+        && request.resource.data.active is bool
+        && request.resource.data.type in ['individual', 'organizer']
+        && (request.resource.data.groupId == null || validStr(request.resource.data.groupId, 100));
+    }
+    match /referrer_groups/{groupId} {
+      allow read:  if hasRole();
+      allow write: if isAdmin()
+        && validStr(request.resource.data.name, 200)
+        && request.resource.data.active is bool;
+    }
 
     // ── management ────────────────────────────────────────────────────────────
     match /roles/{userEmail} {
@@ -108,3 +135,4 @@ service cloud.firestore {
     match /{document=**} { allow read, write: if false; }
   }
 }
+

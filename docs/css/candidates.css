@@ -739,6 +739,171 @@ html.no-scroll {
   opacity: 1;
 }
 
+/* ── Popup tabs ───────────────────────────────────────────────────── */
+.popup-tabs {
+  display: flex;
+  border-bottom: 2px solid #eaeff6;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.popup-tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #7890a6;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.popup-tab:hover { color: var(--nav, #09366d); }
+
+.popup-tab.active {
+  color: var(--nav, #09366d);
+  border-bottom-color: var(--nav, #09366d);
+}
+
+/* ── Interview accordion ──────────────────────────────────────────── */
+.popup-interview {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.iv-loading {
+  text-align: center;
+  color: #999;
+  padding: 2rem 0;
+  font-size: 0.9rem;
+}
+
+.iv-item {
+  border-radius: 10px;
+  background: #f5f7fb;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.iv-q-btn {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: right;
+  cursor: pointer;
+  color: var(--nav, #09366d);
+  line-height: 1.6;
+}
+
+.iv-q-btn:hover { background: #edf0f7; }
+
+.iv-marker {
+  flex-shrink: 0;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--orange, #e47f09);
+  line-height: 1.6;
+}
+
+.iv-q-text {
+  flex: 1;
+  font-weight: 600;
+}
+
+.iv-chevron {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--orange, #e47f09);
+  margin-top: 4px;
+  transition: transform 0.2s;
+}
+
+.iv-item.open .iv-chevron {
+  transform: rotate(90deg);
+}
+
+.iv-answer {
+  display: none;
+}
+
+.iv-body {
+  display: none;
+  padding: 10px 14px 14px;
+}
+
+.iv-item.open .iv-body {
+  display: block;
+}
+
+.iv-a-full {
+  background: #fff;
+  border: 1px solid #e0e4ec;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.iv-r-full {
+  background: #f9fafb;
+  border: 1px solid #e8ebf0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+}
+
+.iv-q-p, .iv-a-p, .iv-r-p {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  margin: 0 0 6px;
+  white-space: pre-line;
+}
+
+.iv-q-p {
+  color: var(--nav, #09366d);
+  font-weight: 600;
+}
+
+.iv-a-p {
+  color: #333;
+}
+
+.iv-r-p {
+  color: #7890a6;
+  font-style: italic;
+}
+
+.iv-img {
+  width: 100%;
+  max-width: 280px;
+  border-radius: 10px;
+  margin: 6px 0;
+  display: block;
+}
+
+.iv-asker {
+  display: block;
+  font-size: 0.75rem;
+  color: #7890a6;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
 /* ── 11. Responsive overrides ───────────────────────────────────── */
 @media (min-width: 768px) {
   .card { max-width: 390px; }
@@ -755,65 +920,3 @@ html.no-scroll {
 
 @media (min-width: 1024px) { /* desktop — add overrides here */ }
 @media (min-width: 1280px) { /* wide desktop — add overrides here */ }
-
-/* ── 12. Click-hint animation (mobile only, once per session) ──── */
-@media (max-width: 767px) {
-  .click-hint {
-    position: absolute;
-    bottom: 60px;
-    right: 12px;
-    z-index: 5;
-    pointer-events: none;
-    opacity: 0;
-    animation: ch-appear 0.4s ease-out forwards;
-  }
-
-  .click-hint svg {
-    display: block;
-    width: 52px;
-    height: 52px;
-    position: relative;
-    z-index: 2;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
-    animation: ch-pulse 2s ease-in-out 3;
-  }
-
-  .click-hint .ch-ring {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border-radius: 50%;
-    border: 2.5px solid var(--orange, #e47f09);
-    opacity: 0;
-  }
-  .click-hint .ch-ring:nth-child(2) { animation: ch-ripple 2s ease-out 3; }
-  .click-hint .ch-ring:nth-child(3) { animation: ch-ripple 2s 0.12s ease-out 3; }
-  .click-hint .ch-ring:nth-child(4) { animation: ch-ripple 2s 0.24s ease-out 3; }
-
-  .click-hint.ch-done {
-    animation: ch-fadeout 0.5s ease-in forwards;
-  }
-
-  @keyframes ch-appear {
-    to { opacity: 1; }
-  }
-
-  @keyframes ch-pulse {
-    0%, 30%, 100% { transform: scale(1); }
-    12%           { transform: scale(1.15); }
-  }
-
-  @keyframes ch-ripple {
-    0%, 20%  { opacity: 0; transform: scale(1); }
-    25%      { opacity: 0.7; transform: scale(1); }
-    50%      { opacity: 0; transform: scale(4.5); }
-    100%     { opacity: 0; transform: scale(4.5); }
-  }
-
-  @keyframes ch-fadeout {
-    to { opacity: 0; }
-  }
-}

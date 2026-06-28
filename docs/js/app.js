@@ -423,6 +423,7 @@ function openPopup(person, card, pushHistory = true, via = "card") {
 
   popup.classList.add("open");
   popup.dataset.personId = person.id;
+  initPopupTabs(person.id);
   // requestAnimationFrame(() => positionPopup(card)); // Don't position the popup for now, as it is fullscreen on mobile.
 }
 
@@ -743,6 +744,129 @@ function resetChoices() {
 
   // Exit select mode and return to initial state
   exitSelectMode();
+}
+
+// ── Interview tabs & accordion ───────────────────────────────────
+const INTERVIEWS_DIR = "interviews/";
+const interviewCache = {}; // id → data | null
+const INTERVIEWS_ENABLED = new URLSearchParams(window.location.search).has("interviews");
+
+// Tab switching
+(function () {
+  const tabs = document.getElementById("popupTabs");
+  if (!tabs) return;
+  tabs.addEventListener("click", (e) => {
+    const btn = e.target.closest(".popup-tab");
+    if (!btn) return;
+    const tabName = btn.dataset.tab;
+    tabs.querySelectorAll(".popup-tab").forEach(t => t.classList.toggle("active", t === btn));
+    popup.querySelectorAll(".popup-tab-panel").forEach(p => {
+      p.style.display = p.dataset.tab === tabName ? "" : "none";
+    });
+  });
+})();
+
+async function initPopupTabs(candidateId) {
+  const tabBar     = document.getElementById("popupTabs");
+  const profileP   = document.getElementById("panelProfile");
+  const interviewP = document.getElementById("panelInterview");
+
+  console.log("initPopupTabs:", candidateId);
+
+  // Feature flag
+  if (!new URLSearchParams(window.location.search).has("interviews")) {
+    console.log("  interviews flag not set, hiding tabs");
+    tabBar.style.display = "none";
+    return;
+  }
+
+  // Reset to profile tab
+  tabBar.querySelectorAll(".popup-tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.tab === "profile")
+  );
+  profileP.style.display = "";
+  interviewP.style.display = "none";
+
+  // Check cache or fetch
+  if (!(candidateId in interviewCache)) {
+    const url = INTERVIEWS_DIR + candidateId + ".json";
+    console.log("  fetching:", url);
+    try {
+      const res = await fetch(url);
+      console.log("  response:", res.status, res.ok);
+      interviewCache[candidateId] = res.ok ? await res.json() : null;
+    } catch (err) {
+      console.error("  fetch error:", err);
+      interviewCache[candidateId] = null;
+    }
+  } else {
+    console.log("  cached:", interviewCache[candidateId] ? "has data" : "null");
+  }
+
+  const data = interviewCache[candidateId];
+  if (data && data.questions && data.questions.length > 0) {
+    console.log("  showing tabs,", data.questions.length, "questions");
+    tabBar.style.display = "flex";
+    renderAccordion(data);
+  } else {
+    console.log("  no interview data, hiding tabs");
+    tabBar.style.display = "none";
+  }
+}
+
+function renderAccordion(data) {
+  const wrap = document.getElementById("ivAccordion");
+  const loading = document.getElementById("ivLoading");
+  loading.style.display = "none";
+
+  const imgBase = INTERVIEWS_DIR + data.candidate_id + "/";
+
+  function renderParts(parts, cls) {
+    return parts.map(p => {
+      if (typeof p === "object" && p.type === "image") {
+        const src = p.url || (imgBase + escapeHTML(p.file));
+        return `<img class="iv-img" src="${src}" alt="" loading="lazy" />`;
+      }
+      return `<p class="${cls}">${escapeHTML(p)}</p>`;
+    }).join("");
+  }
+
+  wrap.innerHTML = data.questions.map((q, i) => {
+    const header = (q.question.find(p => typeof p === "string") || "").split("\n")[0];
+
+    const qHtml = renderParts(q.question, "iv-q-p");
+    const aHtml = renderParts(q.answer, "iv-a-p");
+    const rHtml = q.response.length ? renderParts(q.response, "iv-r-p") : "";
+
+    return `
+      <div class="iv-item" data-q="${i}">
+        <button class="iv-q-btn" aria-expanded="false">
+          <span class="iv-marker">ש׳</span>
+          <span class="iv-q-text">${escapeHTML(header)}</span>
+          <span class="iv-chevron">▸</span>
+        </button>
+        <div class="iv-body">
+          <div class="iv-a-full">${aHtml}</div>
+          ${rHtml ? `<div class="iv-r-full">${rHtml}</div>` : ""}
+        </div>
+      </div>`;
+  }).join("");
+
+  // Accordion toggle
+  wrap.addEventListener("click", (e) => {
+    const btn = e.target.closest(".iv-q-btn");
+    if (!btn) return;
+    const item = btn.closest(".iv-item");
+    const wasOpen = item.classList.contains("open");
+    wrap.querySelectorAll(".iv-item.open").forEach(it => {
+      it.classList.remove("open");
+      it.querySelector(".iv-q-btn").setAttribute("aria-expanded", "false");
+    });
+    if (!wasOpen) {
+      item.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+    }
+  });
 }
 
 // ── Click-hint animation (mobile, 3 cycles) ─────────────────────

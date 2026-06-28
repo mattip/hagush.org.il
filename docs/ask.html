@@ -188,7 +188,7 @@
           const c = candidates.find(x => x.id === iv.candidate_id);
           if (c) {
             iv.candidate_name  = c.name;
-            iv.candidate_photo = c.photos && c.photos[0] ? c.photos[0] : "";
+            iv.candidate_photo = c.photos && c.photos[2] ? c.photos[2] : "";
           } else {
             iv.candidate_name  = iv.candidate_name || iv.candidate_id || "?";
             iv.candidate_photo = iv.candidate_photo || "";

@@ -141,8 +141,14 @@
         <div class="popup-pin-toast" id="popupPinToast">הקישור הועתק!</div>
       </div>
 
-      <!-- ② Info table -->
-      <div class="popup-info text">
+      <!-- ② Tabs (shown only when interview exists) -->
+      <div class="popup-tabs" id="popupTabs" style="display:none">
+        <button class="popup-tab active" data-tab="profile">פרופיל</button>
+        <button class="popup-tab" data-tab="interview">ראיון וואטסאפ</button>
+      </div>
+
+      <!-- ③ Profile info (tab: profile) -->
+      <div class="popup-info text popup-tab-panel" id="panelProfile" data-tab="profile">
         <!-- links -->
         <div class="pi-row pi-links" id="piRowLinks">
           <div class="pi-link-icons" id="piLinks"></div>
@@ -183,7 +189,13 @@
         </div>
 
       </div>
-      <!-- /popup-info -->
+      <!-- /profile panel -->
+
+      <!-- ④ Interview panel (tab: interview) -->
+      <div class="popup-interview popup-tab-panel" id="panelInterview" data-tab="interview" style="display:none">
+        <div class="iv-loading" id="ivLoading">טוען ראיון…</div>
+        <div class="iv-accordion" id="ivAccordion"></div>
+      </div>
     </div>
 
     <script src="./js/app.js?v=2" data-popups="true"></script>

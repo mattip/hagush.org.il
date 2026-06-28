@@ -9,6 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Open Sans', sans-serif; background: #f5f6fa; color: #1a1a2e; min-height: 100vh; }
@@ -56,6 +57,57 @@
     .iv-actions button { background: none; border: none; cursor: pointer; font-size: .8rem; font-weight: 600; }
     .iv-actions .iv-edit { color: #09366d; }
     .iv-actions .iv-delete { color: #c0392b; }
+
+    /* ── Parsing UI ── */
+    .upload-zone { border: 2px dashed #ccd; border-radius: 10px; padding: 2rem; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: #09366d; background: #edf1f9; }
+    .upload-zone input[type="file"] { display: none; }
+    .upload-zone p { color: #666; font-size: .9rem; margin-top: .3rem; }
+    .upload-zone .upload-icon { font-size: 2rem; }
+
+    .detect-card { background: #f8f9fc; border: 1.5px solid #dde; border-radius: 10px; padding: 1rem; margin-bottom: .8rem; }
+    .detect-card.already-parsed { opacity: .5; }
+    .detect-card.skipped { opacity: .35; }
+    .detect-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; flex-wrap: wrap; gap: 4px; }
+    .detect-header .detect-date { font-weight: 700; color: #09366d; }
+    .detect-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .detect-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: .6rem; }
+    .detect-fields label { font-size: .75rem; font-weight: 600; color: #555; display: block; margin-bottom: 2px; }
+    .detect-fields input, .detect-fields select { width: 100%; padding: .4rem .6rem; border: 1.5px solid #dde; border-radius: 6px; font: inherit; font-size: .8rem; }
+    .detect-fields .hint { font-size: .7rem; color: #999; margin-top: .15rem; }
+    .detect-btn-row { display: flex; gap: 6px; }
+    .detect-btn { padding: .4rem 1rem; border: none; border-radius: 6px; font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; }
+    .detect-parse { background: #09366d; color: #fff; }
+    .detect-skip { background: #e0e3e8; color: #444; }
+
+    /* ── Editor ── */
+    .editor-wrap { margin-top: 1rem; }
+    .qa-block { background: #fff; border: 1.5px solid #dde; border-radius: 10px; margin-bottom: .8rem; overflow: hidden; }
+    .qa-block-header { display: flex; justify-content: space-between; align-items: center; padding: .6rem .8rem; background: #f5f7fb; cursor: pointer; }
+    .qa-block-header .qa-num { font-weight: 800; color: #e47f09; margin-inline-end: 6px; }
+    .qa-block-header .qa-preview { flex: 1; font-size: .8rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .qa-block-header .qa-del { background: none; border: none; color: #c0392b; cursor: pointer; font-size: .8rem; font-weight: 600; }
+    .qa-block-body { display: none; padding: .8rem; border-top: 1px solid #eee; }
+    .qa-block.open .qa-block-body { display: block; }
+    .qa-section-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; color: #7890a6; margin: .6rem 0 .3rem; }
+    .qa-section-label:first-child { margin-top: 0; }
+    .qa-msg { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 4px; }
+    .qa-msg textarea { flex: 1; border: 1px solid #e0e3e8; border-radius: 6px; padding: .4rem; font: inherit; font-size: .8rem; resize: vertical; min-height: 2.2em; line-height: 1.5; }
+    .qa-msg .qa-msg-del { background: none; border: none; color: #c0392b; cursor: pointer; font-size: .7rem; padding: 4px; }
+    .qa-msg-img { max-width: 120px; border-radius: 8px; margin: 4px 0; }
+    .qa-section-label .qa-add-msg { font-size: .7rem; color: #09366d; cursor: pointer; background: none; border: none; font-weight: 600; margin-inline-start: 8px; }
+
+    .editor-actions { display: flex; gap: 8px; margin-top: 1rem; }
+    .editor-actions button { padding: .6rem 1.2rem; border: none; border-radius: 8px; font: inherit; font-weight: 700; cursor: pointer; }
+    .btn-draft { background: #e0e3e8; color: #333; }
+    .btn-publish { background: #27ae60; color: #fff; }
+    .btn-publish:hover { filter: brightness(1.08); }
+
+    .status-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .7rem; font-weight: 600; }
+    .status-draft { background: #ffeeba; color: #856404; }
+    .status-published { background: #d4edda; color: #155724; }
+    .status-skipped { background: #e0e3e8; color: #666; }
   </style>
 </head>
 <body>
@@ -108,6 +160,31 @@
       <h2>ראיונות</h2>
       <div class="iv-list" id="ivList"><p style="color:#999">טוען…</p></div>
     </div>
+
+    <!-- ── Parse WhatsApp interview ── -->
+    <div class="form-card">
+      <h2>ניתוח ראיון מוואטסאפ</h2>
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">📁</div>
+        <p>גרור קובץ ZIP של צ׳אט וואטסאפ לכאן, או לחץ לבחירה</p>
+        <input type="file" id="zipInput" accept=".zip" />
+      </div>
+      <div id="detectStatus" style="margin-top:.8rem; font-size:.85rem; color:#666; display:none"></div>
+    </div>
+
+    <div class="form-card" id="detectResults" style="display:none">
+      <h2>ראיונות שזוהו</h2>
+      <div id="detectList"></div>
+    </div>
+
+    <div class="form-card" id="editorCard" style="display:none">
+      <h2 id="editorTitle">עריכת ראיון</h2>
+      <div class="editor-wrap" id="editorWrap"></div>
+      <div class="editor-actions">
+        <button class="btn-publish" id="btnPublish">ייצוא ZIP ופרסום</button>
+      </div>
+    </div>
+
   </div>
 
   <div class="toast" id="toast">נשמר בהצלחה!</div>
@@ -168,6 +245,7 @@
       document.getElementById("admin-panel").style.display = "block";
       document.getElementById("userEmail").textContent = user.email;
       loadInterviews();
+      loadParsingPrefs();
     } else {
       document.getElementById("login-screen").style.display = "flex";
       document.getElementById("admin-panel").style.display = "none";
@@ -307,6 +385,526 @@
     const d = document.createElement("div");
     d.textContent = s || "";
     return d.innerHTML;
+  }
+
+  // ── Parsing preferences ──
+  const PREFS_DOC = "parsing_config/defaults";
+  let parsingPrefs = {
+    interviewer_aliases: ["Lyat", "liat", "ליאת"],
+    candidate_name_map: {},
+    skipped_interviews: [],  // [{sender, date}]
+  };
+
+  async function loadParsingPrefs() {
+    try {
+      const doc = await db.doc(PREFS_DOC).get();
+      if (doc.exists) { Object.assign(parsingPrefs, doc.data()); console.log("Loaded parsing prefs:", parsingPrefs); }
+      else console.log("No parsing prefs doc yet");
+    } catch (err) { console.error("loadParsingPrefs failed:", err); }
+  }
+
+  async function saveParsingPrefs() {
+    try {
+      await db.doc(PREFS_DOC).set(parsingPrefs, { merge: true });
+      console.log("Saved parsing prefs");
+    } catch (err) { console.error("saveParsingPrefs failed:", err); }
+  }
+
+  // ── WhatsApp parser ──────────────────────────────────────────────
+  const MSG_RE = /^\[(\d{1,2}\/\d{1,2}\/\d{2,4}),\s*(\d{1,2}:\d{2}:\d{2})\]\s+(.+?):\s(.*)$/;
+  const SYSTEM_MARKERS = ["end-to-end encrypted","created group","added you","You're now an admin",
+    "changed the group","changed this group","reset this group","turned on disappearing",
+    "turned off disappearing","You changed the group","This message was deleted",
+    "changed the settings"," left"," removed "," joined using","You added"];
+  const ATTACH_RE = /<attached:\s*(.+?)>/;
+
+  function stripInvisible(s) { return s.replace(/[\u200e\u200f\u200b\u200c\u200d\ufeff]/g, ""); }
+
+  function parseMessages(text) {
+    const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    const msgs = [];
+    for (const rawLine of lines) {
+      const line = stripInvisible(rawLine).replace(/^\s+/, "");
+      const m = MSG_RE.exec(line);
+      if (m) {
+        const [, date, time, sender, body] = m;
+        const cleanSender = stripInvisible(sender).trim();
+        const cleanBody = stripInvisible(body).trim();
+        const att = ATTACH_RE.exec(cleanBody);
+        if (att) {
+          msgs.push({ date, time, sender: cleanSender, text: "", image: att[1] });
+        } else if (!cleanBody.includes("image omitted")) {
+          msgs.push({ date, time, sender: cleanSender, text: cleanBody, image: "" });
+        }
+      } else if (msgs.length) {
+        msgs[msgs.length - 1].text += "\n" + rawLine;
+      }
+    }
+    return msgs;
+  }
+
+  function isSystem(text) {
+    const c = stripInvisible(text);
+    return SYSTEM_MARKERS.some(m => c.includes(m));
+  }
+
+  function timeToMin(t) { const p = t.split(":"); return +p[0] * 60 + +p[1]; }
+
+  // ── Interview detector ──────────────────────────────────────────
+  function detectInterviews(msgs) {
+    const senderDates = {};
+    const dateMsgs = {};
+    for (const m of msgs) {
+      if (isSystem(m.text) && !m.image) continue;
+      if (!senderDates[m.sender]) senderDates[m.sender] = new Set();
+      senderDates[m.sender].add(m.date);
+      if (!dateMsgs[m.date]) dateMsgs[m.date] = [];
+      dateMsgs[m.date].push(m);
+    }
+
+    const regulars = new Set();
+    const guests = {};
+
+    for (const [sender, dates] of Object.entries(senderDates)) {
+      if (sender.startsWith("+")) continue;
+      // Skip known interviewer aliases
+      const isKnownInterviewer = parsingPrefs.interviewer_aliases.some(
+        a => sender.toLowerCase().includes(a.toLowerCase())
+      );
+      if (dates.size >= 3 || isKnownInterviewer) { regulars.add(sender); continue; }
+      let count = 0;
+      for (const m of msgs) {
+        if (m.sender === sender && (m.text.length > 10 || m.image)) count++;
+      }
+      if (count >= 3) {
+        for (const d of dates) {
+          if (!guests[d]) guests[d] = [];
+          guests[d].push({ sender, count });
+        }
+      }
+    }
+
+    const detected = [];
+    for (const [date, guestList] of Object.entries(guests)) {
+      const dayMsgs = dateMsgs[date] || [];
+      for (const guest of guestList) {
+        const guestMsgs = dayMsgs.filter(m => m.sender === guest.sender);
+        if (guestMsgs.length < 3) continue;
+
+        const regularCounts = {};
+        for (const m of dayMsgs) {
+          if (regulars.has(m.sender)) regularCounts[m.sender] = (regularCounts[m.sender] || 0) + 1;
+        }
+
+        let bestRegular = "", bestCount = 0;
+        for (const [r, c] of Object.entries(regularCounts)) {
+          if (c > bestCount) { bestRegular = r; bestCount = c; }
+        }
+        for (const alias of parsingPrefs.interviewer_aliases) {
+          for (const r of Object.keys(regularCounts)) {
+            if (r.toLowerCase().includes(alias.toLowerCase())) { bestRegular = r; break; }
+          }
+        }
+
+        const startTime = guestMsgs[0].time.slice(0, 5);
+        const endTime = guestMsgs[guestMsgs.length - 1].time.slice(0, 5);
+        const candidateGuess = fuzzyMatchCandidate(guest.sender);
+
+        const [month, day, year] = date.split("/");
+        const isoDate = `20${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+
+        const isSkipped = parsingPrefs.skipped_interviews.some(
+          s => s.sender === guest.sender && s.date === date
+        );
+
+        detected.push({
+          date, isoDate, guestSender: guest.sender,
+          guestMsgCount: guestMsgs.length, interviewer: bestRegular,
+          startTime, endTime, candidateGuess,
+          isSkipped,
+        });
+      }
+    }
+
+    detected.sort((a, b) => b.isoDate.localeCompare(a.isoDate));
+    return detected;
+  }
+
+  // ── Fuzzy match ──
+  function fuzzyMatchCandidate(displayName) {
+    const dn = displayName.toLowerCase().trim();
+    for (const [alias, id] of Object.entries(parsingPrefs.candidate_name_map)) {
+      if (dn.includes(alias.toLowerCase()) || alias.toLowerCase().includes(dn)) {
+        const c = candidates.find(x => x.id === id);
+        if (c) return c;
+      }
+    }
+    const dnTokens = dn.split(/\s+/);
+    let best = null, bestScore = 0;
+    for (const c of candidates) {
+      const nameTokens = c.name.toLowerCase().split(/\s+/);
+      let score = 0;
+      for (const t of dnTokens) {
+        for (const nt of nameTokens) {
+          if (t.length > 2 && nt.includes(t)) score += 2;
+          else if (nt.length > 2 && t.includes(nt)) score += 2;
+        }
+      }
+      if (score > bestScore) { bestScore = score; best = c; }
+    }
+    return bestScore >= 2 ? best : null;
+  }
+
+  // ── Extract Q/A blocks ──
+  const Q_MIN_LEN = 50;
+
+  function extractQA(allMsgs, interviewer, candidate, startTime, endTime) {
+    const isIv = m => m.sender.toLowerCase().includes(interviewer.toLowerCase());
+    const isCd = m => m.sender.toLowerCase().includes(candidate.toLowerCase());
+
+    const filtered = [];
+    let started = false;
+    for (const m of allMsgs) {
+      if (isSystem(m.text) && !m.image) continue;
+      if (!isIv(m) && !isCd(m)) continue;
+      const mins = timeToMin(m.time);
+      if (mins < timeToMin(startTime) || mins > timeToMin(endTime)) continue;
+      if (!started) {
+        if (isIv(m) && m.text.length > 30) started = true; else continue;
+      }
+      filtered.push(m);
+    }
+
+    const blocks = [];
+    let qParts = [], aParts = [], rParts = [];
+    let state = "Q";
+
+    function msgItem(m) {
+      if (m.image) return { type: "image", file: m.image };
+      return m.text.trim();
+    }
+
+    function flush() {
+      if (qParts.length && aParts.length) {
+        blocks.push({ question: [...qParts], answer: [...aParts], response: [...rParts] });
+      }
+      qParts = []; aParts = []; rParts = [];
+    }
+
+    for (const m of filtered) {
+      const item = msgItem(m);
+      if (isIv(m)) {
+        const isLong = m.text.length >= Q_MIN_LEN;
+        if (state === "Q") { qParts.push(item); }
+        else if (state === "A") {
+          if (isLong) { flush(); qParts.push(item); state = "Q"; }
+          else { rParts.push(item); state = "R"; }
+        } else {
+          if (isLong) { flush(); qParts.push(item); state = "Q"; }
+          else { rParts.push(item); }
+        }
+      } else if (isCd(m)) {
+        if (state === "Q") { aParts.push(item); state = "A"; }
+        else if (state === "A") { aParts.push(item); }
+        else { aParts.push(...rParts); rParts = []; aParts.push(item); state = "A"; }
+      }
+    }
+    flush();
+    return blocks;
+  }
+
+  // ── Upload handling ──────────────────────────────────────────────
+  let allParsedMsgs = [];
+  let zipImages = {};
+
+  const uploadZone = document.getElementById("uploadZone");
+  const zipInput = document.getElementById("zipInput");
+  const detectStatus = document.getElementById("detectStatus");
+
+  uploadZone.addEventListener("click", () => zipInput.click());
+  uploadZone.addEventListener("dragover", e => { e.preventDefault(); uploadZone.classList.add("drag-over"); });
+  uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("drag-over"));
+  uploadZone.addEventListener("drop", e => { e.preventDefault(); uploadZone.classList.remove("drag-over"); handleZip(e.dataTransfer.files[0]); });
+  zipInput.addEventListener("change", () => { if (zipInput.files[0]) handleZip(zipInput.files[0]); });
+
+  async function handleZip(file) {
+    detectStatus.style.display = "block";
+    detectStatus.textContent = "פותח ZIP…";
+    try {
+      const zip = await JSZip.loadAsync(file);
+      let chatText = "";
+      zipImages = {};
+      for (const [path, entry] of Object.entries(zip.files)) {
+        if (entry.dir) continue;
+        const name = path.split("/").pop();
+        if (name === "_chat.txt" || name.endsWith("_chat.txt") || (name.endsWith(".txt") && !chatText)) {
+          chatText = await entry.async("string");
+        } else if (/\.(jpg|jpeg|png|webp|gif)$/i.test(name)) {
+          zipImages[name] = await entry.async("blob");
+        }
+      }
+      if (!chatText) { detectStatus.textContent = "לא נמצא קובץ _chat.txt ב-ZIP"; return; }
+      detectStatus.textContent = "מנתח הודעות…";
+      allParsedMsgs = parseMessages(chatText);
+      detectStatus.textContent = `${allParsedMsgs.length} הודעות. מזהה ראיונות…`;
+      const detected = detectInterviews(allParsedMsgs);
+      detectStatus.textContent = `${detected.length} ראיונות זוהו`;
+      renderDetected(detected);
+    } catch (err) {
+      detectStatus.textContent = "שגיאה: " + err.message;
+    }
+  }
+
+  // ── Render detected interviews ──
+  function renderDetected(interviews) {
+    const wrap = document.getElementById("detectList");
+    document.getElementById("detectResults").style.display = interviews.length ? "block" : "none";
+
+    wrap.innerHTML = interviews.map((iv, i) => {
+      const extra = iv.isSkipped ? " skipped" : "";
+      const badges = [];
+      if (iv.isSkipped) badges.push('<span class="status-badge status-skipped">לא רלוונטי</span>');
+
+      const guess = iv.candidateGuess;
+      const candidateOptions = '<option value="">— בחרו —</option>' + candidates.map(c =>
+        `<option value="${esc(c.id)}" ${guess && guess.id === c.id ? "selected" : ""}>${esc(c.name)}</option>`
+      ).join("");
+
+      const ivName = iv.interviewer || parsingPrefs.interviewer_aliases[0] || "";
+      const aliasHint = parsingPrefs.interviewer_aliases.length
+        ? `<div class="hint">מוכרים: ${esc(parsingPrefs.interviewer_aliases.join(", "))}</div>`
+        : "";
+
+      const btns = iv.isSkipped
+        ? `<button class="detect-btn detect-skip" onclick="unskipDetected(${i})">שחזר</button>`
+        : `<button class="detect-btn detect-parse" onclick="parseDetected(${i})">נתח ▸</button>
+           <button class="detect-btn detect-skip" onclick="skipDetected(${i})">לא רלוונטי</button>`;
+
+      return `<div class="detect-card${extra}" data-idx="${i}">
+        <div class="detect-header">
+          <span class="detect-date">${esc(iv.isoDate)}</span>
+          <div class="detect-badges">
+            <span class="iv-badge iv-past">${esc(iv.guestSender)} (${iv.guestMsgCount})</span>
+            <span class="iv-badge iv-upcoming">מראיינ.ת: ${esc(ivName)}</span>
+            ${badges.join("")}
+          </div>
+        </div>
+        <div class="detect-fields">
+          <div>
+            <label>מועמד.ת</label>
+            <select class="det-candidate" data-idx="${i}">${candidateOptions}</select>
+          </div>
+          <div>
+            <label>מראיינ.ת</label>
+            <input class="det-interviewer" data-idx="${i}" value="${esc(ivName)}" />
+            ${aliasHint}
+          </div>
+          <div>
+            <label>התחלה</label>
+            <input type="time" class="det-start" data-idx="${i}" value="${esc(iv.startTime)}" dir="ltr" />
+          </div>
+          <div>
+            <label>סיום</label>
+            <input type="time" class="det-end" data-idx="${i}" value="${esc(iv.endTime)}" dir="ltr" />
+          </div>
+        </div>
+        <div class="detect-btn-row">${btns}</div>
+      </div>`;
+    }).join("");
+
+    window._detected = interviews;
+  }
+
+  // ── Skip / unskip ──
+  function skipDetected(idx) {
+    const iv = window._detected[idx];
+    parsingPrefs.skipped_interviews.push({ sender: iv.guestSender, date: iv.date });
+    saveParsingPrefs();
+    iv.isSkipped = true;
+    renderDetected(window._detected);
+  }
+
+  function unskipDetected(idx) {
+    const iv = window._detected[idx];
+    parsingPrefs.skipped_interviews = parsingPrefs.skipped_interviews.filter(
+      s => !(s.sender === iv.guestSender && s.date === iv.date)
+    );
+    saveParsingPrefs();
+    iv.isSkipped = false;
+    renderDetected(window._detected);
+  }
+
+  // ── Parse a detected interview ──
+  let currentEditData = null;
+  let currentEditImages = {};
+
+  async function parseDetected(idx) {
+    const iv = window._detected[idx];
+    const card = document.querySelector(`.detect-card[data-idx="${idx}"]`);
+    const candidateId = card.querySelector(".det-candidate").value;
+    const interviewer = card.querySelector(".det-interviewer").value;
+    const startTime = card.querySelector(".det-start").value;
+    const endTime = card.querySelector(".det-end").value;
+
+    if (!candidateId || !interviewer) { alert("נא לבחור מועמד.ת ומראיינ.ת"); return; }
+
+    const candidate = candidates.find(c => c.id === candidateId);
+    const candidateName = candidate ? candidate.name : candidateId;
+
+    // Save mapping for next time
+    parsingPrefs.candidate_name_map[iv.guestSender] = candidateId;
+    if (!parsingPrefs.interviewer_aliases.includes(interviewer)) {
+      parsingPrefs.interviewer_aliases.push(interviewer);
+    }
+    saveParsingPrefs();
+
+    const blocks = extractQA(allParsedMsgs, interviewer, iv.guestSender, startTime, endTime);
+    const questions = blocks.map((b, i) => ({
+      id: `q${i + 1}`, question: b.question, answer: b.answer, response: b.response,
+    }));
+
+    currentEditData = {
+      candidate_id: candidateId, candidate_name: candidateName,
+      date: iv.isoDate, interviewer, status: "draft", questions,
+    };
+    currentEditImages = {};
+    for (const b of blocks) {
+      for (const part of [...b.question, ...b.answer, ...b.response]) {
+        if (typeof part === "object" && part.type === "image" && zipImages[part.file]) {
+          currentEditImages[part.file] = zipImages[part.file];
+        }
+      }
+    }
+    renderEditor(questions, candidateName, currentEditImages);
+  }
+
+  // ── Editor ──────────────────────────────────────────────────────
+  function renderEditor(questions, name, images) {
+    const editorCard = document.getElementById("editorCard");
+    editorCard.style.display = "block";
+    document.getElementById("editorTitle").textContent = `עריכת ראיון — ${name}`;
+    const wrap = document.getElementById("editorWrap");
+
+    wrap.innerHTML = questions.map((q, qi) => {
+      const preview = (q.question.find(p => typeof p === "string") || "").split("\n")[0].slice(0, 60);
+
+      function renderMsgs(parts, section) {
+        return parts.map((p, pi) => {
+          if (typeof p === "object" && p.type === "image") {
+            const blob = images[p.file];
+            const src = blob ? URL.createObjectURL(blob) : (p.url || "");
+            return `<div class="qa-msg" data-q="${qi}" data-s="${section}" data-i="${pi}">
+              ${src ? `<img class="qa-msg-img" src="${src}" />` : `<span style="color:#999">[${esc(p.file || "image")}]</span>`}
+              <button class="qa-msg-del" onclick="delMsg(${qi},'${section}',${pi})">✕</button>
+            </div>`;
+          }
+          return `<div class="qa-msg" data-q="${qi}" data-s="${section}" data-i="${pi}">
+            <textarea rows="1" oninput="autoGrow(this);updateMsg(${qi},'${section}',${pi},this.value)">${esc(p)}</textarea>
+            <button class="qa-msg-del" onclick="delMsg(${qi},'${section}',${pi})">✕</button>
+          </div>`;
+        }).join("");
+      }
+
+      return `<div class="qa-block open" data-qi="${qi}">
+        <div class="qa-block-header" onclick="this.closest('.qa-block').classList.toggle('open')">
+          <span><span class="qa-num">ש׳${qi + 1}</span><span class="qa-preview">${esc(preview)}</span></span>
+          <button class="qa-del" onclick="event.stopPropagation();delBlock(${qi})">מחק</button>
+        </div>
+        <div class="qa-block-body">
+          <div class="qa-section-label">שאלה<button class="qa-add-msg" onclick="addMsg(${qi},'question')">+ הודעה</button></div>
+          ${renderMsgs(q.question, "question")}
+          <div class="qa-section-label">תשובה<button class="qa-add-msg" onclick="addMsg(${qi},'answer')">+ הודעה</button></div>
+          ${renderMsgs(q.answer, "answer")}
+          <div class="qa-section-label">תגובה<button class="qa-add-msg" onclick="addMsg(${qi},'response')">+ הודעה</button></div>
+          ${renderMsgs(q.response, "response")}
+        </div>
+      </div>`;
+    }).join("");
+
+    editorCard.scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => wrap.querySelectorAll("textarea").forEach(autoGrow), 50);
+  }
+
+  function autoGrow(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
+
+  function updateMsg(qi, section, pi, value) {
+    currentEditData.questions[qi][section][pi] = value;
+  }
+
+  function delMsg(qi, section, pi) {
+    currentEditData.questions[qi][section].splice(pi, 1);
+    renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
+  }
+
+  function addMsg(qi, section) {
+    currentEditData.questions[qi][section].push("");
+    renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
+  }
+
+  function delBlock(qi) {
+    if (!confirm("למחוק בלוק שאלה זה?")) return;
+    currentEditData.questions.splice(qi, 1);
+    currentEditData.questions.forEach((q, i) => q.id = `q${i + 1}`);
+    renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
+  }
+
+  // ── Publish as ZIP ──────────────────────────────────────────────
+  document.getElementById("btnPublish").addEventListener("click", () => publishZip());
+
+  async function publishZip() {
+    if (!currentEditData) { console.warn("publishZip: no currentEditData"); return; }
+    const btn = document.getElementById("btnPublish");
+    btn.disabled = true;
+    btn.textContent = "מייצר ZIP…";
+
+    try {
+      const cid = currentEditData.candidate_id;
+      const zip = new JSZip();
+
+      // Build clean JSON — keep image refs as {type, file}
+      const jsonData = {
+        candidate_id: cid,
+        candidate_name: currentEditData.candidate_name,
+        date: currentEditData.date,
+        questions: currentEditData.questions.map((q, i) => ({
+          id: `q${i + 1}`,
+          question: q.question,
+          answer: q.answer,
+          response: q.response,
+        })),
+      };
+      zip.file(`${cid}.json`, JSON.stringify(jsonData, null, 2));
+
+      // Add images to subfolder
+      let imgCount = 0;
+      for (const q of currentEditData.questions) {
+        for (const section of ["question", "answer", "response"]) {
+          for (const p of q[section]) {
+            if (typeof p === "object" && p.type === "image" && p.file && currentEditImages[p.file]) {
+              zip.file(`${cid}/${p.file}`, currentEditImages[p.file]);
+              imgCount++;
+            }
+          }
+        }
+      }
+      console.log(`ZIP: ${cid}.json + ${imgCount} images`);
+
+      // Download
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `interview_${cid}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      showToast();
+    } catch (err) {
+      console.error("publishZip FAILED:", err);
+      alert("שגיאה: " + err.message);
+    }
+    btn.disabled = false;
+    btn.textContent = "ייצוא ZIP ופרסום";
   }
   </script>
 </body>
