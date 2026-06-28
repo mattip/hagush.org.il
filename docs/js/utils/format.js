@@ -1,15 +1,6 @@
 // Pure formatting utilities (no side effects, no DOM)
 
 /**
- * Format a percentage from numerator/denominator.
- * @param {number} numerator - Dividend
- * @param {number} denominator - Divisor
- * @returns {string} Formatted percentage (e.g., "42.5%")
- */
-export const formatPercentage = (numerator, denominator) =>
-  denominator > 0 ? Math.round((numerator / denominator) * 1000) / 10 + "%" : "0%";
-
-/**
  * Convert Firestore Timestamp or Date to human-relative time string (Hebrew).
  * @param {Date|Timestamp|null} date - Date to format
  * @returns {string} Relative time (e.g., "לפני 5 דק׳") or "—"
@@ -36,23 +27,3 @@ export const toDate = (value) =>
     : value
       ? new Date(value)
       : null;
-
-/**
- * Normalize phone number to international format (972...).
- * @param {string} rawPhone - Phone number in any format
- * @returns {string} Normalized phone (e.g., "972501234567") or ""
- */
-export const normalizePhone = (rawPhone) => {
-  let digits = String(rawPhone || "").replace(/\D/g, "");
-
-  if (!digits) return "";
-  if (digits.indexOf("972") === 0) {
-    /* already international */
-  } else if (digits.charAt(0) === "0") {
-    digits = "972" + digits.slice(1);
-  } else if (digits.length === 9) {
-    digits = "972" + digits;
-  }
-
-  return digits;
-};
