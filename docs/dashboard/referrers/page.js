@@ -12,13 +12,12 @@ import {
   getFirestore,
   getDoc,
   doc,
-  setDoc,
-  serverTimestamp,
+  updateDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { FIREBASE_CONFIG } from "../../js/utils/firebase-config.js";
 import { escapeHtml } from "../../js/utils/html-escape.js";
 import { formatRelativeTime } from "../../js/utils/format.js";
-import { getById, show, hide } from "../../js/utils/dom.js";
+import { show, hide } from "../../js/utils/dom.js";
 import {
   fetchReferrers,
   fetchReferrerGroups,
@@ -32,6 +31,7 @@ import {
   fetchJoinFormSubmissions,
 } from "../data.js";
 import { renderReferrers } from "./render.js";
+import { REFERRER_PAGE } from "./referrers.selectors.js";
 
 const app = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
@@ -48,38 +48,24 @@ const ROLE_LABELS = {
   groupLeader: "מנהל·ת קבוצה",
 };
 
-const loginBtn = getById("login-btn");
-const logoutBtn = getById("logout-btn");
-const naLogout = getById("na-logout");
-const loginScreen = getById("login");
-const naScreen = getById("noaccess");
-const dashScreen = getById("dash");
-const loadingEl = getById("loading");
-const contentEl = getById("content");
-const naEmail = getById("na-email");
-const roleBadge = getById("role-badge");
-const userEmail = getById("user-email");
-const refreshBtn = getById("refresh-btn");
-const updatedEl = getById("updated");
-
 let userIdentity = null;
 
-loginBtn?.addEventListener("click", async () => {
-  loginBtn.disabled = true;
-  getById("login-err").textContent = "";
+REFERRER_PAGE.loginBtn?.addEventListener("click", async () => {
+  REFERRER_PAGE.loginBtn.disabled = true;
+  REFERRER_PAGE.loginErr.textContent = "";
   try {
     await signInWithPopup(auth, new GoogleAuthProvider());
   } catch (err) {
     if (err?.code !== "auth/cancelled-popup-request") {
-      getById("login-err").textContent = "שגיאה בכניסה: " + (err?.code || err);
+      REFERRER_PAGE.loginErr.textContent = "שגיאה בכניסה: " + (err?.code || err);
     }
   } finally {
-    loginBtn.disabled = false;
+    REFERRER_PAGE.loginBtn.disabled = false;
   }
 });
 
-logoutBtn?.addEventListener("click", () => signOut(auth));
-naLogout?.addEventListener("click", () => signOut(auth));
+REFERRER_PAGE.logoutBtn?.addEventListener("click", () => signOut(auth));
+REFERRER_PAGE.naLogout?.addEventListener("click", () => signOut(auth));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data Loading
@@ -89,8 +75,8 @@ const loadData = async () => {
   if (!userIdentity) return;
 
   try {
-    show(loadingEl);
-    hide(contentEl);
+    show(REFERRER_PAGE.loadingEl);
+    hide(REFERRER_PAGE.contentEl);
 
     const [submissionsRaw, referrers, groups] = await Promise.all([
       fetchJoinFormSubmissions(db),
@@ -116,30 +102,28 @@ const loadData = async () => {
       userRole: userIdentity.role,
     });
 
-    updatedEl.textContent = "עודכן " + formatRelativeTime(new Date());
+    REFERRER_PAGE.updatedEl.textContent = "עודכן " + formatRelativeTime(new Date());
 
-    hide(loadingEl);
-    show(contentEl);
+    hide(REFERRER_PAGE.loadingEl);
+    show(REFERRER_PAGE.contentEl);
   } catch (e) {
     console.error("Load failed:", e);
-    loadingEl.innerHTML = '<div class="empty">שגיאה בטעינת הנתונים: ' + escapeHtml(e?.message || e) + "</div>";
+    REFERRER_PAGE.loadingEl.innerHTML = '<div class="empty">שגיאה בטעינת הנתונים: ' + escapeHtml(e?.message || e) + "</div>";
   }
 };
 
-refreshBtn?.addEventListener("click", loadData);
+REFERRER_PAGE.refreshBtn?.addEventListener("click", loadData);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Event Handlers
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Add referrer button - use event delegation
 document.addEventListener("click", async (e) => {
   const addReferrerBtn = e.target.closest("#add-referrer-btn");
   if (addReferrerBtn) {
     e.preventDefault();
 
-    const referrersRoot = getById("referrers-root");
-    const table = referrersRoot?.querySelector("table tbody");
+    const table = REFERRER_PAGE.referrersRoot?.querySelector("table tbody");
     if (!table) return;
 
     const tempId = `new-referrer-${Date.now()}`;
@@ -162,12 +146,10 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // Add group button - use event delegation
   const addGroupBtn = e.target.closest("#add-group-btn");
   if (addGroupBtn) {
     e.preventDefault();
 
-    // Find the groups table and add a new row with form
     const groupsSection = addGroupBtn.closest(".panel");
     if (!groupsSection) return;
 
@@ -193,29 +175,21 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // Edit referrer - show inline form with all fields
   const editBtn = e.target.closest('[data-action="edit"]');
   if (editBtn) {
     e.preventDefault();
     const code = editBtn.dataset.code;
     const row = editBtn.closest("tr");
 
-    // Get current referrer from the data we have
-    const referrersRoot = getById("referrers-root");
-    const allRows = referrersRoot?.querySelectorAll("tr[data-ref-code]") || [];
-
-    // Get current values from table
     const cells = row?.querySelectorAll("td") || [];
     const name = cells[1]?.textContent || "";
     const type = cells[2]?.textContent?.includes("מנהל") ? "organizer" : "individual";
     const groupName = cells[3]?.textContent || "";
 
-    // Get group options and find matching groupId for current group
-    const groupOptionsEl = getById("referrer-group-options");
+    const groupOptionsEl = REFERRER_PAGE.referrersRoot?.querySelector("#referrer-group-options");
     const groupOptions = groupOptionsEl?.innerHTML || "";
     let currentGroupId = "";
     if (groupName && groupName !== "—") {
-      // Find the group ID that matches the current group name
       const allOptions = groupOptionsEl?.querySelectorAll("option") || [];
       for (const option of allOptions) {
         if (option.textContent.trim() === groupName.trim()) {
@@ -225,7 +199,6 @@ document.addEventListener("click", async (e) => {
       }
     }
 
-    // Create or show edit form
     let editRow = document.getElementById(`edit-referrer-${code}`);
     if (!editRow) {
       editRow = document.createElement("tr");
@@ -251,11 +224,8 @@ document.addEventListener("click", async (e) => {
       `;
       row?.parentNode.insertBefore(editRow, row.nextSibling);
 
-      // Set the correct selected value after creating the form
       const groupSelect = editRow.querySelector("[name=groupId]");
-      if (currentGroupId) {
-        groupSelect.value = currentGroupId;
-      }
+      if (currentGroupId) groupSelect.value = currentGroupId;
     }
 
     editRow.hidden = false;
@@ -263,7 +233,6 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // Delete referrer
   const deleteBtn = e.target.closest('[data-action="delete"]');
   if (deleteBtn) {
     e.preventDefault();
@@ -281,7 +250,6 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // Delete group
   const deleteGroupBtn = e.target.closest('[data-action="delete-group"]');
   if (deleteGroupBtn) {
     e.preventDefault();
@@ -299,12 +267,11 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // Toggle edit group form
   const editGroupBtn = e.target.closest('[data-action="edit-group"]');
   if (editGroupBtn) {
     e.preventDefault();
     const groupId = editGroupBtn.dataset.groupId;
-    const formRow = getById(`edit-group-${groupId}`);
+    const formRow = document.getElementById(`edit-group-${groupId}`);
     if (!formRow) return;
     const open = !formRow.hidden;
     formRow.hidden = open;
@@ -313,7 +280,6 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // Cancel edit
   const cancelBtn = e.target.closest('[data-action="resolve-cancel"]');
   if (cancelBtn) {
     e.preventDefault();
@@ -321,7 +287,7 @@ document.addEventListener("click", async (e) => {
     if (formRow) {
       formRow.hidden = true;
       const groupId = formRow.dataset.groupId;
-      const btn = getById("referrers-root")?.querySelector(
+      const btn = REFERRER_PAGE.referrersRoot?.querySelector(
         `[data-action="edit-group"][data-group-id="${groupId}"]`
       );
       if (btn) btn.setAttribute("aria-expanded", "false");
@@ -335,7 +301,6 @@ document.addEventListener("submit", async (e) => {
   const form = e.target;
   e.preventDefault();
 
-  // New referrer form
   if (form.dataset.action === "resolve-form-new-referrer") {
     const code = form.querySelector("[name=code]")?.value;
     const name = form.querySelector("[name=name]")?.value;
@@ -359,7 +324,6 @@ document.addEventListener("submit", async (e) => {
     return;
   }
 
-  // Existing referrer edit form
   if (form.dataset.action === "resolve-form-referrer") {
     const code = form.dataset.code;
     const name = form.querySelector("[name=name]")?.value;
@@ -382,7 +346,6 @@ document.addEventListener("submit", async (e) => {
     return;
   }
 
-  // Group form
   if (form.dataset.action === "resolve-form") {
     const name = form.querySelector("[name=name]")?.value;
     if (!name?.trim()) return;
@@ -393,13 +356,8 @@ document.addEventListener("submit", async (e) => {
 
     try {
       if (isNew) {
-        // For new groups, don't pass an id - let Firestore generate one
         await saveGroup(db, { name: name.trim() });
       } else {
-        // For existing groups, update with merge
-        const { updateDoc } = await import(
-          "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-        );
         await updateDoc(doc(db, "referrer_groups", groupId), { name: name.trim() });
       }
       row?.remove();
@@ -418,9 +376,9 @@ document.addEventListener("submit", async (e) => {
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    hide(dashScreen);
-    hide(naScreen);
-    show(loginScreen);
+    hide(REFERRER_PAGE.dashScreen);
+    hide(REFERRER_PAGE.naScreen);
+    show(REFERRER_PAGE.loginScreen);
     return;
   }
 
@@ -433,10 +391,10 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   if (!roleData || roleData.active !== true) {
-    naEmail.textContent = user.email;
-    hide(loginScreen);
-    hide(dashScreen);
-    show(naScreen);
+    REFERRER_PAGE.naEmail.textContent = user.email;
+    hide(REFERRER_PAGE.loginScreen);
+    hide(REFERRER_PAGE.dashScreen);
+    show(REFERRER_PAGE.naScreen);
     return;
   }
 
@@ -448,12 +406,12 @@ onAuthStateChanged(auth, async (user) => {
     referrerId: roleData.referrerId || null,
   };
 
-  roleBadge && (roleBadge.textContent = ROLE_LABELS[userIdentity.role] || userIdentity.role);
-  userEmail && (userEmail.textContent = userIdentity.email);
+  if (REFERRER_PAGE.roleBadge) REFERRER_PAGE.roleBadge.textContent = ROLE_LABELS[userIdentity.role] || userIdentity.role;
+  if (REFERRER_PAGE.userEmail) REFERRER_PAGE.userEmail.textContent = userIdentity.email;
 
-  hide(loginScreen);
-  hide(naScreen);
-  show(dashScreen);
+  hide(REFERRER_PAGE.loginScreen);
+  hide(REFERRER_PAGE.naScreen);
+  show(REFERRER_PAGE.dashScreen);
 
   loadData();
 });
