@@ -2,6 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ── Utility Helper methods ──────────────────────────────────────
 
     function authed()  { return request.auth != null; }
     function email()   { return request.auth.token.email; }
@@ -19,6 +20,8 @@ service cloud.firestore {
     function mgrFull()         { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'full'; }
     function mgrGroup()        { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'group'; }
     function influencerRole()  { return hasRole() && roleDoc().role == 'influencer'; }
+    function validStr(val, max) { return val is string && val.size() <= max; }
+
     function canReadScoped(res) {
       return isAdmin() || mgrFull()
         || (mgrGroup()       && res.data.groupId      == roleDoc().groupId)
@@ -34,16 +37,6 @@ service cloud.firestore {
         && request.resource.data.status in ['clean','test','duplicate','suspicious'];
     }
     match /questions/{id}    { allow read: if isAdmin() || mgrFull(); allow write: if false; }
-
-    // ── telemetry (server-written only) ──────────────────────────────────────
-    match /page_views/{id} {
-      allow read:   if canReadScoped(resource);
-      allow write:  if false;
-    }
-    match /interactions/{id} {
-      allow read:   if canReadScoped(resource);
-      allow write:  if false;
-    }
 
     // ── join form (anonymous create, PII, admin-read) ─────────────────────────
     match /join_form/{id} {
@@ -61,15 +54,15 @@ service cloud.firestore {
             'referrer',
             'source'
           ])
-        && request.resource.data.firstName is string
-        && request.resource.data.lastName  is string
-        && request.resource.data.phone     is string
-        && request.resource.data.email     is string
-        && request.resource.data.referrer  is string
-        && request.resource.data.city      is string
-        && request.resource.data.idNumber  is string
-        && (request.resource.data.registered is bool || request.resource.data.registered is string)
-        && request.resource.data.source    is string;
+        && validStr(request.resource.data.firstName, 100)
+        && validStr(request.resource.data.lastName,  100)
+        && validStr(request.resource.data.phone,      30)
+        && validStr(request.resource.data.email,     254)
+        && validStr(request.resource.data.city,      100)
+        && validStr(request.resource.data.idNumber,   20)
+        && validStr(request.resource.data.source,    256)
+        && validStr(request.resource.data.referrer,  256)
+        && (request.resource.data.registered is bool || request.resource.data.registered is string);
       allow read:           if isAdmin();
       allow update, delete: if false;
     }
@@ -115,4 +108,3 @@ service cloud.firestore {
     match /{document=**} { allow read, write: if false; }
   }
 }
-

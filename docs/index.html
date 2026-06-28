@@ -227,6 +227,11 @@
                 referrer:   form.referrer.value,
               };
 
+              // Capture to Firestore before the backend call so it's saved even if Apps Script fails.
+              try {
+                if (window.hagushFormSubmit) window.hagushFormSubmit(data);
+              } catch (e) { /* never block the submit */ }
+
               // With mode: no-cors the browser can't read the response,
               // but the request goes through. A thrown error means a real
               // network failure (offline, wrong URL, DNS). We treat a
@@ -348,5 +353,6 @@
       <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
       כל הזכויות שמורות לעכשיו באות! 2026
     </footer>
+    <script type="module" src="js/reporter.js"></script>
   </body>
 </html>
