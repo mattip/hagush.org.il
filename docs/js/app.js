@@ -104,6 +104,7 @@ function syncPopupToUrl(reason) {
     if (popup.classList.contains("open")) {
       closePopup();
     return;
+   }
   }
   const match = allPeople.find((p) =>
     idParam ? p.id === idParam : p.name === nameParam,
