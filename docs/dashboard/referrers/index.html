@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>ניהול מפנים — עכשיו באות!</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+
+<!-- ── Login screen ── -->
+<div id="login" class="login">
+  <div class="login-card">
+    <h1>דשבורד עכשיו באות!</h1>
+    <p class="sub">כניסת מנהלים</p>
+    <button id="login-btn" class="login-btn">כניסה עם Google</button>
+    <p id="login-err" class="login-err"></p>
+  </div>
+</div>
+
+<!-- ── No-access screen ── -->
+<div id="noaccess" class="login hidden">
+  <div class="login-card">
+    <h1>אין הרשאה</h1>
+    <p class="sub">החשבון <span id="na-email"></span> אינו מורשה לצפות בלוח. פנו למנהל המערכת.</p>
+    <button id="na-logout" class="login-btn">התנתקות</button>
+  </div>
+</div>
+
+<!-- ── Referrer management ── -->
+<div id="dash" class="wrap hidden" style="padding-top:0">
+  <div class="band">
+    <div class="band-row">
+      <div>
+        <p class="eyebrow"><a href="../index.html" class="back-link">← לוח ניהול</a></p>
+        <div class="title-line">
+          <h1 class="page-title" id="dash-title">ניהול מפנים</h1>
+          <span class="role-badge" id="role-badge">—</span>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="refresh-btn" class="btn">רענן נתונים</button>
+        <span class="muted" id="updated">—</span>
+        <span class="email" id="user-email"></span>
+        <button id="logout-btn" class="btn">יציאה</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="empty"><span class="spinner"></span> טוען נתונים…</div>
+
+  <div id="content" class="hidden">
+    <div id="referrers-root" style="margin-top:24px"></div>
+  </div>
+
+</div>
+
+<script type="module" src="page.js"></script>
+</body>
+</html>

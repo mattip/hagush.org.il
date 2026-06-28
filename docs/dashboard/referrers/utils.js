@@ -1,7 +1,10 @@
-// Static referrer map — Firestore-backed support to be added in a future PR.
-// Map<code, { name, active }>
+// Shared utilities for referrer management.
 
-const SEED_DATA = [
+// Pre-migration fallback seed data.
+// Run seedReferrers(db) once to migrate these into Firestore, then delete or
+// keep this list only for local tests.
+
+export const SEED_ENTRIES = [
   { id: "1",  name: "נופר בן צור" },
   { id: "2",  name: "פולה קויש" },
   { id: "3",  name: "דורית זמיר" },
@@ -29,6 +32,29 @@ const SEED_DATA = [
   { id: "25", name: "הילה גולן" },
 ];
 
-export const REFERRERS_MAP = new Map(
-  SEED_DATA.map(({ id, name }) => [id, { name, active: true }])
-);
+/** @returns {Map<string, Referrer>} */
+export const buildSeedMap = () =>
+  new Map(
+    SEED_ENTRIES.map(({ id, name }) => [
+      id,
+      { code: id, name, active: true, type: "individual", groupId: null },
+    ])
+  );
+
+/**
+ * Builds a stable, human-ish group ID of the form `slug-hash`, e.g. "tzfi-h3k".
+ * The slug is an ASCII-only reduction of the name (empty for Hebrew-only names,
+ * in which case we fall back to "grp"); the 3-char suffix guarantees uniqueness
+ * even when two groups share a name.
+ *
+ * @param {string} name
+ * @returns {string}
+ */
+export const buildGroupId = (name) => {
+  const slug = String(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const hash = Math.random().toString(36).slice(2, 5);
+  return `${slug || "grp"}-${hash}`;
+};
