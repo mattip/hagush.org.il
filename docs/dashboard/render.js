@@ -5,13 +5,11 @@
 import { escapeHtml } from "../js/utils/html-escape.js";
 import { formatRelativeTime, toDate } from "../js/utils/format.js";
 import { getById, createHelpTooltip } from "../js/utils/dom.js";
+import { chevron as createChevron } from "./chevron.component.js";
 
 const RECENT_ROWS_LIMIT = 50;
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("he-IL");
-
-const createChevron = () =>
-  '<svg class="chev" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 const createStatCard = (label, value, accent, subtext, helpText) =>
   `<div class="stat ${accent ? "accent" : ""}">

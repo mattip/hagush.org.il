@@ -26,16 +26,7 @@ import {
 } from "./data.js";
 import { render } from "./render.js";
 import { fetchReferrers } from "./referrers/referrers.api.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Config
-// ─────────────────────────────────────────────────────────────────────────────
-
-const ROLE_LABELS = {
-  admin: "מנהל·ת",
-  manager: "מנהל·ת תוכן",
-  influencer: "מוביל·ה",
-};
+import { ROLE_LABELS } from "./roles.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Firebase
@@ -49,7 +40,7 @@ const db = getFirestore(app);
 // State
 // ─────────────────────────────────────────────────────────────────────────────
 
-let userIdentity = null; // { email, role, scope, groupId, influencerId }
+let userIdentity = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth
@@ -105,22 +96,14 @@ const handleAuth = async (user) => {
   userIdentity = {
     email: user.email,
     role: roleData.role,
-    scope: roleData.scope || "full",
     groupId: roleData.groupId || null,
-    influencerId: roleData.influencerId || null,
+    referrerId: roleData.referrerId || null,
   };
 
   hide(getById("login"));
   hide(getById("noaccess"));
   show(getById("dash"));
-  try {
-    initializeChrome();
-  } catch (e) {
-    console.error("initializeChrome failed", e);
-    getById("loading").innerHTML =
-      '<div class="empty">שגיאת אתחול: ' + escapeHtml(e?.message || e) + "</div>";
-    return;
-  }
+  initializeChrome();
   loadData();
 };
 
@@ -155,7 +138,7 @@ const initializeChrome = () => {
   getById("role-badge").textContent = ROLE_LABELS[userIdentity.role] || userIdentity.role;
   getById("user-email").textContent = userIdentity.email;
   getById("dash-title").textContent =
-    userIdentity.role === "influencer" ? "הדף שלי" : "לוח ניהול כללי";
+    "לוח ניהול כללי";
 
   getById("refresh-btn").addEventListener("click", loadData);
 };

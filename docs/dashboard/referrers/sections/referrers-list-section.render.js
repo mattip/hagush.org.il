@@ -1,5 +1,7 @@
 // Referrers list section rendering
 
+import { sortByCode } from "../utils.js";
+
 export const renderReferrersListSection = (
   referrers,
   { isAdmin, groups, referrerCounts }
@@ -14,22 +16,7 @@ export const renderReferrersListSection = (
       const groupName = ref.groupId ? groups?.get(ref.groupId)?.name || "—" : "—";
       return { ref, count, groupName };
     })
-    .sort((a, b) => {
-      // Sort by code/ID (numeric first, then alphabetic)
-      const codeA = a.ref.code;
-      const codeB = b.ref.code;
-
-      // Try numeric comparison first
-      const numA = parseInt(codeA);
-      const numB = parseInt(codeB);
-
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numA - numB;
-      }
-
-      // Fall back to string comparison
-      return codeA.localeCompare(codeB, "he");
-    })
+    .sort((a, b) => sortByCode(a.ref.code, b.ref.code))
     .map(({ ref, count, groupName }) => {
 
       return `

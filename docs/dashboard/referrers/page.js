@@ -32,21 +32,11 @@ import {
 } from "../data.js";
 import { renderReferrers } from "./render.js";
 import { REFERRER_PAGE } from "./referrers.selectors.js";
+import { ROLE_LABELS } from "../roles.js";
 
 const app = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Auth
-// ─────────────────────────────────────────────────────────────────────────────
-
-const ROLE_LABELS = {
-  admin: "מנהל·ת",
-  manager: "מנהל·ת תוכן",
-  referrer: "מפנה",
-  groupLeader: "מנהל·ת קבוצה",
-};
 
 let userIdentity = null;
 
@@ -86,18 +76,22 @@ const loadData = async () => {
 
     const registrations = submissionsRaw.map(transformSubmissionToRegistration);
     const referrerCounts = new Map();
+    const groupCounts = new Map();
 
     for (const reg of registrations) {
       const code = reg.referrer || "";
-      if (code) {
-        referrerCounts.set(code, (referrerCounts.get(code) || 0) + 1);
+      if (!code) continue;
+      referrerCounts.set(code, (referrerCounts.get(code) || 0) + 1);
+      const ref = referrers.get(code);
+      if (ref?.groupId) {
+        groupCounts.set(ref.groupId, (groupCounts.get(ref.groupId) || 0) + 1);
       }
     }
 
     renderReferrers({
       referrers,
       groups,
-      groupCounts: new Map(),
+      groupCounts,
       referrerCounts,
       userRole: userIdentity.role,
     });
@@ -401,7 +395,6 @@ onAuthStateChanged(auth, async (user) => {
   userIdentity = {
     email: user.email,
     role: roleData.role,
-    scope: roleData.scope || "full",
     groupId: roleData.groupId || null,
     referrerId: roleData.referrerId || null,
   };

@@ -12,7 +12,6 @@
  * @property {string}           city
  * @property {string}           source
  * @property {string}           referrer     - Raw referrer code from the form (e.g. "18", "clm-123").
- * @property {string|null}      groupId      - Group ID, resolved from referrer dimension at load time.
  * @property {boolean|null}     partyRegistered
  * @property {'clean'|'duplicate'|'test'|'suspicious'} status
  * @property {*}                createdAt
@@ -39,7 +38,6 @@ export const transformSubmissionToRegistration = (submission) => {
     city: submission.city || "",
     source: submission.source || "",
     referrer:     submission.referrer || "",
-    groupId:      null,
     partyRegistered:
       submission.registered === "yes"
         ? true
