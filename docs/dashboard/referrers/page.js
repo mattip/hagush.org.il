@@ -2,15 +2,15 @@
 // Auth + role gating live in auth-gate.js; this module owns the referrer page's
 // own chrome, data loading, and the inline resolve form (admin only).
 
-import { escapeHtml } from "../js/utils/html-escape.js";
-import { formatRelativeTime } from "../js/utils/format.js";
-import { getById, show, hide } from "../js/utils/dom.js";
-import { SEL } from "./dashboard-selectors.js";
+import { escapeHtml } from "../../js/utils/html-escape.js";
+import { formatRelativeTime } from "../../js/utils/format.js";
+import { getById, show, hide } from "../../js/utils/dom.js";
+import { SEL } from "../dashboard-selectors.js";
 import {
   transformSubmissionToRegistration,
   fetchJoinFormSubmissions,
-} from "./data.js";
-import { renderReferrers } from "./dashboard.render.js";
+} from "../data.js";
+import { renderReferrers } from "../dashboard.render.js";
 import {
   fetchReferrers,
   fetchReferrerGroups,
@@ -18,7 +18,7 @@ import {
   saveReferrer,
   saveGroup,
 } from "./referrers.js";
-import { initAuthGate } from "./auth-gate.js";
+import { initAuthGate } from "../auth/auth-gate.js";
 
 // State set once the user is authorized.
 let db = null;
