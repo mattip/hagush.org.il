@@ -246,15 +246,18 @@
         const dayMatch = (iv.day_label || "").match(/(\d{1,2}\.\d{1,2})/);
         const dateStr = dayMatch ? dayMatch[1] : iv.date || "";
         const photo = iv.candidate_photo || "";
+        const popupLink = iv.candidate_id
+          ? `candidates.html?id=${encodeURIComponent(iv.candidate_id)}&tab=interview`
+          : "#";
         return `
-          <div class="past-card">
+          <a class="past-card" href="${popupLink}">
             <span class="pc-date">${esc(dateStr)}</span>
             <div class="pc-info">
               <p class="pc-name">${esc(iv.candidate_name)}</p>
               <p class="pc-type">ראיון טקסט חי · וואטסאפ</p>
             </div>
             ${photo ? `<img class="pc-photo" src="${PORTRAITS}/${esc(photo)}" alt="${esc(iv.candidate_name)}" />` : ""}
-          </div>
+          </a>
         `;
       }).join("");
     }
