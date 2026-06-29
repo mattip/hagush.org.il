@@ -96,8 +96,6 @@ const handleAuth = async (user) => {
   userIdentity = {
     email: user.email,
     role: roleData.role,
-    groupId: roleData.groupId || null,
-    referrerId: roleData.referrerId || null,
   };
 
   hide(getById("login"));
@@ -133,14 +131,9 @@ onAuthStateChanged(auth, handleAuth);
 // UI
 // ─────────────────────────────────────────────────────────────────────────────
 
-
 const initializeChrome = () => {
   getById("role-badge").textContent = ROLE_LABELS[userIdentity.role] || userIdentity.role;
   getById("user-email").textContent = userIdentity.email;
-  getById("dash-title").textContent =
-    "לוח ניהול כללי";
-
-  getById("refresh-btn").addEventListener("click", loadData);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -171,3 +164,5 @@ const loadData = async () => {
       "</div>";
   }
 };
+
+getById("refresh-btn").addEventListener("click", loadData);

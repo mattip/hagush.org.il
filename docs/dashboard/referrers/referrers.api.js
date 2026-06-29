@@ -19,10 +19,10 @@ export const fetchReferrers = async (db) => {
   snap.forEach((d) => {
     const data = d.data();
     map.set(d.id, {
-      code:    d.id,
-      name:    data.name    || d.id,
-      active:  data.active  !== false,
-      type:    data.type    || "individual",
+      code: d.id,
+      name: data.name || d.id,
+      active: data.active !== false,
+      type: data.type || "individual",
       groupId: data.groupId || null,
     });
   });
@@ -37,8 +37,8 @@ export const fetchReferrerGroups = async (db) => {
     snap.forEach((d) => {
       const data = d.data();
       map.set(d.id, {
-        id:     d.id,
-        name:   data.name   || d.id,
+        id: d.id,
+        name: data.name || d.id,
         active: data.active !== false,
       });
     });
@@ -50,14 +50,10 @@ export const fetchReferrerGroups = async (db) => {
 };
 
 /** @param {import("firebase/firestore").Firestore} db */
-export const saveReferrer = async (db, { code, name, groupId, type = "individual" }) => {
-  await setDoc(doc(db, "referrers", code), {
-    name,
-    active:    true,
-    type,
-    groupId:   groupId || null,
-    createdAt: serverTimestamp(),
-  });
+export const saveReferrer = async (db, { code, name, groupId, type = "individual", isNew = false }) => {
+  const data = { name, active: true, type, groupId: groupId || null };
+  if (isNew) data.createdAt = serverTimestamp();
+  await setDoc(doc(db, "referrers", code), data, { merge: true });
 };
 
 /** @param {import("firebase/firestore").Firestore} db */
@@ -65,7 +61,7 @@ export const saveGroup = async (db, { name }) => {
   const groupId = buildGroupId(name);
   await setDoc(doc(db, "referrer_groups", groupId), {
     name,
-    active:    true,
+    active: true,
     createdAt: serverTimestamp(),
   });
   return groupId;

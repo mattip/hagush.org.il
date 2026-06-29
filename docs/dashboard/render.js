@@ -11,29 +11,19 @@ const RECENT_ROWS_LIMIT = 50;
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("he-IL");
 
-const createStatCard = (label, value, accent, subtext, helpText) =>
-  `<div class="stat ${accent ? "accent" : ""}">
+const createStatCard = (label, value, subtext, helpText) =>
+  `<div class="stat">
     <p class="label">${escapeHtml(label)} ${helpText ? createHelpTooltip(helpText) : ""}</p>
     <p class="value">${value}</p>
     ${subtext ? `<p class="sub">${subtext}</p>` : ""}
   </div>`;
 
 const createPartyChips = (reg) => {
-  const chips = [];
-
   if (reg.partyRegistered === true)
-    chips.push('<span class="chip green">סימנ/ה שכבר התפקד/ה</span>');
-  else if (reg.partyRegistered === false)
-    chips.push('<span class="chip amber">סימנ/ה שלא התפקד/ה</span>');
-
-  if (reg.status === "duplicate")
-    chips.push('<span class="chip rose">חשד לכפילות</span>');
-  else if (reg.status === "test")
-    chips.push('<span class="chip violet">בדיקה</span>');
-  else if (reg.status === "suspicious")
-    chips.push('<span class="chip amber">חשוד</span>');
-
-  return chips.join(" ") || '<span class="muted">—</span>';
+    return '<span class="chip green">סימנ/ה שכבר התפקד/ה</span>';
+  if (reg.partyRegistered === false)
+    return '<span class="chip amber">סימנ/ה שלא התפקד/ה</span>';
+  return '<span class="muted">—</span>';
 };
 
 const renderSubmissionsTable = (registrations, referrers, showEmail) => {
@@ -137,7 +127,6 @@ export const render = ({ registrations, referrers, userRole }) => {
   getById("kpi-row").innerHTML = createStatCard(
     "הרשמות",
     NUMBER_FORMATTER.format(registrations.length),
-    false,
     `אחרון: ${lastRegistration ? formatRelativeTime(lastRegistration) : "—"}`,
     "סך ההרשמות שהתקבלו דרך הטופס."
   );

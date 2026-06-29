@@ -37,7 +37,7 @@ export const renderGroupsSection = (
       const dataRow = `<tr data-group-id="${escapeHtml(group.id)}">
         <td>${escapeHtml(group.name)}</td>
         <td class="num">${NUMBER_FORMATTER.format(count)}</td>
-        <td class="num" style="cursor: help; font-size: 12px;" title="${tooltipText}">${NUMBER_FORMATTER.format(memberCount)}</td>
+        <td class="num" style="cursor: help; font-size: 12px;" title="${escapeHtml(tooltipText)}">${NUMBER_FORMATTER.format(memberCount)}</td>
         ${editAction}
       </tr>`;
 

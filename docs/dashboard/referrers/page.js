@@ -305,9 +305,9 @@ document.addEventListener("submit", async (e) => {
       await saveReferrer(db, {
         code: code.trim(),
         name: name.trim(),
-        active: true,
         type: "individual",
         groupId: null,
+        isNew: true,
       });
       row?.remove();
       loadData();
@@ -329,7 +329,6 @@ document.addEventListener("submit", async (e) => {
       await saveReferrer(db, {
         code,
         name: name.trim(),
-        active: true,
         type,
         groupId: groupId || null,
       });
@@ -395,8 +394,6 @@ onAuthStateChanged(auth, async (user) => {
   userIdentity = {
     email: user.email,
     role: roleData.role,
-    groupId: roleData.groupId || null,
-    referrerId: roleData.referrerId || null,
   };
 
   if (REFERRER_PAGE.roleBadge) REFERRER_PAGE.roleBadge.textContent = ROLE_LABELS[userIdentity.role] || userIdentity.role;

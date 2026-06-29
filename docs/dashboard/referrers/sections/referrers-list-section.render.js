@@ -1,6 +1,7 @@
 // Referrers list section rendering
 
 import { sortByCode } from "../utils.js";
+import { escapeHtml } from "../../../../js/utils/html-escape.js";
 
 export const renderReferrersListSection = (
   referrers,
@@ -20,16 +21,19 @@ export const renderReferrersListSection = (
     .sort((a, b) => sortByCode(a.ref.code, b.ref.code))
     .map(({ ref, count, groupName }) => {
 
+      const safeCode = escapeHtml(ref.code);
+      const safeName = escapeHtml(ref.name);
+      const safeGroup = escapeHtml(groupName);
       return `
-        <tr data-ref-code="${ref.code}">
-          <td>${ref.code}</td>
-          <td>${ref.name}</td>
+        <tr data-ref-code="${safeCode}">
+          <td>${safeCode}</td>
+          <td>${safeName}</td>
           <td>${ref.type === "organizer" ? "מנהל·ת" : "פרטי"}</td>
-          <td>${groupName}</td>
+          <td>${safeGroup}</td>
           <td>${count}</td>
           ${isAdmin ? `<td>
-            <button data-action="edit" data-code="${ref.code}" style="margin-right: 8px;">ערוך</button>
-            <button data-action="delete" data-code="${ref.code}" style="color: #d32f2f;">מחק</button>
+            <button data-action="edit" data-code="${safeCode}" style="margin-right: 8px;">ערוך</button>
+            <button data-action="delete" data-code="${safeCode}" style="color: #d32f2f;">מחק</button>
           </td>` : ""}
         </tr>
       `;

@@ -5,15 +5,11 @@
  * A registration record, transformed from a raw join_form submission.
  *
  * @typedef {Object} Registration
- * @property {string}           id
  * @property {string}           name
  * @property {string}           phoneMasked
  * @property {string}           email
- * @property {string}           city
- * @property {string}           source
  * @property {string}           referrer     - Raw referrer code from the form (e.g. "18", "clm-123").
  * @property {boolean|null}     partyRegistered
- * @property {'clean'|'duplicate'|'test'|'suspicious'} status
  * @property {*}                createdAt
  */
 
@@ -31,20 +27,16 @@ export const transformSubmissionToRegistration = (submission) => {
     ((submission.firstName || "") + " " + (submission.lastName || "")).trim();
 
   return {
-    id: submission.id,
     name: fullName || "—",
     phoneMasked: String(submission.phone || ""),
     email: submission.email || "",
-    city: submission.city || "",
-    source: submission.source || "",
-    referrer:     submission.referrer || "",
+    referrer: submission.referrer || "",
     partyRegistered:
       submission.registered === "yes"
         ? true
         : submission.registered === "no"
           ? false
           : null,
-    status: "clean",
     createdAt: submission.ts,
   };
 };
