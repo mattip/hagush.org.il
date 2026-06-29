@@ -167,6 +167,12 @@
       <div class="iv-list" id="ivList"><p style="color:#999">טוען…</p></div>
     </div>
 
+    <!-- ── Existing interview content ── -->
+    <div class="form-card">
+      <h2>תוכן ראיונות</h2>
+      <div class="iv-list" id="existingList"><p style="color:#999">טוען…</p></div>
+    </div>
+
     <!-- ── Parse WhatsApp interview ── -->
     <div class="form-card">
       <h2>ניתוח ראיון מוואטסאפ</h2>
@@ -232,7 +238,7 @@
       console.error("Failed to load candidates:", err);
     }
   }
-  loadCandidates();
+  let candidatesReady = loadCandidates();
 
   // ── Auth ──
   document.getElementById("login-btn").addEventListener("click", async () => {
@@ -253,6 +259,7 @@
       loadInterviews();
       loadParsingPrefs();
       loadSkipped();
+      scanAllInterviews().catch(err => console.error("scanAllInterviews failed:", err));
     } else {
       document.getElementById("login-screen").style.display = "flex";
       document.getElementById("admin-panel").style.display = "none";
@@ -436,6 +443,7 @@
 
   // Check which candidate IDs already have interview JSONs
   const existingInterviews = new Set();
+
   async function checkExistingInterviews(candidateIds) {
     const checks = candidateIds.map(async id => {
       if (existingInterviews.has(id)) return;
@@ -445,7 +453,71 @@
       } catch {}
     });
     await Promise.all(checks);
-    console.log("Existing interviews:", [...existingInterviews]);
+  }
+
+  async function scanAllInterviews() {
+    console.log("scanAllInterviews: waiting for candidates…");
+    await candidatesReady;
+    console.log("scanAllInterviews: scanning", candidates.length, "candidates");
+    await checkExistingInterviews(candidates.map(c => c.id));
+    console.log("scanAllInterviews: found", existingInterviews.size, "interviews:", [...existingInterviews]);
+    renderExistingList();
+  }
+
+  function renderExistingList() {
+    const wrap = document.getElementById("existingList");
+    if (!existingInterviews.size) {
+      wrap.innerHTML = '<p style="color:#999">אין תוכן ראיונות</p>';
+      return;
+    }
+    const items = [...existingInterviews].map(id => {
+      const c = candidates.find(x => x.id === id);
+      const name = c ? c.name : id;
+      return `<div class="iv-item">
+        <div class="iv-info">${esc(name)}</div>
+        <div class="iv-actions">
+          <button class="iv-edit" onclick="loadExistingDirect('${esc(id)}')">ערוך</button>
+        </div>
+      </div>`;
+    }).join("");
+    wrap.innerHTML = items;
+  }
+
+  async function loadExistingDirect(candidateId) {
+    const candidate = candidates.find(c => c.id === candidateId);
+    const candidateName = candidate ? candidate.name : candidateId;
+    try {
+      const res = await fetch(INTERVIEWS_DIR + candidateId + ".json");
+      if (!res.ok) { alert("לא נמצא קובץ ראיון"); return; }
+      const data = await res.json();
+
+      currentEditData = {
+        candidate_id: candidateId,
+        candidate_name: candidateName,
+        date: data.date || "",
+        interviewer: "",
+        questions: data.questions,
+      };
+      currentEditImages = {};
+
+      // Load images from disk
+      for (const q of data.questions) {
+        for (const section of ["question", "answer", "response"]) {
+          for (const p of q[section]) {
+            if (typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio") && p.file) {
+              try {
+                const imgRes = await fetch(INTERVIEWS_DIR + candidateId + "/" + p.file);
+                if (imgRes.ok) currentEditImages[p.file] = await imgRes.blob();
+              } catch {}
+            }
+          }
+        }
+      }
+
+      renderEditor(data.questions, candidateName, currentEditImages, true);
+    } catch (err) {
+      alert("שגיאה בטעינת ראיון: " + err.message);
+    }
   }
 
   // ── WhatsApp parser ──────────────────────────────────────────────
@@ -917,7 +989,7 @@
             const src = blob ? URL.createObjectURL(blob) : (p.url || "");
             let media;
             if (p.type === "video") {
-              media = src ? `<video class="qa-msg-img" src="${src}" muted loop playsinline style="cursor:pointer" onclick="this.paused?this.play():this.pause()"></video>` : `<span style="color:#999">[${esc(p.file || "video")}]</span>`;
+              media = src ? `<video class="qa-msg-img" src="${src}" controls playsinline style="max-width:200px"></video>` : `<span style="color:#999">[${esc(p.file || "video")}]</span>`;
             } else if (p.type === "audio") {
               media = src ? `<audio controls src="${src}" style="max-width:200px"></audio>` : `<span style="color:#999">[${esc(p.file || "audio")}]</span>`;
             } else {
