@@ -66,7 +66,7 @@
     .upload-zone .upload-icon { font-size: 2rem; }
 
     .detect-card { background: #f8f9fc; border: 1.5px solid #dde; border-radius: 10px; padding: 1rem; margin-bottom: .8rem; }
-    .detect-card.already-parsed { opacity: .5; }
+    .detect-card.already-parsed { border-color: #27ae60; }
     .detect-card.skipped { opacity: .35; }
     .detect-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; flex-wrap: wrap; gap: 4px; }
     .detect-header .detect-date { font-weight: 700; color: #09366d; }
@@ -88,13 +88,19 @@
     .qa-block-header .qa-num { font-weight: 800; color: #e47f09; margin-inline-end: 6px; }
     .qa-block-header .qa-preview { flex: 1; font-size: .8rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .qa-block-header .qa-del { background: none; border: none; color: #c0392b; cursor: pointer; font-size: .8rem; font-weight: 600; }
+    .qa-header-btns { display: flex; gap: 6px; align-items: center; }
+    .qa-merge { background: none; border: 1px solid #09366d; color: #09366d; border-radius: 4px; cursor: pointer; font-size: .7rem; font-weight: 600; padding: 2px 6px; }
     .qa-block-body { display: none; padding: .8rem; border-top: 1px solid #eee; }
     .qa-block.open .qa-block-body { display: block; }
     .qa-section-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; color: #7890a6; margin: .6rem 0 .3rem; }
     .qa-section-label:first-child { margin-top: 0; }
-    .qa-msg { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 4px; }
+    .qa-msg { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 4px; position: relative; }
     .qa-msg textarea { flex: 1; border: 1px solid #e0e3e8; border-radius: 6px; padding: .4rem; font: inherit; font-size: .8rem; resize: vertical; min-height: 2.2em; line-height: 1.5; }
     .qa-msg .qa-msg-del { background: none; border: none; color: #c0392b; cursor: pointer; font-size: .7rem; padding: 4px; }
+    .qa-msg .qa-msg-split { background: none; border: 1px solid #e47f09; color: #e47f09; border-radius: 4px; cursor: pointer; font-size: .8rem; padding: 1px 5px; }
+    .qa-msg-interviewer { padding-top: 14px; }
+    .qa-msg-interviewer textarea { border-color: #7890a6; background: #f9fafb; font-style: italic; }
+    .qa-msg-interviewer::before { content: "מראיינ.ת"; font-size: .6rem; color: #7890a6; font-weight: 600; position: absolute; top: 0; right: 0; }
     .qa-msg-img { max-width: 120px; border-radius: 8px; margin: 4px 0; }
     .qa-section-label .qa-add-msg { font-size: .7rem; color: #09366d; cursor: pointer; background: none; border: none; font-weight: 600; margin-inline-start: 8px; }
 
@@ -246,6 +252,7 @@
       document.getElementById("userEmail").textContent = user.email;
       loadInterviews();
       loadParsingPrefs();
+      loadSkipped();
     } else {
       document.getElementById("login-screen").style.display = "flex";
       document.getElementById("admin-panel").style.display = "none";
@@ -389,11 +396,12 @@
 
   // ── Parsing preferences ──
   const PREFS_DOC = "parsing_config/defaults";
+  const INTERVIEWS_DIR = "interviews/";
   let parsingPrefs = {
     interviewer_aliases: ["Lyat", "liat", "ליאת"],
     candidate_name_map: {},
-    skipped_interviews: [],  // [{sender, date}]
   };
+  let skippedInterviews = []; // [{sender, date}] — loaded from _skipped.json
 
   async function loadParsingPrefs() {
     try {
@@ -408,6 +416,36 @@
       await db.doc(PREFS_DOC).set(parsingPrefs, { merge: true });
       console.log("Saved parsing prefs");
     } catch (err) { console.error("saveParsingPrefs failed:", err); }
+  }
+
+  async function loadSkipped() {
+    try {
+      const res = await fetch(INTERVIEWS_DIR + "_skipped.json");
+      if (res.ok) { skippedInterviews = await res.json(); console.log("Loaded skipped:", skippedInterviews.length); }
+    } catch { console.log("No _skipped.json found"); }
+  }
+
+  function downloadSkipped() {
+    const blob = new Blob([JSON.stringify(skippedInterviews, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "_skipped.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // Check which candidate IDs already have interview JSONs
+  const existingInterviews = new Set();
+  async function checkExistingInterviews(candidateIds) {
+    const checks = candidateIds.map(async id => {
+      if (existingInterviews.has(id)) return;
+      try {
+        const res = await fetch(INTERVIEWS_DIR + id + ".json", { method: "HEAD" });
+        if (res.ok) existingInterviews.add(id);
+      } catch {}
+    });
+    await Promise.all(checks);
+    console.log("Existing interviews:", [...existingInterviews]);
   }
 
   // ── WhatsApp parser ──────────────────────────────────────────────
@@ -496,13 +534,21 @@
           if (regulars.has(m.sender)) regularCounts[m.sender] = (regularCounts[m.sender] || 0) + 1;
         }
 
+        // Find interviewer: prefer known aliases, fall back to most active regular
         let bestRegular = "", bestCount = 0;
-        for (const [r, c] of Object.entries(regularCounts)) {
-          if (c > bestCount) { bestRegular = r; bestCount = c; }
-        }
+        // First: check if any known alias matches a regular on this day
         for (const alias of parsingPrefs.interviewer_aliases) {
           for (const r of Object.keys(regularCounts)) {
-            if (r.toLowerCase().includes(alias.toLowerCase())) { bestRegular = r; break; }
+            if (r.toLowerCase().includes(alias.toLowerCase()) && regularCounts[r] > bestCount) {
+              bestRegular = r;
+              bestCount = regularCounts[r];
+            }
+          }
+        }
+        // Fall back: most active regular if no alias matched
+        if (!bestRegular) {
+          for (const [r, c] of Object.entries(regularCounts)) {
+            if (c > bestCount) { bestRegular = r; bestCount = c; }
           }
         }
 
@@ -513,7 +559,7 @@
         const [month, day, year] = date.split("/");
         const isoDate = `20${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 
-        const isSkipped = parsingPrefs.skipped_interviews.some(
+        const isSkipped = skippedInterviews.some(
           s => s.sender === guest.sender && s.date === date
         );
 
@@ -558,15 +604,19 @@
   // ── Extract Q/A blocks ──
   const Q_MIN_LEN = 50;
 
-  function extractQA(allMsgs, interviewer, candidate, startTime, endTime) {
-    const isIv = m => m.sender.toLowerCase().includes(interviewer.toLowerCase());
-    const isCd = m => m.sender.toLowerCase().includes(candidate.toLowerCase());
+  function extractQA(allMsgs, interviewer, candidate, startTime, endTime, filterDate) {
+    const norm = s => s.toLowerCase().replace(/\s+/g, " ").trim();
+    const isIv = m => norm(m.sender).includes(norm(interviewer));
+    const isCd = m => norm(m.sender).includes(norm(candidate));
+
+    console.log("extractQA:", { interviewer, candidate, startTime, endTime, filterDate });
 
     const filtered = [];
     let started = false;
     for (const m of allMsgs) {
       if (isSystem(m.text) && !m.image) continue;
       if (!isIv(m) && !isCd(m)) continue;
+      if (filterDate && m.date !== filterDate) continue;
       const mins = timeToMin(m.time);
       if (mins < timeToMin(startTime) || mins > timeToMin(endTime)) continue;
       if (!started) {
@@ -575,12 +625,20 @@
       filtered.push(m);
     }
 
+    const ivCount = filtered.filter(m => isIv(m)).length;
+    const cdCount = filtered.filter(m => isCd(m)).length;
+    console.log(`  Filtered: ${filtered.length} msgs (${ivCount} interviewer, ${cdCount} candidate)`);
+
     const blocks = [];
     let qParts = [], aParts = [], rParts = [];
     let state = "Q";
 
     function msgItem(m) {
-      if (m.image) return { type: "image", file: m.image };
+      if (m.image) {
+        if (/\.(mp4|webm|mov)$/i.test(m.image)) return { type: "video", file: m.image };
+        if (/\.(opus|ogg|mp3|m4a|aac)$/i.test(m.image)) return { type: "audio", file: m.image };
+        return { type: "image", file: m.image };
+      }
       return m.text.trim();
     }
 
@@ -641,6 +699,10 @@
           chatText = await entry.async("string");
         } else if (/\.(jpg|jpeg|png|webp|gif)$/i.test(name)) {
           zipImages[name] = await entry.async("blob");
+        } else if (/\.(mp4|webm|mov)$/i.test(name)) {
+          zipImages[name] = await entry.async("blob");
+        } else if (/\.(opus|ogg|mp3|m4a|aac)$/i.test(name)) {
+          zipImages[name] = await entry.async("blob");
         }
       }
       if (!chatText) { detectStatus.textContent = "לא נמצא קובץ _chat.txt ב-ZIP"; return; }
@@ -648,6 +710,16 @@
       allParsedMsgs = parseMessages(chatText);
       detectStatus.textContent = `${allParsedMsgs.length} הודעות. מזהה ראיונות…`;
       const detected = detectInterviews(allParsedMsgs);
+
+      // Check which candidates already have published interviews
+      const guessedIds = detected.map(d => d.candidateGuess?.id).filter(Boolean);
+      await checkExistingInterviews(guessedIds);
+      for (const d of detected) {
+        if (d.candidateGuess && existingInterviews.has(d.candidateGuess.id)) {
+          d.alreadyParsed = true;
+        }
+      }
+
       detectStatus.textContent = `${detected.length} ראיונות זוהו`;
       renderDetected(detected);
     } catch (err) {
@@ -661,8 +733,9 @@
     document.getElementById("detectResults").style.display = interviews.length ? "block" : "none";
 
     wrap.innerHTML = interviews.map((iv, i) => {
-      const extra = iv.isSkipped ? " skipped" : "";
+      const extra = iv.alreadyParsed ? " already-parsed" : iv.isSkipped ? " skipped" : "";
       const badges = [];
+      if (iv.alreadyParsed) badges.push('<span class="status-badge status-published">כבר נותח</span>');
       if (iv.isSkipped) badges.push('<span class="status-badge status-skipped">לא רלוונטי</span>');
 
       const guess = iv.candidateGuess;
@@ -677,6 +750,9 @@
 
       const btns = iv.isSkipped
         ? `<button class="detect-btn detect-skip" onclick="unskipDetected(${i})">שחזר</button>`
+        : iv.alreadyParsed
+        ? `<button class="detect-btn detect-parse" onclick="loadExisting(${i})">ערוך ▸</button>
+           <button class="detect-btn detect-skip" onclick="parseDetected(${i})">נתח מחדש</button>`
         : `<button class="detect-btn detect-parse" onclick="parseDetected(${i})">נתח ▸</button>
            <button class="detect-btn detect-skip" onclick="skipDetected(${i})">לא רלוונטי</button>`;
 
@@ -718,25 +794,69 @@
   // ── Skip / unskip ──
   function skipDetected(idx) {
     const iv = window._detected[idx];
-    parsingPrefs.skipped_interviews.push({ sender: iv.guestSender, date: iv.date });
-    saveParsingPrefs();
+    skippedInterviews.push({ sender: iv.guestSender, date: iv.date });
     iv.isSkipped = true;
     renderDetected(window._detected);
+    downloadSkipped();
   }
 
   function unskipDetected(idx) {
     const iv = window._detected[idx];
-    parsingPrefs.skipped_interviews = parsingPrefs.skipped_interviews.filter(
+    skippedInterviews = skippedInterviews.filter(
       s => !(s.sender === iv.guestSender && s.date === iv.date)
     );
-    saveParsingPrefs();
     iv.isSkipped = false;
     renderDetected(window._detected);
+    downloadSkipped();
   }
 
   // ── Parse a detected interview ──
   let currentEditData = null;
   let currentEditImages = {};
+
+  async function loadExisting(idx) {
+    const iv = window._detected[idx];
+    const card = document.querySelector(`.detect-card[data-idx="${idx}"]`);
+    const candidateId = card.querySelector(".det-candidate").value;
+    if (!candidateId) { alert("נא לבחור מועמד.ת"); return; }
+
+    const candidate = candidates.find(c => c.id === candidateId);
+    const candidateName = candidate ? candidate.name : candidateId;
+
+    try {
+      const res = await fetch(INTERVIEWS_DIR + candidateId + ".json");
+      if (!res.ok) { alert("לא נמצא קובץ ראיון"); return; }
+      const data = await res.json();
+
+      currentEditData = {
+        candidate_id: candidateId,
+        candidate_name: candidateName,
+        date: data.date || iv.isoDate,
+        interviewer: iv.interviewer,
+        questions: data.questions,
+      };
+      currentEditImages = {};
+
+      // Load existing images from disk into blob cache
+      for (const q of data.questions) {
+        for (const section of ["question", "answer", "response"]) {
+          for (const p of q[section]) {
+            if (typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio") && p.file) {
+              try {
+                const imgRes = await fetch(INTERVIEWS_DIR + candidateId + "/" + p.file);
+                if (imgRes.ok) { currentEditImages[p.file] = await imgRes.blob(); continue; }
+              } catch {}
+              if (zipImages[p.file]) currentEditImages[p.file] = zipImages[p.file];
+            }
+          }
+        }
+      }
+
+      renderEditor(data.questions, candidateName, currentEditImages, true);
+    } catch (err) {
+      alert("שגיאה בטעינת ראיון: " + err.message);
+    }
+  }
 
   async function parseDetected(idx) {
     const iv = window._detected[idx];
@@ -758,7 +878,7 @@
     }
     saveParsingPrefs();
 
-    const blocks = extractQA(allParsedMsgs, interviewer, iv.guestSender, startTime, endTime);
+    const blocks = extractQA(allParsedMsgs, interviewer, iv.guestSender, startTime, endTime, iv.date);
     const questions = blocks.map((b, i) => ({
       id: `q${i + 1}`, question: b.question, answer: b.answer, response: b.response,
     }));
@@ -770,31 +890,52 @@
     currentEditImages = {};
     for (const b of blocks) {
       for (const part of [...b.question, ...b.answer, ...b.response]) {
-        if (typeof part === "object" && part.type === "image" && zipImages[part.file]) {
+        if (typeof part === "object" && (part.type === "image" || part.type === "video" || part.type === "audio") && zipImages[part.file]) {
           currentEditImages[part.file] = zipImages[part.file];
         }
       }
     }
-    renderEditor(questions, candidateName, currentEditImages);
+    renderEditor(questions, candidateName, currentEditImages, true);
   }
 
   // ── Editor ──────────────────────────────────────────────────────
-  function renderEditor(questions, name, images) {
+  function renderEditor(questions, name, images, scroll) {
     const editorCard = document.getElementById("editorCard");
     editorCard.style.display = "block";
     document.getElementById("editorTitle").textContent = `עריכת ראיון — ${name}`;
     const wrap = document.getElementById("editorWrap");
 
     wrap.innerHTML = questions.map((q, qi) => {
-      const preview = (q.question.find(p => typeof p === "string") || "").split("\n")[0].slice(0, 60);
+      const firstText = (q.question.find(p => typeof p === "string") || "").split("\n")[0];
+      if (!q.summary) q.summary = firstText;
+      const preview = q.summary.slice(0, 60);
 
       function renderMsgs(parts, section) {
         return parts.map((p, pi) => {
-          if (typeof p === "object" && p.type === "image") {
+          if (typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio")) {
             const blob = images[p.file];
             const src = blob ? URL.createObjectURL(blob) : (p.url || "");
+            let media;
+            if (p.type === "video") {
+              media = src ? `<video class="qa-msg-img" src="${src}" muted loop playsinline style="cursor:pointer" onclick="this.paused?this.play():this.pause()"></video>` : `<span style="color:#999">[${esc(p.file || "video")}]</span>`;
+            } else if (p.type === "audio") {
+              media = src ? `<audio controls src="${src}" style="max-width:200px"></audio>` : `<span style="color:#999">[${esc(p.file || "audio")}]</span>`;
+            } else {
+              media = src ? `<img class="qa-msg-img" src="${src}" />` : `<span style="color:#999">[${esc(p.file || "image")}]</span>`;
+            }
             return `<div class="qa-msg" data-q="${qi}" data-s="${section}" data-i="${pi}">
-              ${src ? `<img class="qa-msg-img" src="${src}" />` : `<span style="color:#999">[${esc(p.file || "image")}]</span>`}
+              ${media}
+              <button class="qa-msg-del" onclick="delMsg(${qi},'${section}',${pi})">✕</button>
+            </div>`;
+          }
+          if (typeof p === "object" && p.type === "text") {
+            const roleClass = p.role === "interviewer" ? "qa-msg-interviewer" : "";
+            const splitBtn = (p.role === "interviewer" && section === "answer")
+              ? `<button class="qa-msg-split" onclick="event.stopPropagation();splitBlock(${qi},${pi})" title="פצל כאן לשאלה חדשה">✂</button>`
+              : "";
+            return `<div class="qa-msg ${roleClass}" data-q="${qi}" data-s="${section}" data-i="${pi}">
+              <textarea rows="1" oninput="autoGrow(this);updateMsg(${qi},'${section}',${pi},this.value)">${esc(p.text)}</textarea>
+              ${splitBtn}
               <button class="qa-msg-del" onclick="delMsg(${qi},'${section}',${pi})">✕</button>
             </div>`;
           }
@@ -805,12 +946,24 @@
         }).join("");
       }
 
+      const mergeBtn = qi > 0
+        ? `<button class="qa-merge" onclick="event.stopPropagation();mergeWithPrev(${qi})" title="מזג בלוק זה עם הקודם">מזג ↑</button>
+           <button class="qa-merge" onclick="event.stopPropagation();moveFirstToPrev(${qi})" title="העבר שורה ראשונה לתגובת הבלוק הקודם">שורה ↑</button>`
+        : "";
+
       return `<div class="qa-block open" data-qi="${qi}">
         <div class="qa-block-header" onclick="this.closest('.qa-block').classList.toggle('open')">
           <span><span class="qa-num">ש׳${qi + 1}</span><span class="qa-preview">${esc(preview)}</span></span>
-          <button class="qa-del" onclick="event.stopPropagation();delBlock(${qi})">מחק</button>
+          <span class="qa-header-btns">
+            ${mergeBtn}
+            <button class="qa-del" onclick="event.stopPropagation();delBlock(${qi})">מחק</button>
+          </span>
         </div>
         <div class="qa-block-body">
+          <div class="qa-section-label">כותרת לאקורדיון</div>
+          <div class="qa-msg">
+            <textarea rows="1" oninput="autoGrow(this);updateSummary(${qi},this.value)">${esc(q.summary)}</textarea>
+          </div>
           <div class="qa-section-label">שאלה<button class="qa-add-msg" onclick="addMsg(${qi},'question')">+ הודעה</button></div>
           ${renderMsgs(q.question, "question")}
           <div class="qa-section-label">תשובה<button class="qa-add-msg" onclick="addMsg(${qi},'answer')">+ הודעה</button></div>
@@ -821,14 +974,23 @@
       </div>`;
     }).join("");
 
-    editorCard.scrollIntoView({ behavior: "smooth" });
+    if (scroll) editorCard.scrollIntoView({ behavior: "smooth" });
     setTimeout(() => wrap.querySelectorAll("textarea").forEach(autoGrow), 50);
   }
 
   function autoGrow(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
 
   function updateMsg(qi, section, pi, value) {
-    currentEditData.questions[qi][section][pi] = value;
+    const existing = currentEditData.questions[qi][section][pi];
+    if (typeof existing === "object" && existing.type === "text") {
+      existing.text = value;
+    } else {
+      currentEditData.questions[qi][section][pi] = value;
+    }
+  }
+
+  function updateSummary(qi, value) {
+    currentEditData.questions[qi].summary = value;
   }
 
   function delMsg(qi, section, pi) {
@@ -845,6 +1007,100 @@
     if (!confirm("למחוק בלוק שאלה זה?")) return;
     currentEditData.questions.splice(qi, 1);
     currentEditData.questions.forEach((q, i) => q.id = `q${i + 1}`);
+    renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
+  }
+
+  function splitBlock(qi, answerIdx) {
+    const curr = currentEditData.questions[qi];
+    const splitItem = curr.answer[answerIdx];
+
+    // New block: interviewer message becomes question, rest of answer follows
+    const newQText = typeof splitItem === "object" && splitItem.text ? splitItem.text : String(splitItem);
+    const newBlock = {
+      id: "",
+      summary: newQText.split("\n")[0],
+      question: [newQText],
+      answer: curr.answer.slice(answerIdx + 1),
+      response: curr.response,
+    };
+
+    // Truncate current block at split point
+    curr.answer = curr.answer.slice(0, answerIdx);
+    curr.response = [];
+
+    // Insert new block after current
+    currentEditData.questions.splice(qi + 1, 0, newBlock);
+    currentEditData.questions.forEach((q, i) => q.id = `q${i + 1}`);
+    renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
+  }
+
+  function tagRole(items, role) {
+    return items.map(item => {
+      if (typeof item === "string") return { type: "text", role, text: item };
+      if (typeof item === "object" && !item.role) return { ...item, role };
+      return item;
+    });
+  }
+
+  function mergeWithPrev(qi) {
+    if (qi < 1) return;
+    const prev = currentEditData.questions[qi - 1];
+    const curr = currentEditData.questions[qi];
+    // Preserve roles: response + next question are interviewer, answers are candidate
+    prev.answer = [
+      ...prev.answer,
+      ...tagRole(prev.response, "interviewer"),
+      ...tagRole(curr.question, "interviewer"),
+      ...curr.answer,
+    ];
+    prev.response = [...curr.response];
+    currentEditData.questions.splice(qi, 1);
+    currentEditData.questions.forEach((q, i) => q.id = `q${i + 1}`);
+    renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
+  }
+
+  function moveFirstToPrev(qi) {
+    if (qi < 1) return;
+    const prev = currentEditData.questions[qi - 1];
+    const curr = currentEditData.questions[qi];
+    if (!curr.question.length) return;
+    const first = curr.question.shift();
+    prev.response.push(first);
+
+    // If question is now empty, cascade candidate messages up
+    if (curr.question.length === 0) {
+      // Flush prev.response into prev.answer (tagged as interviewer)
+      prev.answer.push(...tagRole(prev.response, "interviewer"));
+      prev.response = [];
+
+      // Move candidate items from top of answer until we hit an interviewer item
+      while (curr.answer.length) {
+        const item = curr.answer[0];
+        const isInterviewer = typeof item === "object" && item.role === "interviewer";
+        if (isInterviewer) break;
+        prev.answer.push(curr.answer.shift());
+      }
+
+      if (curr.answer.length) {
+        // First remaining item is an interviewer message — becomes the new question
+        const newQ = curr.answer.shift();
+        const newQText = typeof newQ === "object" && newQ.text ? newQ.text : String(newQ);
+        curr.question = [newQText];
+        curr.summary = newQText.split("\n")[0];
+      } else {
+        // Everything consumed — also move response and delete block
+        prev.response = [...curr.response];
+        currentEditData.questions.splice(qi, 1);
+      }
+
+      currentEditData.questions.forEach((q, i) => q.id = `q${i + 1}`);
+    } else {
+      // Update summary if it was derived from the moved line
+      const newFirst = (curr.question.find(p => typeof p === "string") || "").split("\n")[0];
+      const movedText = typeof first === "string" ? first.split("\n")[0] : "";
+      if (curr.summary === movedText) curr.summary = newFirst;
+    }
+
     renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
   }
 
@@ -868,6 +1124,7 @@
         date: currentEditData.date,
         questions: currentEditData.questions.map((q, i) => ({
           id: `q${i + 1}`,
+          summary: q.summary || "",
           question: q.question,
           answer: q.answer,
           response: q.response,
@@ -880,7 +1137,7 @@
       for (const q of currentEditData.questions) {
         for (const section of ["question", "answer", "response"]) {
           for (const p of q[section]) {
-            if (typeof p === "object" && p.type === "image" && p.file && currentEditImages[p.file]) {
+            if (typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio") && p.file && currentEditImages[p.file]) {
               zip.file(`${cid}/${p.file}`, currentEditImages[p.file]);
               imgCount++;
             }

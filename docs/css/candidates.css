@@ -813,14 +813,6 @@ html.no-scroll {
 
 .iv-q-btn:hover { background: #edf0f7; }
 
-.iv-marker {
-  flex-shrink: 0;
-  font-weight: 800;
-  font-size: 1rem;
-  color: var(--orange, #e47f09);
-  line-height: 1.6;
-}
-
 .iv-q-text {
   flex: 1;
   font-weight: 600;
@@ -838,6 +830,32 @@ html.no-scroll {
   transform: rotate(90deg);
 }
 
+/* ── Section markers (floated inside boxes) ──────────────────────── */
+.iv-section-marker {
+  float: right;
+  font-weight: 800;
+  font-size: 1.3rem;
+  line-height: 1;
+  margin: 0 0 4px 10px;
+  opacity: 0.7;
+}
+
+.iv-marker-question {
+  color: var(--nav, #09366d);
+}
+
+.iv-marker-answer {
+  color: var(--orange, #e47f09);
+}
+
+.iv-inline-interviewer {
+  background: #f0f4fb;
+  border-radius: 6px;
+  border-right: 2px solid var(--nav, #09366d);
+  padding: 8px 12px;
+  margin: 6px 0;
+}
+
 .iv-answer {
   display: none;
 }
@@ -851,19 +869,27 @@ html.no-scroll {
   display: block;
 }
 
+.iv-q-full {
+  background: #f0f4fb;
+  border-radius: 8px;
+  border-right: 3px solid var(--nav, #09366d);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+
 .iv-a-full {
   background: #fff;
-  border: 1px solid #e0e4ec;
   border-radius: 8px;
-  padding: 10px 12px;
+  border-right: 3px solid var(--orange, #e47f09);
+  padding: 10px 14px;
   margin-bottom: 8px;
 }
 
 .iv-r-full {
   background: #f9fafb;
-  border: 1px solid #e8ebf0;
   border-radius: 8px;
-  padding: 8px 12px;
+  border-right: 3px solid #ccd;
+  padding: 8px 14px;
   margin-bottom: 4px;
 }
 
@@ -888,12 +914,63 @@ html.no-scroll {
   font-style: italic;
 }
 
-.iv-img {
+.iv-img, .iv-video {
   width: 100%;
   max-width: 280px;
   border-radius: 10px;
   margin: 6px 0;
   display: block;
+}
+
+.iv-video-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 280px;
+  margin: 6px 0;
+}
+
+.iv-video-wrap video {
+  width: 100%;
+  border-radius: 10px;
+  display: block;
+}
+
+.iv-video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.5);
+  color: #fff;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .2s;
+}
+
+.iv-video-play:hover {
+  background: rgba(0,0,0,.7);
+}
+
+.iv-video-play.playing {
+  opacity: 0;
+}
+
+.iv-video-wrap:hover .iv-video-play.playing {
+  opacity: .6;
+}
+
+.iv-audio {
+  display: block;
+  max-width: 280px;
+  margin: 6px 0;
+  border-radius: 24px;
 }
 
 .iv-asker {
