@@ -535,6 +535,15 @@ function closePopup() {
   popup.classList.remove("open");
   popupHistory = [];
   document.getElementById("popupBack").style.display = "none";
+
+  // Clean deeplink params from URL
+  const url = new URL(window.location);
+  if (url.searchParams.has("id") || url.searchParams.has("tab") || url.searchParams.has("name")) {
+    url.searchParams.delete("id");
+    url.searchParams.delete("tab");
+    url.searchParams.delete("name");
+    history.replaceState(null, "", url.pathname + (url.search || ""));
+  }
 }
 
 function popupGoBack() {
