@@ -100,6 +100,7 @@ function syncPopupToUrl(reason) {
   const params    = new URLSearchParams(window.location.search);
   const idParam   = params.get("id");
   const nameParam = params.get("name");
+  console.log("syncPopupToUrl:", reason, { idParam, nameParam });
   if (!(idParam || nameParam)) {
     if (popup.classList.contains("open")) {
       closePopup();
@@ -110,6 +111,7 @@ function syncPopupToUrl(reason) {
     idParam ? p.id === idParam : p.name === nameParam,
   );
   if (!match) {
+    console.warn("syncPopupToUrl: no match for", idParam || nameParam);
     return;
   }
   if (popup.classList.contains("open") && popup.dataset.personId === match.id) {
@@ -423,6 +425,7 @@ function openPopup(person, card, pushHistory = true, via = "card") {
 
   popup.classList.add("open");
   popup.dataset.personId = person.id;
+  initPopupTabs(person.id);
   // requestAnimationFrame(() => positionPopup(card)); // Don't position the popup for now, as it is fullscreen on mobile.
 }
 
@@ -743,6 +746,169 @@ function resetChoices() {
 
   // Exit select mode and return to initial state
   exitSelectMode();
+}
+
+// ── Interview tabs & accordion ───────────────────────────────────
+const INTERVIEWS_DIR = "interviews/";
+const interviewCache = {}; // id → data | null
+const INTERVIEWS_ENABLED = new URLSearchParams(window.location.search).has("interviews");
+
+// Tab switching
+(function () {
+  const tabs = document.getElementById("popupTabs");
+  if (!tabs) return;
+  tabs.addEventListener("click", (e) => {
+    const btn = e.target.closest(".popup-tab");
+    if (!btn) return;
+    const tabName = btn.dataset.tab;
+    tabs.querySelectorAll(".popup-tab").forEach(t => t.classList.toggle("active", t === btn));
+    popup.querySelectorAll(".popup-tab-panel").forEach(p => {
+      p.style.display = p.dataset.tab === tabName ? "" : "none";
+      if (p.dataset.tab === tabName) p.scrollTop = 0;
+    });
+  });
+})();
+
+async function initPopupTabs(candidateId) {
+  const tabBar     = document.getElementById("popupTabs");
+  const profileP   = document.getElementById("panelProfile");
+  const interviewP = document.getElementById("panelInterview");
+
+  console.log("initPopupTabs:", candidateId);
+
+  // Reset to profile tab
+  tabBar.querySelectorAll(".popup-tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.tab === "profile")
+  );
+  profileP.style.display = "";
+  interviewP.style.display = "none";
+
+  // Check cache or fetch
+  if (!(candidateId in interviewCache)) {
+    const url = INTERVIEWS_DIR + candidateId + ".json";
+    try {
+      const res = await fetch(url);
+      interviewCache[candidateId] = res.ok ? await res.json() : null;
+    } catch (err) {
+      interviewCache[candidateId] = null;
+    }
+  }
+
+  const data = interviewCache[candidateId];
+  if (data && data.questions && data.questions.length > 0) {
+    // Without ?interviews=1, skip hidden interviews
+    if (!INTERVIEWS_ENABLED && data.hidden) {
+      tabBar.style.display = "none";
+      return;
+    }
+    tabBar.style.display = "flex";
+    renderAccordion(data);
+  } else {
+    tabBar.style.display = "none";
+  }
+}
+
+// Accordion toggle — one-time setup
+(function () {
+  const wrap = document.getElementById("ivAccordion");
+  if (!wrap) return;
+  wrap.addEventListener("click", (e) => {
+    // Video play/pause
+    const playBtn = e.target.closest(".iv-video-play");
+    if (playBtn) {
+      const video = playBtn.parentElement.querySelector("video");
+      if (video.paused) {
+        video.play();
+        playBtn.classList.add("playing");
+      } else {
+        video.pause();
+        playBtn.classList.remove("playing");
+      }
+      video.onended = () => playBtn.classList.remove("playing");
+      return;
+    }
+
+    const btn = e.target.closest(".iv-q-btn");
+    if (!btn) return;
+    const item = btn.closest(".iv-item");
+    const wasOpen = item.classList.contains("open");
+    wrap.querySelectorAll(".iv-item.open").forEach(it => {
+      it.classList.remove("open");
+      it.querySelector(".iv-q-btn").setAttribute("aria-expanded", "false");
+    });
+    if (!wasOpen) {
+      item.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+    }
+  });
+})();
+
+function renderAccordion(data) {
+  const wrap = document.getElementById("ivAccordion");
+  const loading = document.getElementById("ivLoading");
+  loading.style.display = "none";
+
+  const imgBase = INTERVIEWS_DIR + data.candidate_id + "/";
+
+  function renderParts(parts, cls) {
+    return parts.map(p => {
+      if (typeof p === "object" && p.type === "image") {
+        const src = p.url || (imgBase + escapeHTML(p.file));
+        return `<img class="iv-img" src="${src}" alt="" loading="lazy" />`;
+      }
+      if (typeof p === "object" && p.type === "video") {
+        const src = p.url || (imgBase + escapeHTML(p.file));
+        return `<div class="iv-video-wrap">
+          <video class="iv-video" src="${src}" playsinline preload="metadata"></video>
+          <button class="iv-video-play" aria-label="נגן">▶</button>
+        </div>`;
+      }
+      if (typeof p === "object" && p.type === "audio") {
+        const src = p.url || (imgBase + escapeHTML(p.file));
+        return `<audio class="iv-audio" controls src="${src}" preload="metadata"></audio>`;
+      }
+      if (typeof p === "object" && p.type === "text") {
+        const roleCls = p.role === "interviewer" ? "iv-r-p" : cls;
+        if (p.role === "interviewer") {
+          return `<div class="iv-inline-interviewer"><span class="iv-section-marker iv-marker-question">ש׳</span><p class="iv-r-p">${escapeHTML(p.text)}</p></div>`;
+        }
+        return `<p class="${cls}">${escapeHTML(p.text)}</p>`;
+      }
+      return `<p class="${cls}">${escapeHTML(p)}</p>`;
+    }).join("");
+  }
+
+  wrap.innerHTML = data.questions.map((q, i) => {
+    const firstText = (q.question.find(p => typeof p === "string") || "").split("\n")[0];
+    const header = q.summary || firstText;
+
+    const aHtml = renderParts(q.answer, "iv-a-p");
+    const rHtml = q.response.length ? renderParts(q.response, "iv-r-p") : "";
+
+    // Show question in body: skip the first text item if it matches the summary
+    let qParts = q.question;
+    if (header === firstText) {
+      let skipped = false;
+      qParts = q.question.filter(p => {
+        if (!skipped && typeof p === "string" && p.split("\n")[0] === firstText) { skipped = true; return false; }
+        return true;
+      });
+    }
+    const qHtml = qParts.length ? `<div class="iv-q-full"><span class="iv-section-marker iv-marker-question">ש׳</span>${renderParts(qParts, "iv-q-p")}</div>` : "";
+
+    return `
+      <div class="iv-item" data-q="${i}">
+        <button class="iv-q-btn" aria-expanded="false">
+          <span class="iv-q-text">${escapeHTML(header)}</span>
+          <span class="iv-chevron">▸</span>
+        </button>
+        <div class="iv-body">
+          ${qHtml}
+          <div class="iv-a-full"><span class="iv-section-marker iv-marker-answer">ת׳</span>${aHtml}</div>
+          ${rHtml ? `<div class="iv-r-full">${rHtml}</div>` : ""}
+        </div>
+      </div>`;
+  }).join("");
 }
 
 // ── Click-hint animation (mobile, 3 cycles) ─────────────────────
