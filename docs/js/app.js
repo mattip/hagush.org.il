@@ -203,16 +203,18 @@ function createPromoCard() {
 
   const body = document.createElement("p");
   body.className = "muted";
-  body.textContent = "זה הזמן ללמוד על המועמדים.ות, להכיר אותם ולשאול אותם.ן את השאלות הקשות!";
 
-  const linkPara = document.createElement("p");
   const link = document.createElement("a");
   link.href = "https://chat.whatsapp.com/KYjojL9gh7g5fTQxEzB1HA";
   link.className = "link";
   link.textContent = 'הצטרפו לקבוצת הוואטסאפ "עכשיו שואלות"';
-  linkPara.append(link);
+  body.append(link, " כדי להכיר עוד את המועמדים.ות!");
 
-  textSection.append(title, body, linkPara);
+  const body2 = document.createElement("p");
+  body2.className = "muted";
+  body2.textContent = 'לקריאת ראיונות קודמים- לחצו על המועמד.ת שיש עליו את אייקון "עכשיו שואלות"';
+
+  textSection.append(title, body, body2);
   card.append(imgSection, textSection);
   return card;
 }
@@ -750,7 +752,6 @@ function resetChoices() {
 
 // ── Interview tabs & accordion ───────────────────────────────────
 const INTERVIEWS_DIR = "interviews/";
-const INTERVIEWS_ENABLED = new URLSearchParams(window.location.search).has("interviews");
 
 // Tab switching
 (function () {
@@ -785,18 +786,24 @@ async function initPopupTabs(candidateId) {
   // Fetch interview data
   let data = null;
   try {
-    const res = await fetch(INTERVIEWS_DIR + candidateId + ".json");
+    const res = await fetch(INTERVIEWS_DIR + candidateId + ".json", { cache: "no-cache" });
     if (res.ok) data = await res.json();
   } catch {}
 
   if (data && data.questions && data.questions.length > 0) {
-    // Without ?interviews=1, skip hidden interviews
-    if (!INTERVIEWS_ENABLED && data.hidden) {
-      tabBar.style.display = "none";
-      return;
-    }
     tabBar.style.display = "flex";
     renderAccordion(data);
+
+    // Switch to interview tab if ?tab=interview is in URL
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    if (requestedTab === "interview") {
+      tabBar.querySelectorAll(".popup-tab").forEach(t =>
+        t.classList.toggle("active", t.dataset.tab === "interview")
+      );
+      profileP.style.display = "none";
+      interviewP.style.display = "";
+      interviewP.scrollTop = 0;
+    }
   } else {
     tabBar.style.display = "none";
   }
