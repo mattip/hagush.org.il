@@ -24,12 +24,8 @@ export const renderGroupsSection = (
 
       const editAction = isAdmin
         ? `<td>
-            <button data-action="edit-group" data-group-id="${escapeHtml(group.id)}" aria-expanded="false" style="margin-right: 8px;">
-              ערוך
-            </button>
-            <button data-action="delete-group" data-group-id="${escapeHtml(group.id)}" style="color: #d32f2f;">
-              מחק
-            </button>
+            <button class="btn" data-action="edit-group" data-group-id="${escapeHtml(group.id)}" aria-expanded="false">ערוך</button>
+            <button class="bo-del" data-action="delete-group" data-group-id="${escapeHtml(group.id)}">מחק</button>
            </td>`
         : "";
 
@@ -37,18 +33,18 @@ export const renderGroupsSection = (
       const dataRow = `<tr data-group-id="${escapeHtml(group.id)}">
         <td>${escapeHtml(group.name)}</td>
         <td class="num">${NUMBER_FORMATTER.format(count)}</td>
-        <td class="num" style="cursor: help; font-size: 12px;" title="${escapeHtml(tooltipText)}">${NUMBER_FORMATTER.format(memberCount)}</td>
+        <td class="num" style="cursor:help" title="${escapeHtml(tooltipText)}">${NUMBER_FORMATTER.format(memberCount)}</td>
         ${editAction}
       </tr>`;
 
       const editRow = isAdmin
         ? `<tr data-action="resolve-row" data-group-id="${escapeHtml(group.id)}" id="edit-group-${escapeHtml(group.id)}" hidden>
-            <td colspan="4" style="padding: 0;">
-              <form data-action="resolve-form" data-group-id="${escapeHtml(group.id)}">
-                <input name="name" placeholder="שם קבוצה" required autocomplete="off"
+            <td colspan="4" style="padding:8px 12px">
+              <form data-action="resolve-form" data-group-id="${escapeHtml(group.id)}" style="display:flex;gap:8px;align-items:center">
+                <input class="bo-input" name="name" placeholder="שם קבוצה" required autocomplete="off"
                   value="${escapeHtml(group.name)}" />
-                <button type="submit">שמור</button>
-                <button type="button" data-action="resolve-cancel">ביטול</button>
+                <button type="submit" class="bo-save">שמור</button>
+                <button type="button" class="btn" data-action="resolve-cancel">ביטול</button>
               </form>
             </td>
           </tr>`
