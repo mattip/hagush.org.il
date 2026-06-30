@@ -275,7 +275,7 @@
         const now = Date.now();
         // Compare against the full date+time, so an interview earlier *today*
         // drops to "past" once its time passes — not only at the next calendar
-        // day (bug #1). Mirrors isInterviewPast() in app.js.
+        // day (bug #1).
         const startMs = iv => new Date(`${iv.date}T${iv.time || "00:00"}:00`).getTime();
 
         const upcoming = all.filter(iv => startMs(iv) >= now)

@@ -1204,6 +1204,13 @@
       };
       zip.file(`${cid}.json`, JSON.stringify(jsonData, null, 2));
 
+      // index.json — manifest the candidates grid reads to show the "שואלות"
+      // badge. Re-scan so it reflects every parsed interview, add this one, and
+      // ship it at the zip root (unzips into interviews/ alongside <cid>.json).
+      await checkExistingInterviews(candidates.map((c) => c.id));
+      const indexIds = [...new Set([...existingInterviews, cid])].sort();
+      zip.file("index.json", JSON.stringify(indexIds, null, 2));
+
       // Add images to subfolder
       let imgCount = 0;
       for (const q of currentEditData.questions) {
