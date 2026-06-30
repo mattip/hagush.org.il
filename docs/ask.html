@@ -17,7 +17,9 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./css/main.css?v=4" />
-    <link rel="stylesheet" href="./css/ask.css" />
+    <!-- candidates.css carries the shared popup styling (.popup / .pi-* / .iv-*) -->
+    <link rel="stylesheet" href="./css/candidates.css?v=7" />
+    <link rel="stylesheet" href="./css/ask.css?v=2" />
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   </head>
@@ -155,6 +157,81 @@
       כל הזכויות שמורות לעכשיו באות! 2026
     </footer>
 
+    <!-- Popup — shared with candidates.html, driven by ./js/app.js -->
+    <div class="popup full-size" id="popup" role="dialog" aria-modal="true">
+      <!-- ① Photo block -->
+      <div class="popup-img-wrap">
+        <img id="popupImg" src="" alt="" />
+        <span class="popup-name-badge" id="popupNameBadge"></span>
+        <button class="popup-close" id="popupClose" aria-label="סגור">✕</button>
+        <button class="popup-back" id="popupBack" aria-label="חזור" style="display:none">→</button>
+        <button class="popup-pin" id="popupPin" aria-label="קישור קבוע">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+        </button>
+        <div class="popup-pin-toast" id="popupPinToast">הקישור הועתק!</div>
+      </div>
+
+      <!-- ② Tabs (shown only when interview exists) -->
+      <div class="popup-tabs" id="popupTabs" style="display:none">
+        <button class="popup-tab active" data-tab="profile">פרופיל</button>
+        <button class="popup-tab" data-tab="interview">ראיון וואטסאפ</button>
+      </div>
+
+      <!-- ③ Profile info (tab: profile) -->
+      <div class="popup-info text popup-tab-panel" id="panelProfile" data-tab="profile">
+        <!-- links -->
+        <div class="pi-row pi-links" id="piRowLinks">
+          <div class="pi-link-icons" id="piLinks"></div>
+        </div>
+        <!-- 2-col rows: tag | value -->
+        <div class="pi-row pi-2col">
+          <span class="pi-tag">שם</span>
+          <span class="pi-val" id="piName"></span>
+        </div>
+        <div class="pi-row pi-2col" id="piRowAge">
+          <span class="pi-tag">גיל</span>
+          <span class="pi-val" id="piAge"></span>
+        </div>
+        <div class="pi-row pi-2col" id="piRowHome">
+          <span class="pi-tag">עיר/ישוב</span>
+          <span class="pi-val" id="piHome"></span>
+        </div>
+        <div class="pi-row pi-2col" id="piRowActivities">
+          <span class="pi-tag">תיאור/תואר</span>
+          <span class="pi-val" id="piActivities"></span>
+        </div>
+
+        <!-- rationale: full width, no tag -->
+        <div class="pi-row pi-full pi-rationale" id="piRowRationale">
+          <span class="pi-val" id="piRationale"></span>
+        </div>
+
+        <!-- recommendation: tag line, blank line, content -->
+        <div class="pi-row pi-full pi-section" id="piRowRecommendation">
+          <span class="pi-tag">מילה טובה</span>
+          <span class="pi-val" id="piRecommendation"></span>
+        </div>
+
+        <!-- minister: tag line, content line -->
+        <div class="pi-row pi-full pi-section" id="piRowMinister">
+          <span class="pi-tag">איזה שר היתה רוצה להיות?</span>
+          <span class="pi-val" id="piMinister"></span>
+        </div>
+
+      </div>
+      <!-- /profile panel -->
+
+      <!-- ④ Interview panel (tab: interview) -->
+      <div class="popup-interview popup-tab-panel" id="panelInterview" data-tab="interview" style="display:none">
+        <div class="iv-loading" id="ivLoading">טוען ראיון…</div>
+        <div class="iv-accordion" id="ivAccordion"></div>
+      </div>
+    </div>
+
+    <script src="./js/app.js?v=8" data-popups="true"></script>
     <script>
     const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
     const TOKEN      = "NachshavBaot2026";
@@ -195,12 +272,16 @@
           }
           return iv;
         });
-        const today = new Date().toISOString().slice(0, 10);
+        const now = Date.now();
+        // Compare against the full date+time, so an interview earlier *today*
+        // drops to "past" once its time passes — not only at the next calendar
+        // day (bug #1). Mirrors isInterviewPast() in app.js.
+        const startMs = iv => new Date(`${iv.date}T${iv.time || "00:00"}:00`).getTime();
 
-        const upcoming = all.filter(iv => iv.date >= today)
-          .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-        const past = all.filter(iv => iv.date < today)
-          .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time)); // newest first
+        const upcoming = all.filter(iv => startMs(iv) >= now)
+          .sort((a, b) => startMs(a) - startMs(b));
+        const past = all.filter(iv => startMs(iv) < now)
+          .sort((a, b) => startMs(b) - startMs(a)); // newest first
 
         renderUpcoming(upcoming);
         renderPast(past);
@@ -238,28 +319,64 @@
     // ── Past interview cards ──
     function renderPast(interviews) {
       const list = document.getElementById("pastList");
+      list.innerHTML = "";
       if (!interviews.length) {
         list.innerHTML = '<p class="ask-empty">עוד אין ראיונות קודמים</p>';
         return;
       }
-      list.innerHTML = interviews.map(iv => {
+      interviews.forEach(iv => {
         const dayMatch = (iv.day_label || "").match(/(\d{1,2}\.\d{1,2})/);
         const dateStr = dayMatch ? dayMatch[1] : iv.date || "";
         const photo = iv.candidate_photo || "";
-        const popupLink = iv.candidate_id
-          ? `candidates.html?id=${encodeURIComponent(iv.candidate_id)}&tab=interview`
-          : "#";
-        return `
-          <a class="past-card" href="${popupLink}">
-            <span class="pc-date">${esc(dateStr)}</span>
-            <div class="pc-info">
-              <p class="pc-name">${esc(iv.candidate_name)}</p>
-              <p class="pc-type">ראיון טקסט חי · וואטסאפ</p>
-            </div>
-            ${photo ? `<img class="pc-photo" src="${PORTRAITS}/${esc(photo)}" alt="${esc(iv.candidate_name)}" />` : ""}
-          </a>
+
+        // Start inert: a passed interview isn't a live link until its JSON has
+        // been parsed and committed (bug #2). markInterviewWhenReady() flips it.
+        const card = document.createElement("a");
+        card.className = "past-card past-card--pending";
+        card.innerHTML = `
+          <span class="pc-date">${esc(dateStr)}</span>
+          <div class="pc-info">
+            <p class="pc-name">${esc(iv.candidate_name)}</p>
+            <p class="pc-type">הראיון יעלה בקרוב</p>
+          </div>
+          ${photo ? `<img class="pc-photo" src="${PORTRAITS}/${esc(photo)}" alt="${esc(iv.candidate_name)}" />` : ""}
         `;
-      }).join("");
+        list.appendChild(card);
+        markInterviewWhenReady(card, iv);
+      });
+    }
+
+    // A past interview becomes a live card only once interviews/<id>.json exists
+    // with questions — the same readiness signal app.js uses to show the popup's
+    // interview tab. When ready, clicking opens the shared popup in-place over
+    // ask.html (feature #1) instead of navigating away; the href is kept as a
+    // graceful fallback.
+    async function markInterviewWhenReady(card, iv) {
+      const person = candidates.find(c => c.id === iv.candidate_id);
+      if (!person) return; // unknown candidate → no popup target, stay inert
+
+      let ready = false;
+      try {
+        const res = await fetch(`interviews/${iv.candidate_id}.json`, { cache: "no-cache" });
+        if (res.ok) {
+          const data = await res.json();
+          ready = !!(data && data.questions && data.questions.length);
+        }
+      } catch {}
+      if (!ready) return;
+
+      card.classList.remove("past-card--pending");
+      card.querySelector(".pc-type").textContent = "ראיון טקסט חי · וואטסאפ";
+      card.href = `candidates.html?id=${encodeURIComponent(iv.candidate_id)}&tab=interview`;
+      card.addEventListener("click", (e) => {
+        if (typeof openPopup !== "function") return; // let the href handle it
+        e.preventDefault();
+        const url = new URL(location);
+        url.searchParams.set("id", iv.candidate_id);
+        url.searchParams.set("tab", "interview");
+        history.replaceState(null, "", url);
+        openPopup(person, document.body, false, "ask");
+      });
     }
 
     // ── Candidate radio buttons in form ──

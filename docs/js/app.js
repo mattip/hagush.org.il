@@ -74,7 +74,9 @@ fetch("candidates.json")
   .then(shuffle)
   .then((people) => {
     allPeople = people;
-    buildGrid(people);
+    // Grid only exists on candidates.html. ask.html reuses this script purely
+    // for the popup (openPopup/initPopupTabs/isInterviewPast), so skip the grid.
+    if (document.getElementById("grid")) buildGrid(people);
     restoreFromCookies();
     // Open popup from URL: ?id=emily_m or ?name=אמיר
     // (We don't rewrite the address bar here — doing so changes how the
@@ -616,7 +618,7 @@ function restoreFromCookies() {
 const btnSelect = document.getElementById("btnSelect");
 const btnShowChoices = document.getElementById("btnShowChoices");
 const btnReset = document.getElementById("btnReset");
-const btnSelectOriginalText = btnSelect.textContent;
+const btnSelectOriginalText = btnSelect ? btnSelect.textContent : "";
 const cookieOverlay = document.getElementById("cookieOverlay");
 const cookieYes = document.getElementById("cookieYes");
 const cookieNo = document.getElementById("cookieNo");
@@ -625,6 +627,9 @@ const choicesClose = document.getElementById("choicesClose");
 const choicesCopy = document.getElementById("choicesCopy");
 const isTouch = () => navigator.maxTouchPoints > 0;
 
+// Select-mode + cookie/choices wiring only applies on pages with the toolbar
+// (candidates.html). On ask.html these elements don't exist, so guard the lot.
+if (btnSelect) {
 btnSelect.addEventListener("click", () => {
   if (selectMode) {
     exitSelectMode();
@@ -673,6 +678,7 @@ choicesCopy.addEventListener("click", () => {
     }, 2000);
   });
 });
+} // end select-mode wiring guard
 
 function enterSelectMode() {
   selectMode = true;
