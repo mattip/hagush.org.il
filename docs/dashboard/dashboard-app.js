@@ -25,17 +25,8 @@ import {
   fetchJoinFormSubmissions,
 } from "./data.js";
 import { render } from "./render.js";
-import { REFERRERS_MAP } from "./referrers.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Config
-// ─────────────────────────────────────────────────────────────────────────────
-
-const ROLE_LABELS = {
-  admin: "מנהל·ת",
-  manager: "מנהל·ת תוכן",
-  influencer: "מוביל·ה",
-};
+import { fetchReferrers } from "./referrers/referrers.api.js";
+import { ROLE_LABELS } from "./roles.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Firebase
@@ -49,7 +40,7 @@ const db = getFirestore(app);
 // State
 // ─────────────────────────────────────────────────────────────────────────────
 
-let userIdentity = null; // { email, role, scope, groupId, influencerId }
+let userIdentity = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth
@@ -105,22 +96,12 @@ const handleAuth = async (user) => {
   userIdentity = {
     email: user.email,
     role: roleData.role,
-    scope: roleData.scope || "full",
-    groupId: roleData.groupId || null,
-    influencerId: roleData.influencerId || null,
   };
 
   hide(getById("login"));
   hide(getById("noaccess"));
   show(getById("dash"));
-  try {
-    initializeChrome();
-  } catch (e) {
-    console.error("initializeChrome failed", e);
-    getById("loading").innerHTML =
-      '<div class="empty">שגיאת אתחול: ' + escapeHtml(e?.message || e) + "</div>";
-    return;
-  }
+  initializeChrome();
   loadData();
 };
 
@@ -150,14 +131,9 @@ onAuthStateChanged(auth, handleAuth);
 // UI
 // ─────────────────────────────────────────────────────────────────────────────
 
-
 const initializeChrome = () => {
   getById("role-badge").textContent = ROLE_LABELS[userIdentity.role] || userIdentity.role;
   getById("user-email").textContent = userIdentity.email;
-  getById("dash-title").textContent =
-    userIdentity.role === "influencer" ? "הדף שלי" : "לוח ניהול כללי";
-
-  getById("refresh-btn").addEventListener("click", loadData);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -170,10 +146,13 @@ const loadData = async () => {
   hide(getById("content"));
 
   try {
-    const submissionsRaw = await fetchJoinFormSubmissions(db);
+    const [submissionsRaw, referrers] = await Promise.all([
+      fetchJoinFormSubmissions(db),
+      fetchReferrers(db),
+    ]);
     const registrations = submissionsRaw.map(transformSubmissionToRegistration);
 
-    render({ registrations, referrers: REFERRERS_MAP, userRole: userIdentity.role });
+    render({ registrations, referrers, userRole: userIdentity.role });
     getById("updated").textContent = "עודכן " + formatRelativeTime(new Date());
     hide(getById("loading"));
     show(getById("content"));
@@ -185,3 +164,5 @@ const loadData = async () => {
       "</div>";
   }
 };
+
+getById("refresh-btn").addEventListener("click", loadData);
