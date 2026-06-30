@@ -132,3 +132,24 @@ tbody tr:last-child { border-bottom:none; }
 .bo-addrow td { background:#fafbff; }
 .switch { display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; }
 select.bo-input { max-width:200px; background:#fff; }
+
+/* ── Import modal ─────────────────────────────────────────────────── */
+.import-modal-overlay { position:fixed; inset:0; background:rgb(0 0 0 / 50%); display:flex; align-items:center; justify-content:center; z-index:1000; }
+.import-modal-dialog { background:#fff; border-radius:var(--radius-xl); box-shadow:0 20px 60px -20px rgb(0 0 0 / 30%); width:90vw; max-width:1000px; max-height:90vh; display:flex; flex-direction:column; }
+.import-modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--n200); }
+.import-modal-header h2 { margin:0; font-size:18px; font-weight:600; color:var(--brand-900); }
+.import-modal-close { background:none; border:none; font-size:24px; color:var(--n400); cursor:pointer; padding:0; width:32px; height:32px; display:flex; align-items:center; justify-content:center; transition:.15s; }
+.import-modal-close:hover { color:var(--n700); }
+.import-modal-info { padding:16px 24px; background:var(--brand-50); border-bottom:1px solid var(--n200); font-size:13px; }
+.import-modal-info p { margin:0; color:var(--brand-700); }
+.import-modal-table-container { flex:1; overflow:auto; }
+.import-data-table { width:100%; border-collapse:collapse; font-size:12px; }
+.import-data-table thead { background:var(--n100); position:sticky; top:0; }
+.import-data-table th { padding:10px 12px; text-align:right; font-weight:500; color:var(--n600); border-bottom:1px solid var(--n200); }
+.import-data-table td { padding:8px 12px; text-align:right; border-bottom:1px solid var(--n100); }
+.import-data-table tbody tr:hover { background:var(--brand-50); }
+.import-modal-footer { display:flex; gap:8px; padding:16px 24px; border-top:1px solid var(--n200); justify-content:flex-start; }
+.btn-primary { background:var(--brand-600); color:#fff; border:none; border-radius:var(--radius-lg); padding:8px 16px; cursor:pointer; font:inherit; font-weight:500; transition:.15s; }
+.btn-primary:hover { background:var(--brand-700); }
+.btn-secondary { background:#fff; color:var(--n700); border:1px solid var(--n300); border-radius:var(--radius-lg); padding:8px 16px; cursor:pointer; font:inherit; font-weight:500; transition:.15s; }
+.btn-secondary:hover { border-color:var(--brand-400); color:var(--brand-700); }
