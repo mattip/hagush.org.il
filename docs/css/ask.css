@@ -1,5 +1,11 @@
 /* ── Ask page — "עכשיו שואלות!" ─────────────────────────────────── */
 
+/* We pull in candidates.css for the shared popup styles; its body rule
+   (background: var(--light)) would otherwise tint this page. Keep ask white. */
+body {
+  background: #fff;
+}
+
 /* ── Hero ─────────────────────────────────────────────────────────── */
 .ask-hero {
   padding: 2rem 2rem 1rem;
@@ -271,6 +277,15 @@
 
 .past-card:hover {
   filter: brightness(1.15);
+}
+
+/* Passed interview whose JSON isn't published yet — inert, not a link. */
+.past-card--pending {
+  opacity: 0.55;
+  cursor: default;
+}
+.past-card--pending:hover {
+  filter: none;
 }
 
 .pc-date {

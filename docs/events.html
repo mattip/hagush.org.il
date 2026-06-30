@@ -107,6 +107,17 @@
     let activeRegions = new Set();
     let activeParticipants = new Set();
 
+    // An event stays listed until 2 hours after its start time, then drops off.
+    // date+time are local ("YYYY-MM-DD" / "HH:MM"); comparing the full datetime
+    // avoids the old date-only / UTC bug that hid today's events in the evening.
+    const EVENT_GRACE_MS = 2 * 60 * 60 * 1000;
+    function isEventCurrent(ev) {
+      const cutoff = ev.time
+        ? new Date(`${ev.date}T${ev.time}:00`).getTime() + EVENT_GRACE_MS
+        : new Date(`${ev.date}T23:59:59`).getTime(); // no time → through end of day
+      return cutoff >= Date.now();
+    }
+
     // ── Load events ──
     async function loadEvents() {
       try {
@@ -118,9 +129,8 @@
           .map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
-      // Only future events for filters
-      const today = new Date().toISOString().slice(0, 10);
-      const futureEvents = allEvents.filter(ev => ev.date >= today);
+      // Only current/upcoming events for filters
+      const futureEvents = allEvents.filter(isEventCurrent);
 
       // Build region filter from future events
       const regions = new Set();
@@ -157,9 +167,8 @@
       const list = document.getElementById("eventsList");
       let filtered = allEvents;
 
-      // Only show future events (or today)
-      const today = new Date().toISOString().slice(0, 10);
-      filtered = filtered.filter(ev => ev.date >= today);
+      // Only show current/upcoming events (drop 2h after start time)
+      filtered = filtered.filter(isEventCurrent);
 
       if (activeRegions.size > 0) {
         filtered = filtered.filter(ev => {
