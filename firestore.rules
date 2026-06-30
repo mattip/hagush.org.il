@@ -50,7 +50,6 @@ service cloud.firestore {
             'phone',
             'email',
             'city',
-            'idNumber',
             'registered',
             'referrer',
             'source'
@@ -60,7 +59,6 @@ service cloud.firestore {
         && validStr(request.resource.data.phone,      30)
         && validStr(request.resource.data.email,     254)
         && validStr(request.resource.data.city,      100)
-        && validStr(request.resource.data.idNumber,   20)
         && validStr(request.resource.data.source,    256)
         && validStr(request.resource.data.referrer,  256)
         && (request.resource.data.registered is bool || request.resource.data.registered is string);
