@@ -186,7 +186,7 @@
         const monthName = monthNames[parseInt(month)] || month;
         const dayNum = parseInt(day) || day;
 
-        const participantsStr = (ev.participants || []).join(" + ");
+        const participantsStr = (ev.participants || []).join(" + ").replace(/"/g, "״");
         const locationParts = [ev.city, ev.address].filter(Boolean).join(" | ");
 
         let cta = "";
