@@ -110,6 +110,7 @@
 .ask-wa-icon {
   width: 28px;
   height: 28px;
+  filter: invert(56%) sepia(53%) saturate(652%) hue-rotate(107deg) brightness(97%) contrast(92%);
 }
 
 /* ── Form section ─────────────────────────────────────────────────── */
@@ -264,6 +265,12 @@
   padding: 12px 14px;
   gap: 12px;
   color: #fff;
+  text-decoration: none;
+  transition: filter 0.15s;
+}
+
+.past-card:hover {
+  filter: brightness(1.15);
 }
 
 .pc-date {

@@ -596,7 +596,13 @@
     const participants = getAllParticipants();
 
     if (!date || !time || region.length === 0 || !city || participants.length === 0) {
-      alert("נא למלא את כל שדות החובה (תאריך, שעה, אזור, עיר, משתתפים)");
+      const missing = [];
+      if (!date) missing.push("תאריך");
+      if (!time) missing.push("שעה");
+      if (region.length === 0) missing.push("אזור");
+      if (!city) missing.push("עיר/ישוב");
+      if (participants.length === 0) missing.push("משתתפים");
+      alert("נא למלא: " + missing.join(", "));
       return;
     }
 

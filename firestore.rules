@@ -21,6 +21,8 @@ service cloud.firestore {
     function mgrGroup()        { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'group'; }
     function isReferrer()      { return hasRole() && roleDoc().role in ['referrer', 'groupLeader']; }
     function validStr(val, max) { return val is string && val.size() <= max; }
+    // Optional string: valid when absent, or a string within the length limit.
+    function optStr(data, key, max) { return !(key in data) || validStr(data[key], max); }
 
     function canReadScoped(res) {
       return isAdmin() || mgrFull()
@@ -39,32 +41,41 @@ service cloud.firestore {
     match /questions/{id}    { allow read: if isAdmin() || mgrFull(); allow write: if false; }
 
     // ── join form (anonymous create, PII, admin-read) ─────────────────────────
-    match /join_form/{id} {
-      allow create: if request.resource.data.ts is timestamp
-        && request.resource.data.keys().hasOnly(
-          [
-            'ts',
-            'firstName',
-            'lastName',
-            'phone',
-            'email',
-            'city',
-            'idNumber',
-            'registered',
-            'referrer',
-            'source'
-          ])
-        && validStr(request.resource.data.firstName, 100)
+    function validJoinFields() {
+      return validStr(request.resource.data.firstName, 100)
         && validStr(request.resource.data.lastName,  100)
         && validStr(request.resource.data.phone,      30)
-        && validStr(request.resource.data.email,     254)
+        && optStr(request.resource.data, 'email',    254)
         && validStr(request.resource.data.city,      100)
-        && validStr(request.resource.data.idNumber,   20)
+        && optStr(request.resource.data, 'idNumber',  20)
         && validStr(request.resource.data.source,    256)
         && validStr(request.resource.data.referrer,  256)
         && (request.resource.data.registered is bool || request.resource.data.registered is string);
-      allow read:           if isAdmin();
-      allow update, delete: if false;
+    }
+    function validImportDoc() {
+      return request.resource.data.ts is timestamp
+        && request.resource.data.keys().hasOnly(
+          ['ts','firstName','lastName','phone','email','city','idNumber','registered','referrer','source','importBatchId','importedAt'])
+        && validStr(request.resource.data.importBatchId, 64)
+        && request.resource.data.importedAt is timestamp
+        && validJoinFields();
+    }
+    match /join_form/{id} {
+      // Anonymous public submission from the join form.
+      allow create: if request.resource.data.ts is timestamp
+        && request.resource.data.keys().hasOnly(
+          ['ts','firstName','lastName','phone','email','city','idNumber','registered','referrer','source'])
+        && validJoinFields();
+      // Admin CSV import: same fields plus import audit metadata.
+      allow create: if isAdmin() && validImportDoc();
+      allow read:   if isAdmin();
+      // Re-import with deterministic ids overwrites existing import records, but
+      // never an organic public submission (which has no importBatchId).
+      allow update: if isAdmin()
+        && resource.data.importBatchId is string
+        && validImportDoc();
+      // Admins may revert an import by deleting only records tagged with a batch id.
+      allow delete: if isAdmin() && resource.data.importBatchId is string;
     }
     match /ask_candidate_form/{id} { allow read: if isAdmin(); allow write: if false; }
 

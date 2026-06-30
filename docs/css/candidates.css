@@ -739,6 +739,153 @@ html.no-scroll {
   opacity: 1;
 }
 
+/* ── Popup tabs ───────────────────────────────────────────────────── */
+.popup-tabs {
+  display: flex;
+  border-bottom: 2px solid #eaeff6;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.popup-tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #7890a6;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.popup-tab:hover { color: var(--nav, #09366d); }
+
+.popup-tab.active {
+  color: var(--nav, #09366d);
+  border-bottom-color: var(--nav, #09366d);
+}
+
+/* ── Interview accordion ──────────────────────────────────────────── */
+.popup-interview {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.iv-loading {
+  text-align: center;
+  color: #999;
+  padding: 2rem 0;
+  font-size: 0.9rem;
+}
+
+/* ── Interview chat flow ──────────────────────────────────────────── */
+.iv-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.iv-bubble {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.iv-bubble-iv {
+  align-self: flex-start;
+  background: #d9fdd3;
+  color: #1a1a2e;
+  border-top-left-radius: 2px;
+}
+
+.iv-bubble-cd {
+  align-self: flex-end;
+  background: #fff;
+  color: #1a1a2e;
+  border: 1px solid #e8ebf0;
+  border-top-right-radius: 2px;
+}
+
+.iv-bubble-img {
+  width: 100%;
+  max-width: 240px;
+  border-radius: 8px;
+  display: block;
+}
+
+
+.iv-video-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.iv-video-wrap video {
+  width: 100%;
+  max-width: 240px;
+  border-radius: 8px;
+  display: block;
+}
+
+.iv-video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.5);
+  color: #fff;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .2s;
+}
+
+.iv-video-play:hover {
+  background: rgba(0,0,0,.7);
+}
+
+.iv-video-play.playing {
+  opacity: 0;
+}
+
+.iv-video-wrap:hover .iv-video-play.playing {
+  opacity: .6;
+}
+
+.iv-audio {
+  display: block;
+  max-width: 240px;
+  border-radius: 24px;
+}
+
+.iv-asker {
+  display: block;
+  font-size: 0.75rem;
+  color: #7890a6;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
 /* ── 11. Responsive overrides ───────────────────────────────────── */
 @media (min-width: 768px) {
   .card { max-width: 390px; }
@@ -755,65 +902,3 @@ html.no-scroll {
 
 @media (min-width: 1024px) { /* desktop — add overrides here */ }
 @media (min-width: 1280px) { /* wide desktop — add overrides here */ }
-
-/* ── 12. Click-hint animation (mobile only, once per session) ──── */
-@media (max-width: 767px) {
-  .click-hint {
-    position: absolute;
-    bottom: 60px;
-    right: 12px;
-    z-index: 5;
-    pointer-events: none;
-    opacity: 0;
-    animation: ch-appear 0.4s ease-out forwards;
-  }
-
-  .click-hint svg {
-    display: block;
-    width: 52px;
-    height: 52px;
-    position: relative;
-    z-index: 2;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
-    animation: ch-pulse 2s ease-in-out 3;
-  }
-
-  .click-hint .ch-ring {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border-radius: 50%;
-    border: 2.5px solid var(--orange, #e47f09);
-    opacity: 0;
-  }
-  .click-hint .ch-ring:nth-child(2) { animation: ch-ripple 2s ease-out 3; }
-  .click-hint .ch-ring:nth-child(3) { animation: ch-ripple 2s 0.12s ease-out 3; }
-  .click-hint .ch-ring:nth-child(4) { animation: ch-ripple 2s 0.24s ease-out 3; }
-
-  .click-hint.ch-done {
-    animation: ch-fadeout 0.5s ease-in forwards;
-  }
-
-  @keyframes ch-appear {
-    to { opacity: 1; }
-  }
-
-  @keyframes ch-pulse {
-    0%, 30%, 100% { transform: scale(1); }
-    12%           { transform: scale(1.15); }
-  }
-
-  @keyframes ch-ripple {
-    0%, 20%  { opacity: 0; transform: scale(1); }
-    25%      { opacity: 0.7; transform: scale(1); }
-    50%      { opacity: 0; transform: scale(4.5); }
-    100%     { opacity: 0; transform: scale(4.5); }
-  }
-
-  @keyframes ch-fadeout {
-    to { opacity: 0; }
-  }
-}

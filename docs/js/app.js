@@ -100,6 +100,7 @@ function syncPopupToUrl(reason) {
   const params    = new URLSearchParams(window.location.search);
   const idParam   = params.get("id");
   const nameParam = params.get("name");
+  console.log("syncPopupToUrl:", reason, { idParam, nameParam });
   if (!(idParam || nameParam)) {
     if (popup.classList.contains("open")) {
       closePopup();
@@ -110,6 +111,7 @@ function syncPopupToUrl(reason) {
     idParam ? p.id === idParam : p.name === nameParam,
   );
   if (!match) {
+    console.warn("syncPopupToUrl: no match for", idParam || nameParam);
     return;
   }
   if (popup.classList.contains("open") && popup.dataset.personId === match.id) {
@@ -201,16 +203,18 @@ function createPromoCard() {
 
   const body = document.createElement("p");
   body.className = "muted";
-  body.textContent = "זה הזמן ללמוד על המועמדים.ות, להכיר אותם ולשאול אותם.ן את השאלות הקשות!";
 
-  const linkPara = document.createElement("p");
   const link = document.createElement("a");
   link.href = "https://chat.whatsapp.com/KYjojL9gh7g5fTQxEzB1HA";
   link.className = "link";
   link.textContent = 'הצטרפו לקבוצת הוואטסאפ "עכשיו שואלות"';
-  linkPara.append(link);
+  body.append(link, " כדי להכיר עוד את המועמדים.ות!");
 
-  textSection.append(title, body, linkPara);
+  const body2 = document.createElement("p");
+  body2.className = "muted";
+  body2.textContent = 'לקריאת ראיונות קודמים- לחצו על המועמד.ת שיש עליו את אייקון "עכשיו שואלות"';
+
+  textSection.append(title, body, body2);
   card.append(imgSection, textSection);
   return card;
 }
@@ -423,6 +427,7 @@ function openPopup(person, card, pushHistory = true, via = "card") {
 
   popup.classList.add("open");
   popup.dataset.personId = person.id;
+  initPopupTabs(person.id);
   // requestAnimationFrame(() => positionPopup(card)); // Don't position the popup for now, as it is fullscreen on mobile.
 }
 
@@ -530,6 +535,15 @@ function closePopup() {
   popup.classList.remove("open");
   popupHistory = [];
   document.getElementById("popupBack").style.display = "none";
+
+  // Clean deeplink params from URL
+  const url = new URL(window.location);
+  if (url.searchParams.has("id") || url.searchParams.has("tab") || url.searchParams.has("name")) {
+    url.searchParams.delete("id");
+    url.searchParams.delete("tab");
+    url.searchParams.delete("name");
+    history.replaceState(null, "", url.pathname + (url.search || ""));
+  }
 }
 
 function popupGoBack() {
@@ -744,6 +758,118 @@ function resetChoices() {
   // Exit select mode and return to initial state
   exitSelectMode();
 }
+
+// ── Interview tabs & accordion ───────────────────────────────────
+const INTERVIEWS_DIR = "interviews/";
+
+// Tab switching
+(function () {
+  const tabs = document.getElementById("popupTabs");
+  if (!tabs) return;
+  tabs.addEventListener("click", (e) => {
+    const btn = e.target.closest(".popup-tab");
+    if (!btn) return;
+    const tabName = btn.dataset.tab;
+    tabs.querySelectorAll(".popup-tab").forEach(t => t.classList.toggle("active", t === btn));
+    popup.querySelectorAll(".popup-tab-panel").forEach(p => {
+      p.style.display = p.dataset.tab === tabName ? "" : "none";
+      if (p.dataset.tab === tabName) p.scrollTop = 0;
+    });
+  });
+})();
+
+async function initPopupTabs(candidateId) {
+  const tabBar     = document.getElementById("popupTabs");
+  const profileP   = document.getElementById("panelProfile");
+  const interviewP = document.getElementById("panelInterview");
+
+  console.log("initPopupTabs:", candidateId);
+
+  // Reset to profile tab
+  tabBar.querySelectorAll(".popup-tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.tab === "profile")
+  );
+  profileP.style.display = "";
+  interviewP.style.display = "none";
+
+  // Fetch interview data
+  let data = null;
+  try {
+    const res = await fetch(INTERVIEWS_DIR + candidateId + ".json", { cache: "no-cache" });
+    if (res.ok) data = await res.json();
+  } catch {}
+
+  if (data && data.questions && data.questions.length > 0) {
+    tabBar.style.display = "flex";
+    renderAccordion(data);
+
+    // Switch to interview tab if ?tab=interview is in URL
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    if (requestedTab === "interview") {
+      tabBar.querySelectorAll(".popup-tab").forEach(t =>
+        t.classList.toggle("active", t.dataset.tab === "interview")
+      );
+      profileP.style.display = "none";
+      interviewP.style.display = "";
+      interviewP.scrollTop = 0;
+    }
+  } else {
+    tabBar.style.display = "none";
+  }
+}
+
+function renderAccordion(data) {
+  const wrap = document.getElementById("ivAccordion");
+  document.getElementById("ivLoading").style.display = "none";
+
+  const imgBase = INTERVIEWS_DIR + data.candidate_id + "/";
+
+  function renderBubble(p, role) {
+    const cls = role === "interviewer" ? "iv-bubble iv-bubble-iv" : "iv-bubble iv-bubble-cd";
+    if (typeof p === "object" && p.type === "image") {
+      const src = p.url || (imgBase + escapeHTML(p.file));
+      return `<div class="${cls}"><img class="iv-bubble-img" src="${src}" alt="" loading="lazy" /></div>`;
+    }
+    if (typeof p === "object" && p.type === "video") {
+      const src = p.url || (imgBase + escapeHTML(p.file));
+      return `<div class="${cls}"><div class="iv-video-wrap"><video class="iv-video" src="${src}" playsinline preload="metadata"></video><button class="iv-video-play" aria-label="נגן">▶</button></div></div>`;
+    }
+    if (typeof p === "object" && p.type === "audio") {
+      const src = p.url || (imgBase + escapeHTML(p.file));
+      return `<div class="${cls}"><audio class="iv-audio" controls src="${src}" preload="metadata"></audio></div>`;
+    }
+    if (typeof p === "object" && p.type === "text") {
+      const r = p.role === "interviewer" ? "iv-bubble iv-bubble-iv" : "iv-bubble iv-bubble-cd";
+      return `<div class="${r}">${escapeHTML(p.text)}</div>`;
+    }
+    return `<div class="${cls}">${escapeHTML(p)}</div>`;
+  }
+
+  let html = "";
+  for (const q of data.questions) {
+    for (const p of q.question) html += renderBubble(p, "interviewer");
+    for (const p of q.answer)   html += renderBubble(p, "candidate");
+    for (const p of q.response) html += renderBubble(p, "interviewer");
+  }
+
+  wrap.innerHTML = `<div class="iv-chat">${html}</div>`;
+
+  // Video play/pause
+  wrap.addEventListener("click", (e) => {
+    const playBtn = e.target.closest(".iv-video-play");
+    if (!playBtn) return;
+    const video = playBtn.parentElement.querySelector("video");
+    if (video.paused) {
+      video.play();
+      playBtn.classList.add("playing");
+    } else {
+      video.pause();
+      playBtn.classList.remove("playing");
+    }
+    video.onended = () => playBtn.classList.remove("playing");
+  });
+}
+
 
 // ── Click-hint animation (mobile, 3 cycles) ─────────────────────
 function initClickHint() {
