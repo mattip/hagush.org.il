@@ -521,6 +521,10 @@ function scheduleClose() {
 }
 
 function closePopup() {
+  // Nothing open → nothing to restore. Without this guard, a click anywhere
+  // outside a card (e.g. a radio on ask.html) runs the full teardown, and the
+  // scroll-restore snaps the page to the top (body.style.top is unset → 0).
+  if (!popup.classList.contains("open")) return;
   const scrollY = parseInt(document.body.style.top || "0") * -1;
   document.body.style.top = "";
   document.body.style.paddingRight = "";

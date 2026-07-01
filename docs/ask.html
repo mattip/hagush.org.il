@@ -10,10 +10,10 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="עכשיו באות!" />
     <meta property="og:title" content="עכשיו שואלות!" />
-    <meta property="og:description" content="כל שבוע נאסוף שאלות עבור מועמד.ת אחר.ת. נפגש בקבוצת וואטספא יעודית להכיר ולראות את התשובות שלהם לנושאים שנשאלו." />
+    <meta property="og:description" content="ניפגש בקבוצת הוואטסאפ הייעודית שלנו כדי להכיר את המועמדים.ות ולשאול אותם את כל השאלות הקשות! תוכלו לשאול" />
     <meta property="og:url" content="https://hagush.org.il/ask.html" />
     <meta property="og:locale" content="he_IL" />
-    <meta name="description" content="כל שבוע נאסוף שאלות עבור מועמד.ת אחר.ת. נפגש בקבוצת וואטספא יעודית להכיר ולראות את התשובות שלהם לנושאים שנשאלו." />
+    <meta name="description" content="ניפגש בקבוצת הוואטסאפ הייעודית שלנו כדי להכיר את המועמדים.ות ולשאול אותם את כל השאלות הקשות! תוכלו לשאול" />
 
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./css/main.css?v=4" />
@@ -46,10 +46,12 @@
       <section class="ask-hero section">
         <h1 class="ask-title">עכשיו שואלות!</h1>
         <p class="ask-desc">
-          כל שבוע נאסוף שאלות עבור מועמד.ת אחר.ת. נפגש בקבוצת
-          וואטספא יעודית להכיר ולראות את התשובות שלהם לנושאים
-          שנשאלו.
+          ניפגש בקבוצת הוואטסאפ הייעודית שלנו כדי להכיר את
+          המועמדים.ות ולשאול אותם את כל השאלות הקשות!
         </p>
+        <p><b> יש לך
+          שאלה? מלא.י את הטופס מטה
+        </b></p>
       </section>
 
       <!-- ── Upcoming interviews ── -->
@@ -71,8 +73,6 @@
         <div class="ask-form-banner">יש לי שאלה למועמד.ה &gt;</div>
 
         <div class="ask-form-wrap">
-          <p class="ask-form-intro">מלאו פרטים לשלוח שאלה למנחות</p>
-
           <form id="askForm" class="ask-form" novalidate>
             <input type="text" name="website" tabindex="-1" autocomplete="off"
               style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0"
@@ -231,7 +231,7 @@
       </div>
     </div>
 
-    <script src="./js/app.js?v=10" data-popups="true"></script>
+    <script src="./js/app.js?v=11" data-popups="true"></script>
     <script>
     const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
     const TOKEN      = "NachshavBaot2026";
@@ -360,7 +360,7 @@
         const res = await fetch(`interviews/${iv.candidate_id}.json`, { cache: "no-cache" });
         if (res.ok) {
           const data = await res.json();
-          ready = !!(data && data.questions && data.questions.length);
+          ready = !!(data && Array.isArray(data.messages) && data.messages.length);
         }
       } catch {}
       if (!ready) return;
