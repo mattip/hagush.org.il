@@ -66,7 +66,7 @@ Promise.all([
     people = shuffle(people.filter((p) => !p.hidden));
     allPeople = people;
     // Grid only exists on candidates.html. ask.html reuses this script purely
-    // for the popup (openPopup/initPopupTabs/renderAccordion), so skip the grid.
+    // for the popup (openPopup/initPopupTabs/renderChat), so skip the grid.
     if (document.getElementById("grid")) buildGrid(people);
     restoreFromCookies();
     // Open popup from URL: ?id=emily_m or ?name=אמיר
@@ -428,7 +428,7 @@ function openPopup(person, card, pushHistory = true, via = "card") {
 
 // ── Recommendation name linking ───────────────────────────────────
 function escapeHTML(str) {
-  return str
+  return String(str ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -791,16 +791,36 @@ async function initPopupTabs(candidateId) {
   profileP.style.display = "";
   interviewP.style.display = "none";
 
-  // Fetch interview data
+  // Fetch interview data. Distinguish "no interview" (404 — expected, stay
+  // quiet) from "interview exists but is broken" (parse/HTTP error — log loudly
+  // so a malformed docs/interviews/<id>.json doesn't just silently vanish).
+  const url = INTERVIEWS_DIR + candidateId + ".json";
   let data = null;
   try {
-    const res = await fetch(INTERVIEWS_DIR + candidateId + ".json", { cache: "no-cache" });
-    if (res.ok) data = await res.json();
-  } catch {}
+    const res = await fetch(url, { cache: "no-cache" });
+    if (res.ok) {
+      try {
+        data = await res.json();
+      } catch (err) {
+        console.error(
+          `Interview file ${url} is invalid JSON — interview tab hidden. Fix the file:`,
+          err.message,
+        );
+      }
+    } else if (res.status !== 404) {
+      console.warn(`Interview file ${url} failed to load: HTTP ${res.status}`);
+    }
+  } catch (err) {
+    console.warn(`Interview file ${url} could not be fetched:`, err.message);
+  }
 
-  if (data && data.questions && data.questions.length > 0) {
+  if (data && Array.isArray(data.messages) && data.messages.length > 0) {
     tabBar.style.display = "flex";
-    renderAccordion(data);
+    try {
+      renderChat(data);
+    } catch (err) {
+      console.error(`Failed to render interview for "${data.candidate_id}":`, err);
+    }
 
     // Switch to interview tab if ?tab=interview is in URL
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
@@ -817,39 +837,47 @@ async function initPopupTabs(candidateId) {
   }
 }
 
-function renderAccordion(data) {
+function renderChat(data) {
   const wrap = document.getElementById("ivAccordion");
   document.getElementById("ivLoading").style.display = "none";
 
   const imgBase = INTERVIEWS_DIR + data.candidate_id + "/";
 
-  function renderBubble(p, role) {
-    const cls = role === "interviewer" ? "iv-bubble iv-bubble-iv" : "iv-bubble iv-bubble-cd";
-    if (typeof p === "object" && p.type === "image") {
-      const src = p.url || (imgBase + escapeHTML(p.file));
-      return `<div class="${cls}"><img class="iv-bubble-img" src="${src}" alt="" loading="lazy" /></div>`;
+  // role: "question" → interviewer bubble (green), "answer" → candidate (white).
+  // A content item is a string (text bubble) or a media dict {type, file|url}.
+  function renderBubble(p, role, ctx) {
+    const cls = role === "question" ? "iv-bubble iv-bubble-iv" : "iv-bubble iv-bubble-cd";
+
+    if (p && typeof p === "object") {
+      const src = p.url || (p.file ? imgBase + escapeHTML(p.file) : null);
+      if ((p.type === "image" || p.type === "video" || p.type === "audio") && !src) {
+        console.error(
+          `Interview "${data.candidate_id}" ${ctx}: ${p.type} item has no "file" or "url" — skipped. Item:`, p);
+        return `<div class="${cls} iv-bubble-broken">⚠️ מדיה חסרה</div>`;
+      }
+      if (p.type === "image") return `<div class="${cls}"><img class="iv-bubble-img" src="${src}" alt="" loading="lazy" /></div>`;
+      if (p.type === "video") return `<div class="${cls}"><div class="iv-video-wrap"><video class="iv-video" src="${src}" playsinline preload="metadata"></video><button class="iv-video-play" aria-label="נגן">▶</button></div></div>`;
+      if (p.type === "audio") return `<div class="${cls}"><audio class="iv-audio" controls src="${src}" preload="metadata"></audio></div>`;
+      if (p.type === "text")  return `<div class="${cls}">${escapeHTML(p.text)}</div>`;
+      console.error(
+        `Interview "${data.candidate_id}" ${ctx}: unrecognized item (need a string or {type:image|video|audio|text}) — skipped. Item:`, p);
+      return `<div class="${cls} iv-bubble-broken">⚠️ תוכן לא נתמך</div>`;
     }
-    if (typeof p === "object" && p.type === "video") {
-      const src = p.url || (imgBase + escapeHTML(p.file));
-      return `<div class="${cls}"><div class="iv-video-wrap"><video class="iv-video" src="${src}" playsinline preload="metadata"></video><button class="iv-video-play" aria-label="נגן">▶</button></div></div>`;
-    }
-    if (typeof p === "object" && p.type === "audio") {
-      const src = p.url || (imgBase + escapeHTML(p.file));
-      return `<div class="${cls}"><audio class="iv-audio" controls src="${src}" preload="metadata"></audio></div>`;
-    }
-    if (typeof p === "object" && p.type === "text") {
-      const r = p.role === "interviewer" ? "iv-bubble iv-bubble-iv" : "iv-bubble iv-bubble-cd";
-      return `<div class="${r}">${escapeHTML(p.text)}</div>`;
-    }
+
     return `<div class="${cls}">${escapeHTML(p)}</div>`;
   }
 
   let html = "";
-  for (const q of data.questions) {
-    for (const p of q.question) html += renderBubble(p, "interviewer");
-    for (const p of q.answer)   html += renderBubble(p, "candidate");
-    for (const p of q.response) html += renderBubble(p, "interviewer");
-  }
+  data.messages.forEach((msg, i) => {
+    const role = "question" in msg ? "question" : "answer";
+    const parts = msg[role];
+    if (!Array.isArray(parts)) {
+      console.error(
+        `Interview "${data.candidate_id}" message #${i}: expected a "question" or "answer" array — skipped. Message:`, msg);
+      return;
+    }
+    parts.forEach((p) => { html += renderBubble(p, role, `message #${i}`); });
+  });
 
   wrap.innerHTML = `<div class="iv-chat">${html}</div>`;
 

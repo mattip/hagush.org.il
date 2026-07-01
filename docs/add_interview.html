@@ -89,7 +89,6 @@
     .qa-block-header .qa-preview { flex: 1; font-size: .8rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .qa-block-header .qa-del { background: none; border: none; color: #c0392b; cursor: pointer; font-size: .8rem; font-weight: 600; }
     .qa-header-btns { display: flex; gap: 6px; align-items: center; }
-    .qa-merge { background: none; border: 1px solid #09366d; color: #09366d; border-radius: 4px; cursor: pointer; font-size: .7rem; font-weight: 600; padding: 2px 6px; }
     .qa-block-body { display: none; padding: .8rem; border-top: 1px solid #eee; }
     .qa-block.open .qa-block-body { display: block; }
     .qa-section-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; color: #7890a6; margin: .6rem 0 .3rem; }
@@ -97,10 +96,6 @@
     .qa-msg { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 4px; position: relative; }
     .qa-msg textarea { flex: 1; border: 1px solid #e0e3e8; border-radius: 6px; padding: .4rem; font: inherit; font-size: .8rem; resize: vertical; min-height: 2.2em; line-height: 1.5; }
     .qa-msg .qa-msg-del { background: none; border: none; color: #c0392b; cursor: pointer; font-size: .7rem; padding: 4px; }
-    .qa-msg .qa-msg-split { background: none; border: 1px solid #e47f09; color: #e47f09; border-radius: 4px; cursor: pointer; font-size: .8rem; padding: 1px 5px; }
-    .qa-msg-interviewer { padding-top: 14px; }
-    .qa-msg-interviewer textarea { border-color: #7890a6; background: #f9fafb; font-style: italic; }
-    .qa-msg-interviewer::before { content: "מראיינ.ת"; font-size: .6rem; color: #7890a6; font-weight: 600; position: absolute; top: 0; right: 0; }
     .qa-msg-img { max-width: 120px; border-radius: 8px; margin: 4px 0; }
     .qa-section-label .qa-add-msg { font-size: .7rem; color: #09366d; cursor: pointer; background: none; border: none; font-weight: 600; margin-inline-start: 8px; }
 
@@ -483,6 +478,58 @@
     wrap.innerHTML = items;
   }
 
+  // ── messages <-> editor blocks ───────────────────────────────────
+  // File format is a flat list of { question:[…] } / { answer:[…] } messages
+  // (question = interviewer/green, answer = candidate/white). The editor works
+  // in {question, answer} blocks: a question after an answer starts a new block.
+  function messagesToBlocks(messages) {
+    const blocks = [];
+    let cur = null;
+    for (const msg of (messages || [])) {
+      const role = ("question" in msg) ? "question" : "answer";
+      const parts = Array.isArray(msg[role]) ? msg[role] : [];
+      if (role === "question") {
+        if (!cur || cur.answer.length) { cur = { question: [], answer: [] }; blocks.push(cur); }
+        cur.question.push(...parts);
+      } else {
+        if (!cur) { cur = { question: [], answer: [] }; blocks.push(cur); }
+        cur.answer.push(...parts);
+      }
+    }
+    return blocks;
+  }
+
+  function normPart(p) {
+    // Legacy {type:"text",…} items collapse back to plain strings.
+    if (p && typeof p === "object" && p.type === "text") return p.text || "";
+    return p;
+  }
+
+  function blocksToMessages(blocks) {
+    const messages = [];
+    for (const b of blocks) {
+      const q = b.question.map(normPart).filter(x => x !== "");
+      const a = b.answer.map(normPart).filter(x => x !== "");
+      if (q.length) messages.push({ question: q });
+      if (a.length) messages.push({ answer: a });
+    }
+    return messages;
+  }
+
+  async function loadBlockImages(blocks, candidateId) {
+    for (const b of blocks) {
+      for (const p of [...b.question, ...b.answer]) {
+        if (p && typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio") && p.file) {
+          try {
+            const imgRes = await fetch(INTERVIEWS_DIR + candidateId + "/" + p.file);
+            if (imgRes.ok) { currentEditImages[p.file] = await imgRes.blob(); continue; }
+          } catch {}
+          if (zipImages[p.file]) currentEditImages[p.file] = zipImages[p.file];
+        }
+      }
+    }
+  }
+
   async function loadExistingDirect(candidateId) {
     const candidate = candidates.find(c => c.id === candidateId);
     const candidateName = candidate ? candidate.name : candidateId;
@@ -491,30 +538,19 @@
       if (!res.ok) { alert("לא נמצא קובץ ראיון"); return; }
       const data = await res.json();
 
+      const blocks = messagesToBlocks(data.messages);
       currentEditData = {
         candidate_id: candidateId,
         candidate_name: candidateName,
         date: data.date || "",
         interviewer: "",
-        questions: data.questions,
+        questions: blocks,
       };
       currentEditImages = {};
 
-      // Load images from disk
-      for (const q of data.questions) {
-        for (const section of ["question", "answer", "response"]) {
-          for (const p of q[section]) {
-            if (typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio") && p.file) {
-              try {
-                const imgRes = await fetch(INTERVIEWS_DIR + candidateId + "/" + p.file);
-                if (imgRes.ok) currentEditImages[p.file] = await imgRes.blob();
-              } catch {}
-            }
-          }
-        }
-      }
+      await loadBlockImages(blocks, candidateId);
 
-      renderEditor(data.questions, candidateName, currentEditImages, true);
+      renderEditor(blocks, candidateName, currentEditImages, true);
     } catch (err) {
       alert("שגיאה בטעינת ראיון: " + err.message);
     }
@@ -674,8 +710,6 @@
   }
 
   // ── Extract Q/A blocks ──
-  const Q_MIN_LEN = 50;
-
   function extractQA(allMsgs, interviewer, candidate, startTime, endTime, filterDate) {
     const norm = s => s.toLowerCase().replace(/\s+/g, " ").trim();
     const isIv = m => norm(m.sender).includes(norm(interviewer));
@@ -702,8 +736,7 @@
     console.log(`  Filtered: ${filtered.length} msgs (${ivCount} interviewer, ${cdCount} candidate)`);
 
     const blocks = [];
-    let qParts = [], aParts = [], rParts = [];
-    let state = "Q";
+    let cur = null;
 
     function msgItem(m) {
       if (m.image) {
@@ -714,32 +747,17 @@
       return m.text.trim();
     }
 
-    function flush() {
-      if (qParts.length && aParts.length) {
-        blocks.push({ question: [...qParts], answer: [...aParts], response: [...rParts] });
-      }
-      qParts = []; aParts = []; rParts = [];
-    }
-
     for (const m of filtered) {
       const item = msgItem(m);
       if (isIv(m)) {
-        const isLong = m.text.length >= Q_MIN_LEN;
-        if (state === "Q") { qParts.push(item); }
-        else if (state === "A") {
-          if (isLong) { flush(); qParts.push(item); state = "Q"; }
-          else { rParts.push(item); state = "R"; }
-        } else {
-          if (isLong) { flush(); qParts.push(item); state = "Q"; }
-          else { rParts.push(item); }
-        }
+        // interviewer → question; a question after an answer opens a new block
+        if (!cur || cur.answer.length) { cur = { question: [], answer: [] }; blocks.push(cur); }
+        cur.question.push(item);
       } else if (isCd(m)) {
-        if (state === "Q") { aParts.push(item); state = "A"; }
-        else if (state === "A") { aParts.push(item); }
-        else { aParts.push(...rParts); rParts = []; aParts.push(item); state = "A"; }
+        if (!cur) { cur = { question: [], answer: [] }; blocks.push(cur); }
+        cur.answer.push(item);
       }
     }
-    flush();
     return blocks;
   }
 
@@ -900,31 +918,20 @@
       if (!res.ok) { alert("לא נמצא קובץ ראיון"); return; }
       const data = await res.json();
 
+      const blocks = messagesToBlocks(data.messages);
       currentEditData = {
         candidate_id: candidateId,
         candidate_name: candidateName,
         date: data.date || iv.isoDate,
         interviewer: iv.interviewer,
-        questions: data.questions,
+        questions: blocks,
       };
       currentEditImages = {};
 
-      // Load existing images from disk into blob cache
-      for (const q of data.questions) {
-        for (const section of ["question", "answer", "response"]) {
-          for (const p of q[section]) {
-            if (typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio") && p.file) {
-              try {
-                const imgRes = await fetch(INTERVIEWS_DIR + candidateId + "/" + p.file);
-                if (imgRes.ok) { currentEditImages[p.file] = await imgRes.blob(); continue; }
-              } catch {}
-              if (zipImages[p.file]) currentEditImages[p.file] = zipImages[p.file];
-            }
-          }
-        }
-      }
+      // Load existing images from disk (falling back to the uploaded zip)
+      await loadBlockImages(blocks, candidateId);
 
-      renderEditor(data.questions, candidateName, currentEditImages, true);
+      renderEditor(blocks, candidateName, currentEditImages, true);
     } catch (err) {
       alert("שגיאה בטעינת ראיון: " + err.message);
     }
@@ -951,23 +958,20 @@
     saveParsingPrefs();
 
     const blocks = extractQA(allParsedMsgs, interviewer, iv.guestSender, startTime, endTime, iv.date);
-    const questions = blocks.map((b, i) => ({
-      id: `q${i + 1}`, question: b.question, answer: b.answer, response: b.response,
-    }));
 
     currentEditData = {
       candidate_id: candidateId, candidate_name: candidateName,
-      date: iv.isoDate, interviewer, status: "draft", questions,
+      date: iv.isoDate, interviewer, status: "draft", questions: blocks,
     };
     currentEditImages = {};
     for (const b of blocks) {
-      for (const part of [...b.question, ...b.answer, ...b.response]) {
+      for (const part of [...b.question, ...b.answer]) {
         if (typeof part === "object" && (part.type === "image" || part.type === "video" || part.type === "audio") && zipImages[part.file]) {
           currentEditImages[part.file] = zipImages[part.file];
         }
       }
     }
-    renderEditor(questions, candidateName, currentEditImages, true);
+    renderEditor(blocks, candidateName, currentEditImages, true);
   }
 
   // ── Editor ──────────────────────────────────────────────────────
@@ -978,9 +982,8 @@
     const wrap = document.getElementById("editorWrap");
 
     wrap.innerHTML = questions.map((q, qi) => {
-      const firstText = (q.question.find(p => typeof p === "string") || "").split("\n")[0];
-      if (!q.summary) q.summary = firstText;
-      const preview = q.summary.slice(0, 60);
+      const preview = ((q.question.find(p => typeof p === "string")
+        || q.answer.find(p => typeof p === "string") || "").split("\n")[0]).slice(0, 60);
 
       function renderMsgs(parts, section) {
         return parts.map((p, pi) => {
@@ -1000,48 +1003,26 @@
               <button class="qa-msg-del" onclick="delMsg(${qi},'${section}',${pi})">✕</button>
             </div>`;
           }
-          if (typeof p === "object" && p.type === "text") {
-            const roleClass = p.role === "interviewer" ? "qa-msg-interviewer" : "";
-            const splitBtn = (p.role === "interviewer" && section === "answer")
-              ? `<button class="qa-msg-split" onclick="event.stopPropagation();splitBlock(${qi},${pi})" title="פצל כאן לשאלה חדשה">✂</button>`
-              : "";
-            return `<div class="qa-msg ${roleClass}" data-q="${qi}" data-s="${section}" data-i="${pi}">
-              <textarea rows="1" oninput="autoGrow(this);updateMsg(${qi},'${section}',${pi},this.value)">${esc(p.text)}</textarea>
-              ${splitBtn}
-              <button class="qa-msg-del" onclick="delMsg(${qi},'${section}',${pi})">✕</button>
-            </div>`;
-          }
+          const text = (typeof p === "object" && p.type === "text") ? (p.text || "") : p;
           return `<div class="qa-msg" data-q="${qi}" data-s="${section}" data-i="${pi}">
-            <textarea rows="1" oninput="autoGrow(this);updateMsg(${qi},'${section}',${pi},this.value)">${esc(p)}</textarea>
+            <textarea rows="1" oninput="autoGrow(this);updateMsg(${qi},'${section}',${pi},this.value)">${esc(text)}</textarea>
             <button class="qa-msg-del" onclick="delMsg(${qi},'${section}',${pi})">✕</button>
           </div>`;
         }).join("");
       }
 
-      const mergeBtn = qi > 0
-        ? `<button class="qa-merge" onclick="event.stopPropagation();mergeWithPrev(${qi})" title="מזג בלוק זה עם הקודם">מזג ↑</button>
-           <button class="qa-merge" onclick="event.stopPropagation();moveFirstToPrev(${qi})" title="העבר שורה ראשונה לתגובת הבלוק הקודם">שורה ↑</button>`
-        : "";
-
       return `<div class="qa-block open" data-qi="${qi}">
         <div class="qa-block-header" onclick="this.closest('.qa-block').classList.toggle('open')">
           <span><span class="qa-num">ש׳${qi + 1}</span><span class="qa-preview">${esc(preview)}</span></span>
           <span class="qa-header-btns">
-            ${mergeBtn}
             <button class="qa-del" onclick="event.stopPropagation();delBlock(${qi})">מחק</button>
           </span>
         </div>
         <div class="qa-block-body">
-          <div class="qa-section-label">כותרת לאקורדיון</div>
-          <div class="qa-msg">
-            <textarea rows="1" oninput="autoGrow(this);updateSummary(${qi},this.value)">${esc(q.summary)}</textarea>
-          </div>
           <div class="qa-section-label">שאלה<button class="qa-add-msg" onclick="addMsg(${qi},'question')">+ הודעה</button></div>
           ${renderMsgs(q.question, "question")}
           <div class="qa-section-label">תשובה<button class="qa-add-msg" onclick="addMsg(${qi},'answer')">+ הודעה</button></div>
           ${renderMsgs(q.answer, "answer")}
-          <div class="qa-section-label">תגובה<button class="qa-add-msg" onclick="addMsg(${qi},'response')">+ הודעה</button></div>
-          ${renderMsgs(q.response, "response")}
         </div>
       </div>`;
     }).join("");
@@ -1061,10 +1042,6 @@
     }
   }
 
-  function updateSummary(qi, value) {
-    currentEditData.questions[qi].summary = value;
-  }
-
   function delMsg(qi, section, pi) {
     currentEditData.questions[qi][section].splice(pi, 1);
     renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
@@ -1078,101 +1055,6 @@
   function delBlock(qi) {
     if (!confirm("למחוק בלוק שאלה זה?")) return;
     currentEditData.questions.splice(qi, 1);
-    currentEditData.questions.forEach((q, i) => q.id = `q${i + 1}`);
-    renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
-  }
-
-  function splitBlock(qi, answerIdx) {
-    const curr = currentEditData.questions[qi];
-    const splitItem = curr.answer[answerIdx];
-
-    // New block: interviewer message becomes question, rest of answer follows
-    const newQText = typeof splitItem === "object" && splitItem.text ? splitItem.text : String(splitItem);
-    const newBlock = {
-      id: "",
-      summary: newQText.split("\n")[0],
-      question: [newQText],
-      answer: curr.answer.slice(answerIdx + 1),
-      response: curr.response,
-    };
-
-    // Truncate current block at split point
-    curr.answer = curr.answer.slice(0, answerIdx);
-    curr.response = [];
-
-    // Insert new block after current
-    currentEditData.questions.splice(qi + 1, 0, newBlock);
-    currentEditData.questions.forEach((q, i) => q.id = `q${i + 1}`);
-    renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
-  }
-
-  function tagRole(items, role) {
-    return items.map(item => {
-      if (typeof item === "string") return { type: "text", role, text: item };
-      if (typeof item === "object" && !item.role) return { ...item, role };
-      return item;
-    });
-  }
-
-  function mergeWithPrev(qi) {
-    if (qi < 1) return;
-    const prev = currentEditData.questions[qi - 1];
-    const curr = currentEditData.questions[qi];
-    // Preserve roles: response + next question are interviewer, answers are candidate
-    prev.answer = [
-      ...prev.answer,
-      ...tagRole(prev.response, "interviewer"),
-      ...tagRole(curr.question, "interviewer"),
-      ...curr.answer,
-    ];
-    prev.response = [...curr.response];
-    currentEditData.questions.splice(qi, 1);
-    currentEditData.questions.forEach((q, i) => q.id = `q${i + 1}`);
-    renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
-  }
-
-  function moveFirstToPrev(qi) {
-    if (qi < 1) return;
-    const prev = currentEditData.questions[qi - 1];
-    const curr = currentEditData.questions[qi];
-    if (!curr.question.length) return;
-    const first = curr.question.shift();
-    prev.response.push(first);
-
-    // If question is now empty, cascade candidate messages up
-    if (curr.question.length === 0) {
-      // Flush prev.response into prev.answer (tagged as interviewer)
-      prev.answer.push(...tagRole(prev.response, "interviewer"));
-      prev.response = [];
-
-      // Move candidate items from top of answer until we hit an interviewer item
-      while (curr.answer.length) {
-        const item = curr.answer[0];
-        const isInterviewer = typeof item === "object" && item.role === "interviewer";
-        if (isInterviewer) break;
-        prev.answer.push(curr.answer.shift());
-      }
-
-      if (curr.answer.length) {
-        // First remaining item is an interviewer message — becomes the new question
-        const newQ = curr.answer.shift();
-        const newQText = typeof newQ === "object" && newQ.text ? newQ.text : String(newQ);
-        curr.question = [newQText];
-        curr.summary = newQText.split("\n")[0];
-      } else {
-        // Everything consumed — also move response and delete block
-        prev.response = [...curr.response];
-        currentEditData.questions.splice(qi, 1);
-      }
-
-      currentEditData.questions.forEach((q, i) => q.id = `q${i + 1}`);
-    } else {
-      // Update summary if it was derived from the moved line
-      const newFirst = (curr.question.find(p => typeof p === "string") || "").split("\n")[0];
-      const movedText = typeof first === "string" ? first.split("\n")[0] : "";
-      if (curr.summary === movedText) curr.summary = newFirst;
-    }
-
     renderEditor(currentEditData.questions, currentEditData.candidate_name, currentEditImages);
   }
 
@@ -1194,13 +1076,7 @@
         candidate_id: cid,
         candidate_name: currentEditData.candidate_name,
         date: currentEditData.date,
-        questions: currentEditData.questions.map((q, i) => ({
-          id: `q${i + 1}`,
-          summary: q.summary || "",
-          question: q.question,
-          answer: q.answer,
-          response: q.response,
-        })),
+        messages: blocksToMessages(currentEditData.questions),
       };
       zip.file(`${cid}.json`, JSON.stringify(jsonData, null, 2));
 
@@ -1214,7 +1090,7 @@
       // Add images to subfolder
       let imgCount = 0;
       for (const q of currentEditData.questions) {
-        for (const section of ["question", "answer", "response"]) {
+        for (const section of ["question", "answer"]) {
           for (const p of q[section]) {
             if (typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio") && p.file && currentEditImages[p.file]) {
               zip.file(`${cid}/${p.file}`, currentEditImages[p.file]);
