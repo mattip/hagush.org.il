@@ -656,6 +656,20 @@
       loadExisting();
     } catch (err) {
       alert("שגיאה בשמירה: " + err.message);
+      // Report the failure to Firestore so permission errors are diagnosable
+      // server-side — captures the exact email (and its casing) the rules see.
+      try {
+        const u = auth.currentUser;
+        await db.collection("client_errors").add({
+          email:   u ? (u.email || "") : "",
+          uid:     u ? (u.uid || "") : "",
+          op:      editingId ? "update_event" : "create_event",
+          code:    err && err.code ? String(err.code) : "",
+          message: err && err.message ? String(err.message).slice(0, 500) : "",
+          page:    "add_event",
+          ts:      firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (_) { /* logging must never mask the original error */ }
     }
 
     btn.disabled = false;
@@ -675,7 +689,7 @@
     preferredCandidate = null;
     if (user) {
       try {
-        const roleDoc = await db.collection("roles").doc(user.email).get();
+        const roleDoc = await db.collection("roles").doc(user.email.toLowerCase()).get();
         if (roleDoc.exists && roleDoc.data().active) {
           if (roleDoc.data().role === "admin") isUserAdmin = true;
           if (roleDoc.data().preferred_candidate) preferredCandidate = roleDoc.data().preferred_candidate;

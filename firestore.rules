@@ -6,10 +6,14 @@ service cloud.firestore {
 
     function authed()  { return request.auth != null; }
     function email()   { return request.auth.token.email; }
-    function roleDoc() { return get(/databases/$(database)/documents/roles/$(email())).data; }
+    // roles/{email} doc ids are stored lowercase, but OAuth tokens can carry mixed
+    // case (e.g. Naomibeyth@gmail.com). Normalise before the exact-match lookup,
+    // otherwise the role doc isn't found and every role-gated write is denied.
+    function emailKey() { return request.auth.token.email.lower(); }
+    function roleDoc() { return get(/databases/$(database)/documents/roles/$(emailKey())).data; }
     function hasRole() {
       return authed()
-        && exists(/databases/$(database)/documents/roles/$(email()))
+        && exists(/databases/$(database)/documents/roles/$(emailKey()))
         && roleDoc().active == true;
     }
     function isAdmin()         { return hasRole() && roleDoc().role == 'admin'; }
@@ -87,6 +91,24 @@ service cloud.firestore {
         && request.resource.data.ts is timestamp
         && request.resource.data.status in ['success', 'forbidden']
         && request.resource.data.keys().hasOnly(['email', 'status', 'ts']);
+      allow update, delete: if false;
+    }
+
+    // ── client error log (diagnostics) ────────────────────────────────────────
+    // Any signed-in user may append a failure record — deliberately NOT gated on
+    // a role, so writes that were denied for lack of a role can still be logged.
+    // Captures the exact token email/casing the rules saw. Admin-read only.
+    match /client_errors/{id} {
+      allow read:   if isAdmin();
+      allow create: if authed()
+        && request.resource.data.ts is timestamp
+        && request.resource.data.keys().hasOnly(['email','uid','op','code','message','page','ts'])
+        && optStr(request.resource.data, 'email',   254)
+        && optStr(request.resource.data, 'uid',     128)
+        && optStr(request.resource.data, 'op',      100)
+        && optStr(request.resource.data, 'code',    100)
+        && optStr(request.resource.data, 'message', 500)
+        && optStr(request.resource.data, 'page',    100);
       allow update, delete: if false;
     }
 
