@@ -440,6 +440,19 @@
   const auth = firebase.auth();
   const db   = firebase.firestore();
 
+  // ── Build stamp ──
+  // Bump this on every change; it's rendered on-screen so you can confirm the
+  // browser actually loaded the latest version (no cache guesswork).
+  const APP_VERSION = "2026-07-01a";
+  (function stampVersion() {
+    const el = document.createElement("div");
+    el.textContent = "build " + APP_VERSION;
+    el.style.cssText = "position:fixed;bottom:6px;left:6px;z-index:9999;" +
+      "background:rgba(9,54,109,.85);color:#fff;font:600 11px/1.2 monospace;" +
+      "padding:4px 7px;border-radius:5px;pointer-events:none";
+    document.body.appendChild(el);
+  })();
+
   // ── Auth ──
   const loginScreen = document.getElementById("login-screen");
   const adminPanel  = document.getElementById("admin-panel");
@@ -610,6 +623,7 @@
     btn.disabled = true;
     btn.textContent = "שומר…";
 
+    let step = "";  // records exactly which Firestore call is in flight, for the failure log
     try {
       const eventData = {
         date:              date,
@@ -624,12 +638,15 @@
 
       if (editingId) {
         // Update existing
+        step = "update campaign_events";
         await db.collection("campaign_events").doc(editingId).update(eventData);
         editingId = null;
       } else {
         // Create new — event + owner as separate docs sharing same ID
         const docRef = db.collection("campaign_events").doc();
+        step = "create campaign_events";
         await docRef.set(eventData);
+        step = "create campaign_event_owner";
         await db.collection("campaign_event_owner").doc(docRef.id).set({
           email: auth.currentUser.email,
           created_at: firebase.firestore.FieldValue.serverTimestamp(),
@@ -656,6 +673,20 @@
       loadExisting();
     } catch (err) {
       alert("שגיאה בשמירה: " + err.message);
+      // Report the failure to Firestore so permission errors are diagnosable
+      // server-side — captures the exact email (and its casing) the rules see.
+      try {
+        const u = auth.currentUser;
+        await db.collection("client_errors").add({
+          email:   u ? (u.email || "") : "",
+          uid:     u ? (u.uid || "") : "",
+          op:      step || (editingId ? "update_event" : "create_event"),
+          code:    err && err.code ? String(err.code) : "",
+          message: err && err.message ? String(err.message).slice(0, 500) : "",
+          page:    "add_event",
+          ts:      firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (_) { /* logging must never mask the original error */ }
     }
 
     btn.disabled = false;
@@ -675,7 +706,7 @@
     preferredCandidate = null;
     if (user) {
       try {
-        const roleDoc = await db.collection("roles").doc(user.email).get();
+        const roleDoc = await db.collection("roles").doc(user.email.toLowerCase()).get();
         if (roleDoc.exists && roleDoc.data().active) {
           if (roleDoc.data().role === "admin") isUserAdmin = true;
           if (roleDoc.data().preferred_candidate) preferredCandidate = roleDoc.data().preferred_candidate;

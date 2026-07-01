@@ -218,7 +218,7 @@ function doPost(e) {
 
 // ── Join form 
 function handleJoin(data, respond) {
-  const required = ['firstName', 'lastName', 'phone', 'registered', 'source'];
+  const required = ['firstName', 'lastName', 'phone', 'registered'];
   for (const field of required) {
     if (!data[field] || String(data[field]).trim() === '') {
       logRejection('missing: ' + field, data);
