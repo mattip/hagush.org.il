@@ -243,6 +243,13 @@ body {
   padding: 2rem 0;
 }
 
+/* The WhatsApp link is a full-width flex box here (no .ask-links parent to
+   center it), so center its icon+text and give it a little breathing room. */
+.af-success .ask-wa-link {
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
 /* ── Past interviews ──────────────────────────────────────────────── */
 .ask-past {
   padding-top: 2rem;
