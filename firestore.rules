@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -7,10 +6,14 @@ service cloud.firestore {
 
     function authed()  { return request.auth != null; }
     function email()   { return request.auth.token.email; }
-    function roleDoc() { return get(/databases/$(database)/documents/roles/$(email())).data; }
+    // roles/{email} doc ids are stored lowercase, but OAuth tokens can carry mixed
+    // case (e.g. Naomibeyth@gmail.com). Normalise before the exact-match lookup,
+    // otherwise the role doc isn't found and every role-gated write is denied.
+    function emailKey() { return request.auth.token.email.lower(); }
+    function roleDoc() { return get(/databases/$(database)/documents/roles/$(emailKey())).data; }
     function hasRole() {
       return authed()
-        && exists(/databases/$(database)/documents/roles/$(email()))
+        && exists(/databases/$(database)/documents/roles/$(emailKey()))
         && roleDoc().active == true;
     }
     function isAdmin()         { return hasRole() && roleDoc().role == 'admin'; }
@@ -22,6 +25,8 @@ service cloud.firestore {
     function mgrGroup()        { return hasRole() && roleDoc().role == 'manager' && roleDoc().scope == 'group'; }
     function isReferrer()      { return hasRole() && roleDoc().role in ['referrer', 'groupLeader']; }
     function validStr(val, max) { return val is string && val.size() <= max; }
+    // Optional string: valid when absent, or a string within the length limit.
+    function optStr(data, key, max) { return !(key in data) || validStr(data[key], max); }
 
     function canReadScoped(res) {
       return isAdmin() || mgrFull()
@@ -40,30 +45,41 @@ service cloud.firestore {
     match /questions/{id}    { allow read: if isAdmin() || mgrFull(); allow write: if false; }
 
     // ── join form (anonymous create, PII, admin-read) ─────────────────────────
-    match /join_form/{id} {
-      allow create: if request.resource.data.ts is timestamp
-        && request.resource.data.keys().hasOnly(
-          [
-            'ts',
-            'firstName',
-            'lastName',
-            'phone',
-            'email',
-            'city',
-            'registered',
-            'referrer',
-            'source'
-          ])
-        && validStr(request.resource.data.firstName, 100)
+    function validJoinFields() {
+      return validStr(request.resource.data.firstName, 100)
         && validStr(request.resource.data.lastName,  100)
         && validStr(request.resource.data.phone,      30)
-        && validStr(request.resource.data.email,     254)
+        && optStr(request.resource.data, 'email',    254)
         && validStr(request.resource.data.city,      100)
+        && optStr(request.resource.data, 'idNumber',  20)
         && validStr(request.resource.data.source,    256)
         && validStr(request.resource.data.referrer,  256)
         && (request.resource.data.registered is bool || request.resource.data.registered is string);
-      allow read:           if isAdmin();
-      allow update, delete: if false;
+    }
+    function validImportDoc() {
+      return request.resource.data.ts is timestamp
+        && request.resource.data.keys().hasOnly(
+          ['ts','firstName','lastName','phone','email','city','idNumber','registered','referrer','source','importBatchId','importedAt'])
+        && validStr(request.resource.data.importBatchId, 64)
+        && request.resource.data.importedAt is timestamp
+        && validJoinFields();
+    }
+    match /join_form/{id} {
+      // Anonymous public submission from the join form.
+      allow create: if request.resource.data.ts is timestamp
+        && request.resource.data.keys().hasOnly(
+          ['ts','firstName','lastName','phone','email','city','idNumber','registered','referrer','source'])
+        && validJoinFields();
+      // Admin CSV import: same fields plus import audit metadata.
+      allow create: if isAdmin() && validImportDoc();
+      allow read:   if isAdmin();
+      // Re-import with deterministic ids overwrites existing import records, but
+      // never an organic public submission (which has no importBatchId).
+      allow update: if isAdmin()
+        && resource.data.importBatchId is string
+        && validImportDoc();
+      // Admins may revert an import by deleting only records tagged with a batch id.
+      allow delete: if isAdmin() && resource.data.importBatchId is string;
     }
     match /ask_candidate_form/{id} { allow read: if isAdmin(); allow write: if false; }
 
@@ -75,6 +91,24 @@ service cloud.firestore {
         && request.resource.data.ts is timestamp
         && request.resource.data.status in ['success', 'forbidden']
         && request.resource.data.keys().hasOnly(['email', 'status', 'ts']);
+      allow update, delete: if false;
+    }
+
+    // ── client error log (diagnostics) ────────────────────────────────────────
+    // Any signed-in user may append a failure record — deliberately NOT gated on
+    // a role, so writes that were denied for lack of a role can still be logged.
+    // Captures the exact token email/casing the rules saw. Admin-read only.
+    match /client_errors/{id} {
+      allow read:   if isAdmin();
+      allow create: if authed()
+        && request.resource.data.ts is timestamp
+        && request.resource.data.keys().hasOnly(['email','uid','op','code','message','page','ts'])
+        && optStr(request.resource.data, 'email',   254)
+        && optStr(request.resource.data, 'uid',     128)
+        && optStr(request.resource.data, 'op',      100)
+        && optStr(request.resource.data, 'code',    100)
+        && optStr(request.resource.data, 'message', 500)
+        && optStr(request.resource.data, 'page',    100);
       allow update, delete: if false;
     }
 
@@ -111,6 +145,7 @@ service cloud.firestore {
     // All authenticated dashboard users can read; only admins can write.
     match /referrers/{code} {
       allow read:  if hasRole();
+      allow delete: if isAdmin();
       allow write: if isAdmin()
         && validStr(request.resource.data.name, 200)
         && request.resource.data.active is bool
@@ -119,6 +154,7 @@ service cloud.firestore {
     }
     match /referrer_groups/{groupId} {
       allow read:  if hasRole();
+      allow delete: if isAdmin();
       allow write: if isAdmin()
         && validStr(request.resource.data.name, 200)
         && request.resource.data.active is bool;
