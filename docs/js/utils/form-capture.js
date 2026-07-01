@@ -17,7 +17,7 @@ const makeDocId = (fields) => {
   return `${date}T${time}_${name}_${rand}`;
 };
 
-const STORED_KEYS = ["firstName", "lastName", "phone", "email", "city", "idNumber", "registered", "referrer", "source"];
+const STORED_KEYS = ["firstName", "lastName", "phone", "email", "city", "registered", "referrer", "source"];
 
 export const captureFormSubmission = async (fields) => {
   const MAX_STR = 500;
