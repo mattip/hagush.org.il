@@ -201,8 +201,8 @@ document.addEventListener("click", async (e) => {
       editRow.setAttribute("data-code", code);
       editRow.innerHTML = `
         <td colspan="6" style="padding: 0;">
-          <form data-action="resolve-form-referrer" data-code="${code}" style="display: flex; gap: 8px; padding: 8px;">
-            <input name="name" placeholder="שם" required autocomplete="off" value="${name}" style="flex: 2;" />
+          <form data-action="resolve-form-referrer" data-code="${escapeHtml(code)}" style="display: flex; gap: 8px; padding: 8px;">
+            <input name="name" placeholder="שם" required autocomplete="off" value="${escapeHtml(name)}" style="flex: 2;" />
             <select name="type" style="flex: 1;">
               <option value="individual" ${type === "individual" ? "selected" : ""}>פרטי</option>
               <option value="organizer" ${type === "organizer" ? "selected" : ""}>מנהל·ת</option>

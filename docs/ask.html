@@ -18,7 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./css/main.css?v=4" />
     <!-- candidates.css carries the shared popup styling (.popup / .pi-* / .iv-*) -->
-    <link rel="stylesheet" href="./css/candidates.css?v=7" />
+    <link rel="stylesheet" href="./css/candidates.css?v=8" />
     <link rel="stylesheet" href="./css/ask.css?v=3" />
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -240,7 +240,7 @@
       </div>
     </div>
 
-    <script src="./js/app.js?v=13" data-popups="true" data-share-self="true" data-default-tab="interview"></script>
+    <script src="./js/app.js?v=15" data-popups="true" data-share-self="true" data-default-tab="interview"></script>
     <script>
     const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
     const TOKEN      = "NachshavBaot2026";
@@ -304,35 +304,49 @@
       }
     }
 
-    function esc(s) {
-      const d = document.createElement("div");
-      d.textContent = s || "";
-      return d.innerHTML;
+    // DOM builder — untrusted values reach the page only via textContent /
+    // setAttribute / addEventListener, so escaping is automatic (no innerHTML
+    // string building, no quote-breakout risk).
+    function el(tag, props, ...kids) {
+      const n = document.createElement(tag);
+      for (const [k, v] of Object.entries(props || {})) {
+        if (v == null || v === false) continue;
+        if (k === "class") n.className = v;
+        else if (k === "text") n.textContent = v;
+        else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2).toLowerCase(), v);
+        else n.setAttribute(k, v);
+      }
+      for (const c of kids.flat()) {
+        if (c == null || c === false) continue;
+        n.append(c.nodeType ? c : document.createTextNode(String(c)));
+      }
+      return n;
     }
 
     // ── Upcoming interview cards ──
     function renderUpcoming(interviews) {
       const grid = document.getElementById("upcomingGrid");
       if (!interviews.length) {
-        grid.innerHTML = '<p class="ask-empty">אין ראיונות קרובים כרגע</p>';
+        grid.replaceChildren(el("p", { class: "ask-empty" }, "אין ראיונות קרובים כרגע"));
         return;
       }
-      grid.innerHTML = interviews.map(iv => `
-        <div class="upcoming-card">
-          <p class="uc-name">${esc(iv.candidate_name)}</p>
-          <p class="uc-time">ניפגש ביום ${esc(iv.day_label)},<br>בשעה ${esc(iv.time)}</p>
-        </div>
-      `).join("");
+      grid.replaceChildren(...interviews.map(iv =>
+        el("div", { class: "upcoming-card" },
+          el("p", { class: "uc-name", text: iv.candidate_name }),
+          el("p", { class: "uc-time" },
+            `ניפגש ביום ${iv.day_label || ""},`, el("br"), `בשעה ${iv.time || ""}`),
+        )
+      ));
     }
 
     // ── Past interview cards ──
     function renderPast(interviews) {
       const list = document.getElementById("pastList");
-      list.innerHTML = "";
       if (!interviews.length) {
-        list.innerHTML = '<p class="ask-empty">עוד אין ראיונות קודמים</p>';
+        list.replaceChildren(el("p", { class: "ask-empty" }, "עוד אין ראיונות קודמים"));
         return;
       }
+      list.replaceChildren();
       interviews.forEach(iv => {
         const dayMatch = (iv.day_label || "").match(/(\d{1,2}\.\d{1,2})/);
         const dateStr = dayMatch ? dayMatch[1] : iv.date || "";
@@ -340,16 +354,14 @@
 
         // Start inert: a passed interview isn't a live link until its JSON has
         // been parsed and committed (bug #2). markInterviewWhenReady() flips it.
-        const card = document.createElement("a");
-        card.className = "past-card past-card--pending";
-        card.innerHTML = `
-          <span class="pc-date">${esc(dateStr)}</span>
-          <div class="pc-info">
-            <p class="pc-name">${esc(iv.candidate_name)}</p>
-            <p class="pc-type">הראיון יעלה בקרוב</p>
-          </div>
-          ${photo ? `<img class="pc-photo" src="${PORTRAITS}/${esc(photo)}" alt="${esc(iv.candidate_name)}" />` : ""}
-        `;
+        const card = el("a", { class: "past-card past-card--pending" },
+          el("span", { class: "pc-date", text: dateStr }),
+          el("div", { class: "pc-info" },
+            el("p", { class: "pc-name", text: iv.candidate_name }),
+            el("p", { class: "pc-type" }, "הראיון יעלה בקרוב"),
+          ),
+          photo ? el("img", { class: "pc-photo", src: `${PORTRAITS}/${photo}`, alt: iv.candidate_name || "" }) : null,
+        );
         list.appendChild(card);
         markInterviewWhenReady(card, iv);
       });
@@ -392,15 +404,17 @@
     function renderCandidateRadios(interviews) {
       const wrap = document.getElementById("candidateRadios");
       if (!interviews.length) {
-        wrap.innerHTML = '<p style="color:#999; font-size:.85rem">אין מועמדים פעילים כרגע</p>';
+        wrap.replaceChildren(el("p", { style: "color:#999; font-size:.85rem" }, "אין מועמדים פעילים כרגע"));
         return;
       }
-      wrap.innerHTML = interviews.map((iv, i) => `
-        <label class="af-radio">
-          <input type="radio" name="candidate" value="${esc(iv.candidate_id)}" data-name="${esc(iv.candidate_name)}" ${i === 0 ? "checked" : ""} />
-          ${esc(iv.candidate_name)}
-        </label>
-      `).join("");
+      wrap.replaceChildren(...interviews.map((iv, i) => {
+        const input = el("input", {
+          type: "radio", name: "candidate",
+          value: iv.candidate_id, "data-name": iv.candidate_name,
+        });
+        if (i === 0) input.checked = true;
+        return el("label", { class: "af-radio" }, input, ` ${iv.candidate_name}`);
+      }));
 
       updateQuestionLabel();
       wrap.addEventListener("change", updateQuestionLabel);
@@ -410,8 +424,8 @@
       const selected = document.querySelector('input[name="candidate"]:checked');
       if (selected) {
         const name = selected.getAttribute("data-name") || selected.value;
-        document.querySelector('label[for="af-question"]').innerHTML =
-          `השאלה שלי ל${esc(name)} <span class="af-req">*</span>`;
+        document.querySelector('label[for="af-question"]')
+          .replaceChildren(`השאלה שלי ל${name} `, el("span", { class: "af-req" }, "*"));
       }
     }
 

@@ -818,6 +818,12 @@ html.no-scroll {
   border-top-right-radius: 2px;
 }
 
+.iv-link {
+  color: #0a58ca;
+  text-decoration: underline;
+  overflow-wrap: anywhere; /* let long URLs wrap inside the bubble */
+}
+
 .iv-bubble-img {
   width: 100%;
   max-width: 240px;

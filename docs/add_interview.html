@@ -345,27 +345,26 @@
       return;
     }
 
-    wrap.innerHTML = snap.docs.map(doc => {
+    wrap.replaceChildren(...snap.docs.map(doc => {
       const iv = doc.data();
       const c = candidates.find(x => x.id === iv.candidate_id);
       const displayName = c ? c.name : (iv.candidate_name || iv.candidate_id || "?");
       const isUpcoming = iv.date >= today;
       const badge = isUpcoming
-        ? '<span class="iv-badge iv-upcoming">קרוב</span>'
-        : '<span class="iv-badge iv-past">עבר</span>';
-      return `
-        <div class="iv-item">
-          <div>
-            <div class="iv-info">${esc(displayName)} ${badge}</div>
-            <div class="iv-meta">${esc(iv.day_label || iv.date)} ${esc(iv.time)} ${iv.created_by ? '— ' + esc(iv.created_by) : ''}</div>
-          </div>
-          <div class="iv-actions">
-            <button class="iv-edit" onclick="editInterview('${doc.id}')">ערוך</button>
-            <button class="iv-delete" onclick="deleteInterview('${doc.id}')">מחק</button>
-          </div>
-        </div>
-      `;
-    }).join("");
+        ? el("span", { class: "iv-badge iv-upcoming" }, "קרוב")
+        : el("span", { class: "iv-badge iv-past" }, "עבר");
+      return el("div", { class: "iv-item" },
+        el("div", null,
+          el("div", { class: "iv-info" }, displayName, " ", badge),
+          el("div", { class: "iv-meta" },
+            `${iv.day_label || iv.date || ""} ${iv.time || ""} ${iv.created_by ? "— " + iv.created_by : ""}`),
+        ),
+        el("div", { class: "iv-actions" },
+          el("button", { class: "iv-edit", onclick: () => editInterview(doc.id) }, "ערוך"),
+          el("button", { class: "iv-delete", onclick: () => deleteInterview(doc.id) }, "מחק"),
+        ),
+      );
+    }));
   }
 
   async function editInterview(id) {
@@ -390,10 +389,22 @@
     loadInterviews();
   }
 
-  function esc(s) {
-    const d = document.createElement("div");
-    d.textContent = s || "";
-    return d.innerHTML;
+  // DOM builder — untrusted values reach the page only via textContent /
+  // setAttribute / addEventListener, so escaping is automatic (no innerHTML).
+  function el(tag, props, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2).toLowerCase(), v);
+      else n.setAttribute(k, v);
+    }
+    for (const c of kids.flat()) {
+      if (c == null || c === false) continue;
+      n.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }
+    return n;
   }
 
   // ── Parsing preferences ──
@@ -465,17 +476,16 @@
       wrap.innerHTML = '<p style="color:#999">אין תוכן ראיונות</p>';
       return;
     }
-    const items = [...existingInterviews].map(id => {
+    wrap.replaceChildren(...[...existingInterviews].map(id => {
       const c = candidates.find(x => x.id === id);
       const name = c ? c.name : id;
-      return `<div class="iv-item">
-        <div class="iv-info">${esc(name)}</div>
-        <div class="iv-actions">
-          <button class="iv-edit" onclick="loadExistingDirect('${esc(id)}')">ערוך</button>
-        </div>
-      </div>`;
-    }).join("");
-    wrap.innerHTML = items;
+      return el("div", { class: "iv-item" },
+        el("div", { class: "iv-info", text: name }),
+        el("div", { class: "iv-actions" },
+          el("button", { class: "iv-edit", onclick: () => loadExistingDirect(id) }, "ערוך"),
+        ),
+      );
+    }));
   }
 
   // ── messages <-> editor blocks ───────────────────────────────────
@@ -822,61 +832,63 @@
     const wrap = document.getElementById("detectList");
     document.getElementById("detectResults").style.display = interviews.length ? "block" : "none";
 
-    wrap.innerHTML = interviews.map((iv, i) => {
+    wrap.replaceChildren(...interviews.map((iv, i) => {
       const extra = iv.alreadyParsed ? " already-parsed" : iv.isSkipped ? " skipped" : "";
-      const badges = [];
-      if (iv.alreadyParsed) badges.push('<span class="status-badge status-published">כבר נותח</span>');
-      if (iv.isSkipped) badges.push('<span class="status-badge status-skipped">לא רלוונטי</span>');
-
       const guess = iv.candidateGuess;
-      const candidateOptions = '<option value="">— בחרו —</option>' + candidates.map(c =>
-        `<option value="${esc(c.id)}" ${guess && guess.id === c.id ? "selected" : ""}>${esc(c.name)}</option>`
-      ).join("");
-
       const ivName = iv.interviewer || parsingPrefs.interviewer_aliases[0] || "";
-      const aliasHint = parsingPrefs.interviewer_aliases.length
-        ? `<div class="hint">מוכרים: ${esc(parsingPrefs.interviewer_aliases.join(", "))}</div>`
-        : "";
 
-      const btns = iv.isSkipped
-        ? `<button class="detect-btn detect-skip" onclick="unskipDetected(${i})">שחזר</button>`
-        : iv.alreadyParsed
-        ? `<button class="detect-btn detect-parse" onclick="loadExisting(${i})">ערוך ▸</button>
-           <button class="detect-btn detect-skip" onclick="parseDetected(${i})">נתח מחדש</button>`
-        : `<button class="detect-btn detect-parse" onclick="parseDetected(${i})">נתח ▸</button>
-           <button class="detect-btn detect-skip" onclick="skipDetected(${i})">לא רלוונטי</button>`;
+      // candidate <select> — build options, then set the guessed one via .value
+      const select = el("select", { class: "det-candidate", "data-idx": i },
+        el("option", { value: "" }, "— בחרו —"),
+        ...candidates.map(c => el("option", { value: c.id }, c.name)),
+      );
+      select.value = (guess && guess.id) || "";
 
-      return `<div class="detect-card${extra}" data-idx="${i}">
-        <div class="detect-header">
-          <span class="detect-date">${esc(iv.isoDate)}</span>
-          <div class="detect-badges">
-            <span class="iv-badge iv-past">${esc(iv.guestSender)} (${iv.guestMsgCount})</span>
-            <span class="iv-badge iv-upcoming">מראיינ.ת: ${esc(ivName)}</span>
-            ${badges.join("")}
-          </div>
-        </div>
-        <div class="detect-fields">
-          <div>
-            <label>מועמד.ת</label>
-            <select class="det-candidate" data-idx="${i}">${candidateOptions}</select>
-          </div>
-          <div>
-            <label>מראיינ.ת</label>
-            <input class="det-interviewer" data-idx="${i}" value="${esc(ivName)}" />
-            ${aliasHint}
-          </div>
-          <div>
-            <label>התחלה</label>
-            <input type="time" class="det-start" data-idx="${i}" value="${esc(iv.startTime)}" dir="ltr" />
-          </div>
-          <div>
-            <label>סיום</label>
-            <input type="time" class="det-end" data-idx="${i}" value="${esc(iv.endTime)}" dir="ltr" />
-          </div>
-        </div>
-        <div class="detect-btn-row">${btns}</div>
-      </div>`;
-    }).join("");
+      const badges = [];
+      if (iv.alreadyParsed) badges.push(el("span", { class: "status-badge status-published" }, "כבר נותח"));
+      if (iv.isSkipped) badges.push(el("span", { class: "status-badge status-skipped" }, "לא רלוונטי"));
+
+      // action buttons — closures over the row index (no inline onclick)
+      const btnRow = el("div", { class: "detect-btn-row" });
+      if (iv.isSkipped) {
+        btnRow.append(el("button", { class: "detect-btn detect-skip", onclick: () => unskipDetected(i) }, "שחזר"));
+      } else if (iv.alreadyParsed) {
+        btnRow.append(
+          el("button", { class: "detect-btn detect-parse", onclick: () => loadExisting(i) }, "ערוך ▸"),
+          el("button", { class: "detect-btn detect-skip", onclick: () => parseDetected(i) }, "נתח מחדש"),
+        );
+      } else {
+        btnRow.append(
+          el("button", { class: "detect-btn detect-parse", onclick: () => parseDetected(i) }, "נתח ▸"),
+          el("button", { class: "detect-btn detect-skip", onclick: () => skipDetected(i) }, "לא רלוונטי"),
+        );
+      }
+
+      return el("div", { class: "detect-card" + extra, "data-idx": i },
+        el("div", { class: "detect-header" },
+          el("span", { class: "detect-date", text: iv.isoDate }),
+          el("div", { class: "detect-badges" },
+            el("span", { class: "iv-badge iv-past" }, `${iv.guestSender} (${iv.guestMsgCount})`),
+            el("span", { class: "iv-badge iv-upcoming" }, `מראיינ.ת: ${ivName}`),
+            ...badges,
+          ),
+        ),
+        el("div", { class: "detect-fields" },
+          el("div", null, el("label", null, "מועמד.ת"), select),
+          el("div", null,
+            el("label", null, "מראיינ.ת"),
+            el("input", { class: "det-interviewer", "data-idx": i, value: ivName }),
+            parsingPrefs.interviewer_aliases.length
+              ? el("div", { class: "hint" }, `מוכרים: ${parsingPrefs.interviewer_aliases.join(", ")}`) : null,
+          ),
+          el("div", null, el("label", null, "התחלה"),
+            el("input", { type: "time", class: "det-start", "data-idx": i, value: iv.startTime || "", dir: "ltr" })),
+          el("div", null, el("label", null, "סיום"),
+            el("input", { type: "time", class: "det-end", "data-idx": i, value: iv.endTime || "", dir: "ltr" })),
+        ),
+        btnRow,
+      );
+    }));
 
     window._detected = interviews;
   }
@@ -981,51 +993,51 @@
     document.getElementById("editorTitle").textContent = `עריכת ראיון — ${name}`;
     const wrap = document.getElementById("editorWrap");
 
-    wrap.innerHTML = questions.map((q, qi) => {
+    wrap.replaceChildren(...questions.map((q, qi) => {
       const preview = ((q.question.find(p => typeof p === "string")
         || q.answer.find(p => typeof p === "string") || "").split("\n")[0]).slice(0, 60);
 
       function renderMsgs(parts, section) {
         return parts.map((p, pi) => {
+          const del = el("button", { class: "qa-msg-del", onclick: () => delMsg(qi, section, pi) }, "✕");
           if (typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio")) {
             const blob = images[p.file];
             const src = blob ? URL.createObjectURL(blob) : (p.url || "");
             let media;
-            if (p.type === "video") {
-              media = src ? `<video class="qa-msg-img" src="${src}" controls playsinline style="max-width:200px"></video>` : `<span style="color:#999">[${esc(p.file || "video")}]</span>`;
-            } else if (p.type === "audio") {
-              media = src ? `<audio controls src="${src}" style="max-width:200px"></audio>` : `<span style="color:#999">[${esc(p.file || "audio")}]</span>`;
-            } else {
-              media = src ? `<img class="qa-msg-img" src="${src}" />` : `<span style="color:#999">[${esc(p.file || "image")}]</span>`;
-            }
-            return `<div class="qa-msg" data-q="${qi}" data-s="${section}" data-i="${pi}">
-              ${media}
-              <button class="qa-msg-del" onclick="delMsg(${qi},'${section}',${pi})">✕</button>
-            </div>`;
+            if (!src) media = el("span", { style: "color:#999" }, `[${p.file || p.type}]`);
+            else if (p.type === "video") media = el("video", { class: "qa-msg-img", src, controls: "", playsinline: "", style: "max-width:200px" });
+            else if (p.type === "audio") media = el("audio", { controls: "", src, style: "max-width:200px" });
+            else media = el("img", { class: "qa-msg-img", src });
+            return el("div", { class: "qa-msg", "data-q": qi, "data-s": section, "data-i": pi }, media, del);
           }
           const text = (typeof p === "object" && p.type === "text") ? (p.text || "") : p;
-          return `<div class="qa-msg" data-q="${qi}" data-s="${section}" data-i="${pi}">
-            <textarea rows="1" oninput="autoGrow(this);updateMsg(${qi},'${section}',${pi},this.value)">${esc(text)}</textarea>
-            <button class="qa-msg-del" onclick="delMsg(${qi},'${section}',${pi})">✕</button>
-          </div>`;
-        }).join("");
+          const ta = el("textarea", { rows: "1" });
+          ta.value = text;                                   // property, not innerHTML → safe
+          ta.addEventListener("input", () => { autoGrow(ta); updateMsg(qi, section, pi, ta.value); });
+          return el("div", { class: "qa-msg", "data-q": qi, "data-s": section, "data-i": pi }, ta, del);
+        });
       }
 
-      return `<div class="qa-block open" data-qi="${qi}">
-        <div class="qa-block-header" onclick="this.closest('.qa-block').classList.toggle('open')">
-          <span><span class="qa-num">ש׳${qi + 1}</span><span class="qa-preview">${esc(preview)}</span></span>
-          <span class="qa-header-btns">
-            <button class="qa-del" onclick="event.stopPropagation();delBlock(${qi})">מחק</button>
-          </span>
-        </div>
-        <div class="qa-block-body">
-          <div class="qa-section-label">שאלה<button class="qa-add-msg" onclick="addMsg(${qi},'question')">+ הודעה</button></div>
-          ${renderMsgs(q.question, "question")}
-          <div class="qa-section-label">תשובה<button class="qa-add-msg" onclick="addMsg(${qi},'answer')">+ הודעה</button></div>
-          ${renderMsgs(q.answer, "answer")}
-        </div>
-      </div>`;
-    }).join("");
+      const header = el("div", { class: "qa-block-header",
+        onclick: (e) => e.currentTarget.closest(".qa-block").classList.toggle("open") },
+        el("span", null,
+          el("span", { class: "qa-num" }, `ש׳${qi + 1}`),
+          el("span", { class: "qa-preview", text: preview }),
+        ),
+        el("span", { class: "qa-header-btns" },
+          el("button", { class: "qa-del", onclick: (e) => { e.stopPropagation(); delBlock(qi); } }, "מחק"),
+        ),
+      );
+      const body = el("div", { class: "qa-block-body" },
+        el("div", { class: "qa-section-label" }, "שאלה",
+          el("button", { class: "qa-add-msg", onclick: () => addMsg(qi, "question") }, "+ הודעה")),
+        ...renderMsgs(q.question, "question"),
+        el("div", { class: "qa-section-label" }, "תשובה",
+          el("button", { class: "qa-add-msg", onclick: () => addMsg(qi, "answer") }, "+ הודעה")),
+        ...renderMsgs(q.answer, "answer"),
+      );
+      return el("div", { class: "qa-block open", "data-qi": qi }, header, body);
+    }));
 
     if (scroll) editorCard.scrollIntoView({ behavior: "smooth" });
     setTimeout(() => wrap.querySelectorAll("textarea").forEach(autoGrow), 50);

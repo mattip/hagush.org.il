@@ -141,19 +141,21 @@
         else if (r) regions.add(r);
       });
       const regionDropdown = document.getElementById("regionDropdown");
-      regionDropdown.innerHTML = '<button class="filter-option" data-value="">הכל</button>'
-        + [...regions].sort().map(r =>
-          `<button class="filter-option" data-value="${esc(r)}">${esc(r)}</button>`
-        ).join("");
+      regionDropdown.replaceChildren(
+        el("button", { class: "filter-option", "data-value": "" }, "הכל"),
+        ...[...regions].sort().map(r =>
+          el("button", { class: "filter-option", "data-value": r }, r)),
+      );
 
       // Build participant filter from future events
       const participants = new Set();
       futureEvents.forEach(ev => (ev.participants || []).forEach(p => participants.add(p)));
       const dropdown = document.getElementById("participantDropdown");
-      dropdown.innerHTML = '<button class="filter-option" data-value="">הכל</button>'
-        + [...participants].sort().map(p =>
-          `<button class="filter-option" data-value="${esc(p)}">${esc(p)}</button>`
-        ).join("");
+      dropdown.replaceChildren(
+        el("button", { class: "filter-option", "data-value": "" }, "הכל"),
+        ...[...participants].sort().map(p =>
+          el("button", { class: "filter-option", "data-value": p }, p)),
+      );
 
       renderEvents();
       } catch (err) {
@@ -185,11 +187,11 @@
       }
 
       if (filtered.length === 0) {
-        list.innerHTML = '<p class="empty-msg">אין אירועים להצגה</p>';
+        list.replaceChildren(el("p", { class: "empty-msg" }, "אין אירועים להצגה"));
         return;
       }
 
-      list.innerHTML = filtered.map(ev => {
+      list.replaceChildren(...filtered.map(ev => {
         const [year, month, day] = (ev.date || "").split("-");
         const monthNames = ["", "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
                             "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
@@ -199,31 +201,29 @@
         const participantsStr = (ev.participants || []).join(" + ").replace(/"/g, "״");
         const locationParts = [ev.city, ev.address].filter(Boolean).join(" | ");
 
-        let cta = "";
-        if (ev.registration_link) {
-          cta = `<a class="event-cta" href="${esc(ev.registration_link)}" target="_blank" rel="noreferrer">פרטים ורישום &gt;</a>`;
-        } else {
-          cta = `<div class="event-cta no-reg">ללא רישום מוקדם</div>`;
-        }
+        const link = (ev.registration_link || "").trim();
+        // Only https links are shown as clickable — never set a visitor up for a
+        // non-secure or phishable redirect. Anything else → "no registration".
+        const cta = /^https:\/\//i.test(link)
+          ? el("a", { class: "event-cta", href: link, target: "_blank", rel: "noreferrer" }, "פרטים ורישום >")
+          : el("div", { class: "event-cta no-reg" }, "ללא רישום מוקדם");
 
-        return `
-          <article class="event-card">
-            <div class="event-card-body">
-              <div class="event-date-block">
-                <span class="event-month">${esc(monthName)}</span>
-                <span class="event-day">${esc(String(dayNum))}</span>
-                <span class="event-time">${esc(ev.time || "")}</span>
-              </div>
-              <div class="event-details">
-                <p class="event-participants">${esc(participantsStr)}</p>
-                <p class="event-location">${esc(locationParts)}</p>
-                ${ev.description ? `<p class="event-desc">${esc(ev.description)}</p>` : ""}
-              </div>
-            </div>
-            ${cta}
-          </article>
-        `;
-      }).join("");
+        return el("article", { class: "event-card" },
+          el("div", { class: "event-card-body" },
+            el("div", { class: "event-date-block" },
+              el("span", { class: "event-month", text: monthName }),
+              el("span", { class: "event-day", text: String(dayNum) }),
+              el("span", { class: "event-time", text: ev.time || "" }),
+            ),
+            el("div", { class: "event-details" },
+              el("p", { class: "event-participants", text: participantsStr }),
+              el("p", { class: "event-location", text: locationParts }),
+              ev.description ? el("p", { class: "event-desc", text: ev.description }) : null,
+            ),
+          ),
+          cta,
+        );
+      }));
     }
 
     // ── Filters ──
@@ -309,10 +309,22 @@
       }
     });
 
-    function esc(s) {
-      const d = document.createElement("div");
-      d.textContent = s;
-      return d.innerHTML;
+    // DOM builder — untrusted values reach the page only via textContent /
+    // setAttribute / addEventListener, so escaping is automatic (no innerHTML).
+    function el(tag, props, ...kids) {
+      const n = document.createElement(tag);
+      for (const [k, v] of Object.entries(props || {})) {
+        if (v == null || v === false) continue;
+        if (k === "class") n.className = v;
+        else if (k === "text") n.textContent = v;
+        else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2).toLowerCase(), v);
+        else n.setAttribute(k, v);
+      }
+      for (const c of kids.flat()) {
+        if (c == null || c === false) continue;
+        n.append(c.nodeType ? c : document.createTextNode(String(c)));
+      }
+      return n;
     }
 
     loadEvents();

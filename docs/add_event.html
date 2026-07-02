@@ -486,9 +486,11 @@
       }
 
       const pdList = document.getElementById("pdList");
-      pdList.innerHTML = candidateNames.map(name =>
-        `<label class="pd-item${name === preferredCandidate ? ' pd-preferred' : ''}"><span>${esc(name)}</span><input type="checkbox" value="${esc(name)}" onchange="syncParticipants()" /></label>`
-      ).join("");
+      pdList.replaceChildren(...candidateNames.map(name => {
+        const cb = el("input", { type: "checkbox", value: name, onchange: renderParticipants });
+        return el("label", { class: "pd-item" + (name === preferredCandidate ? " pd-preferred" : "") },
+          el("span", { text: name }), cb);
+      }));
     } catch (e) {
       console.error("Failed to load candidates.json:", e);
     }
@@ -547,9 +549,6 @@
     renderParticipants();
   }
 
-  // Sync checkbox selections + others into the tag display
-  window.syncParticipants = function() { renderParticipants(); };
-
   function getSelectedCandidates() {
     return [...document.querySelectorAll("#pdList input:checked")].map(cb => cb.value);
   }
@@ -567,21 +566,17 @@
       ? `${all.length} משתתפים נבחרו ▾`
       : "בחרו משתתפים ▾";
 
-    const candidateTags = getSelectedCandidates().map(name =>
-      `<span class="participant-tag">${esc(name)}<button onclick="uncheckCandidate('${esc(name)}')">✕</button></span>`
-    );
+    // Use the actual checkbox elements (closures), so unchecking never needs a
+    // querySelector built from an untrusted name.
+    const candidateTags = [...document.querySelectorAll("#pdList input:checked")].map(cb =>
+      el("span", { class: "participant-tag" }, cb.value,
+        el("button", { onclick: () => { cb.checked = false; renderParticipants(); } }, "✕")));
     const otherTags = otherParticipants.map((name, i) =>
-      `<span class="participant-tag">${esc(name)}<button onclick="removeOther(${i})">✕</button></span>`
-    );
+      el("span", { class: "participant-tag" }, name,
+        el("button", { onclick: () => removeOther(i) }, "✕")));
 
-    list.innerHTML = candidateTags.join("") + otherTags.join("");
+    list.replaceChildren(...candidateTags, ...otherTags);
   }
-
-  window.uncheckCandidate = function(name) {
-    const cb = document.querySelector(`#pdList input[value="${name}"]`);
-    if (cb) cb.checked = false;
-    renderParticipants();
-  };
 
   // ── Region (checkboxes, returns array) ──
   function getRegion() {
@@ -616,6 +611,14 @@
       if (!city) missing.push("עיר/ישוב");
       if (participants.length === 0) missing.push("משתתפים");
       alert("נא למלא: " + missing.join(", "));
+      return;
+    }
+
+    // Registration link, if given, must be https — never send visitors to a
+    // non-secure (or phishable) destination.
+    const link = document.getElementById("evLink").value.trim();
+    if (link && !/^https:\/\//i.test(link)) {
+      alert("קישור הרשמה חייב להתחיל ב-https://");
       return;
     }
 
@@ -759,27 +762,25 @@
     const missing = eventIds.filter(id => !ownerMap[id]);
     if (missing.length) console.warn("Events without owners:", missing);
 
-    wrap.innerHTML = snap.docs.map(doc => {
+    wrap.replaceChildren(...snap.docs.map(doc => {
       const ev = doc.data();
       const names = (ev.participants || []).join(", ");
       const ownerEmail = ownerMap[doc.id] || "";
       const isOwner = ownerEmail === currentUserEmail;
       const canEdit = isOwner || isUserAdmin;
 
-      return `
-        <div class="existing-event">
-          <div>
-            <div class="ev-info">${esc(names)}</div>
-            <div class="ev-date">${esc(ev.date)} ${esc(ev.time)} — ${esc(ev.city || "")}</div>
-            <div class="ev-creator">${isUserAdmin && ownerEmail ? 'נוסף ע״י ' + esc(ownerEmail) : ''}</div>
-          </div>
-          <div class="ev-actions">
-            ${canEdit ? `<button class="ev-edit" onclick="editEvent('${doc.id}')">ערוך</button>` : ""}
-            ${canEdit ? `<button onclick="deleteEvent('${doc.id}')">מחק</button>` : ""}
-          </div>
-        </div>
-      `;
-    }).join("");
+      return el("div", { class: "existing-event" },
+        el("div", null,
+          el("div", { class: "ev-info", text: names }),
+          el("div", { class: "ev-date" }, `${ev.date || ""} ${ev.time || ""} — ${ev.city || ""}`),
+          el("div", { class: "ev-creator", text: isUserAdmin && ownerEmail ? "נוסף ע״י " + ownerEmail : "" }),
+        ),
+        el("div", { class: "ev-actions" },
+          canEdit ? el("button", { class: "ev-edit", onclick: () => editEvent(doc.id) }, "ערוך") : null,
+          canEdit ? el("button", { onclick: () => deleteEvent(doc.id) }, "מחק") : null,
+        ),
+      );
+    }));
   }
 
   // ── Edit event — load into form ──
@@ -840,10 +841,22 @@
     loadExisting();
   }
 
-  function esc(s) {
-    const d = document.createElement("div");
-    d.textContent = s || "";
-    return d.innerHTML;
+  // DOM builder — untrusted values reach the page only via textContent /
+  // setAttribute / addEventListener, so escaping is automatic (no innerHTML).
+  function el(tag, props, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2).toLowerCase(), v);
+      else n.setAttribute(k, v);
+    }
+    for (const c of kids.flat()) {
+      if (c == null || c === false) continue;
+      n.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }
+    return n;
   }
   </script>
 </body>
