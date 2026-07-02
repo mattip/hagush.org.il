@@ -413,18 +413,14 @@ function openPopup(person, card, pushHistory = true, via = "card") {
   const hasLinks = Object.keys(links).length > 0;
   rowShow("piRowLinks", hasLinks);
   if (hasLinks) {
-    setHTML(
-      "piLinks",
-      Object.entries(links)
+    document.getElementById("piLinks").replaceChildren(
+      ...Object.entries(links)
         .sort(([a], [b]) => (a === "homepage" ? -1 : b === "homepage" ? 1 : 0))
         .map(([platform, url]) =>
           platform === "homepage"
-            ? `<a href="${url}" target="_blank" rel="noreferrer" class="pi-homepage-link">לאתר שלי</a>`
-            : `<a href="${url}" target="_blank" rel="noreferrer" class="pi-social-link" title="${platform}">
-            <img src="${platform}.svg" alt="${platform} icon" class="social-icon-img" />
-          </a>`,
-        )
-        .join(""),
+            ? elem("a", { href: url, target: "_blank", rel: "noreferrer", class: "pi-homepage-link" }, "לאתר שלי")
+            : elem("a", { href: url, target: "_blank", rel: "noreferrer", class: "pi-social-link", title: platform },
+                elem("img", { src: `${platform}.svg`, alt: `${platform} icon`, class: "social-icon-img" }))),
     );
   }
 
@@ -432,6 +428,24 @@ function openPopup(person, card, pushHistory = true, via = "card") {
   popup.dataset.personId = person.id;
   initPopupTabs(person.id);
   // requestAnimationFrame(() => positionPopup(card)); // Don't position the popup for now, as it is fullscreen on mobile.
+}
+
+// DOM builder — dynamic values reach the page only via textContent /
+// setAttribute / addEventListener, so escaping is automatic (no innerHTML).
+function elem(tag, props, ...kids) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2).toLowerCase(), v);
+    else node.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) {
+    if (c == null || c === false) continue;
+    node.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  return node;
 }
 
 // ── Recommendation name linking ───────────────────────────────────
@@ -458,7 +472,7 @@ function linkRecommendation(text) {
       if (!variant) continue;
       result = result.replace(
         new RegExp(variant, "g"),
-        `<a href="#" class="pi-rec-link" data-person-id="${person.id}">${variant} <span class="pi-rec-show">הצג</span></a>`,
+        `<a href="#" class="pi-rec-link" data-person-id="${escapeHTML(person.id)}">${variant} <span class="pi-rec-show">הצג</span></a>`,
       );
     }
   }
@@ -862,25 +876,30 @@ function renderChat(data) {
     const cls = role === "question" ? "iv-bubble iv-bubble-iv" : "iv-bubble iv-bubble-cd";
 
     if (p && typeof p === "object") {
-      const src = p.url || (p.file ? imgBase + escapeHTML(p.file) : null);
+      const src = p.url || (p.file ? imgBase + p.file : null);
       if ((p.type === "image" || p.type === "video" || p.type === "audio") && !src) {
         console.error(
           `Interview "${data.candidate_id}" ${ctx}: ${p.type} item has no "file" or "url" — skipped. Item:`, p);
-        return `<div class="${cls} iv-bubble-broken">⚠️ מדיה חסרה</div>`;
+        return elem("div", { class: `${cls} iv-bubble-broken` }, "⚠️ מדיה חסרה");
       }
-      if (p.type === "image") return `<div class="${cls}"><img class="iv-bubble-img" src="${src}" alt="" loading="lazy" /></div>`;
-      if (p.type === "video") return `<div class="${cls}"><div class="iv-video-wrap"><video class="iv-video" src="${src}" playsinline preload="metadata"></video><button class="iv-video-play" aria-label="נגן">▶</button></div></div>`;
-      if (p.type === "audio") return `<div class="${cls}"><audio class="iv-audio" controls src="${src}" preload="metadata"></audio></div>`;
-      if (p.type === "text")  return `<div class="${cls}">${escapeHTML(p.text)}</div>`;
+      if (p.type === "image") return elem("div", { class: cls },
+        elem("img", { class: "iv-bubble-img", src, alt: "", loading: "lazy" }));
+      if (p.type === "video") return elem("div", { class: cls },
+        elem("div", { class: "iv-video-wrap" },
+          elem("video", { class: "iv-video", src, playsinline: "", preload: "metadata" }),
+          elem("button", { class: "iv-video-play", "aria-label": "נגן" }, "▶")));
+      if (p.type === "audio") return elem("div", { class: cls },
+        elem("audio", { class: "iv-audio", controls: "", src, preload: "metadata" }));
+      if (p.type === "text")  return elem("div", { class: cls }, p.text || "");
       console.error(
         `Interview "${data.candidate_id}" ${ctx}: unrecognized item (need a string or {type:image|video|audio|text}) — skipped. Item:`, p);
-      return `<div class="${cls} iv-bubble-broken">⚠️ תוכן לא נתמך</div>`;
+      return elem("div", { class: `${cls} iv-bubble-broken` }, "⚠️ תוכן לא נתמך");
     }
 
-    return `<div class="${cls}">${escapeHTML(p)}</div>`;
+    return elem("div", { class: cls }, p == null ? "" : String(p));
   }
 
-  let html = "";
+  const chat = elem("div", { class: "iv-chat" });
   data.messages.forEach((msg, i) => {
     const role = "question" in msg ? "question" : "answer";
     const parts = msg[role];
@@ -889,10 +908,10 @@ function renderChat(data) {
         `Interview "${data.candidate_id}" message #${i}: expected a "question" or "answer" array — skipped. Message:`, msg);
       return;
     }
-    parts.forEach((p) => { html += renderBubble(p, role, `message #${i}`); });
+    parts.forEach((p) => chat.append(renderBubble(p, role, `message #${i}`)));
   });
 
-  wrap.innerHTML = `<div class="iv-chat">${html}</div>`;
+  wrap.replaceChildren(chat);
 
   // Video play/pause
   wrap.addEventListener("click", (e) => {

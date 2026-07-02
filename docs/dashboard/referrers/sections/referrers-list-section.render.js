@@ -42,7 +42,7 @@ export const renderReferrersListSection = (
 
   const groupOptions = Array.from(groups?.values() || [])
     .filter(g => g.active)
-    .map(g => `<option value="${g.id}">${g.name}</option>`)
+    .map(g => `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name)}</option>`)
     .join("");
 
   const addButton = isAdmin
