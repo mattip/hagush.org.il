@@ -864,6 +864,27 @@ async function initPopupTabs(candidateId) {
   }
 }
 
+// Turn https:// URLs inside interview text into safe clickable links; the rest
+// stays as plain text nodes. Returns an array of nodes/strings for elem().
+function linkifyText(text) {
+  const s = String(text ?? "");
+  const nodes = [];
+  const re = /https:\/\/[^\s]+/g;
+  let last = 0, m;
+  while ((m = re.exec(s)) !== null) {
+    let url = m[0];
+    const trail = url.match(/[.,;:!?)\]]+$/);   // keep trailing punctuation out of the link
+    const tail = trail ? trail[0] : "";
+    if (tail) url = url.slice(0, -tail.length);
+    if (m.index > last) nodes.push(s.slice(last, m.index));
+    nodes.push(elem("a", { class: "iv-link", href: url, target: "_blank", rel: "noreferrer" }, url));
+    if (tail) nodes.push(tail);
+    last = m.index + m[0].length;
+  }
+  if (last < s.length) nodes.push(s.slice(last));
+  return nodes;
+}
+
 function renderChat(data) {
   const wrap = document.getElementById("ivAccordion");
   document.getElementById("ivLoading").style.display = "none";
@@ -890,13 +911,13 @@ function renderChat(data) {
           elem("button", { class: "iv-video-play", "aria-label": "נגן" }, "▶")));
       if (p.type === "audio") return elem("div", { class: cls },
         elem("audio", { class: "iv-audio", controls: "", src, preload: "metadata" }));
-      if (p.type === "text")  return elem("div", { class: cls }, p.text || "");
+      if (p.type === "text")  return elem("div", { class: cls }, ...linkifyText(p.text));
       console.error(
         `Interview "${data.candidate_id}" ${ctx}: unrecognized item (need a string or {type:image|video|audio|text}) — skipped. Item:`, p);
       return elem("div", { class: `${cls} iv-bubble-broken` }, "⚠️ תוכן לא נתמך");
     }
 
-    return elem("div", { class: cls }, p == null ? "" : String(p));
+    return elem("div", { class: cls }, ...linkifyText(p));
   }
 
   const chat = elem("div", { class: "iv-chat" });
