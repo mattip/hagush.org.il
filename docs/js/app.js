@@ -8,6 +8,12 @@ const PINNED_WINDOW = 6;        // how many leading slots the pinned ids are spr
 const timers = {};
 const popup = document.getElementById("popup");
 const POPUPS_ENABLED = document.currentScript.dataset.popups !== "false";
+// Pages without OG stubs (e.g. ask.html) set data-share-self: the pin copies
+// this page's own ?id=<id> selector instead of the /candidates/<id>.html stub.
+const SHARE_SELF = document.currentScript.dataset.shareSelf === "true";
+// Optional tab to open on a deep-link when the URL carries no ?tab (ask.html
+// sets data-default-tab="interview" so ?id=<id> opens straight to the interview).
+const DEFAULT_TAB = document.currentScript.dataset.defaultTab || "";
 
 let closeTimer = null;
 
@@ -321,11 +327,13 @@ document.getElementById("popupBack").addEventListener("click", popupGoBack);
   pinBtn.addEventListener("click", () => {
     const id = popup.dataset.personId;
     if (!id) return;
-    // Copy the OG-stub URL, not the selector URL. The stub at
-    // /candidates/<id>.html carries social-preview meta tags (name + photo)
-    // and instantly redirects a real browser to candidates.html?id=<id>,
-    // so the in-app experience is identical but pasted links preview nicely.
-    const url = `${location.origin}/candidates/${encodeURIComponent(id)}.html`;
+    // On candidates.html: copy the OG-stub URL (/candidates/<id>.html) — it
+    // carries social-preview meta and redirects to candidates.html?id=<id>.
+    // On pages with data-share-self (ask.html, no stub): copy this page's own
+    // ?id=<id> selector, which re-opens the popup here (interview tab by default).
+    const url = SHARE_SELF
+      ? `${location.origin}${location.pathname}?id=${encodeURIComponent(id)}`
+      : `${location.origin}/candidates/${encodeURIComponent(id)}.html`;
     copyToClipboard(url).then(() => {
       clearTimeout(toastTimer);
       pinToast.classList.add("show");
@@ -826,8 +834,9 @@ async function initPopupTabs(candidateId) {
       console.error(`Failed to render interview for "${data.candidate_id}":`, err);
     }
 
-    // Switch to interview tab if ?tab=interview is in URL
-    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    // Switch to interview tab if ?tab=interview is in URL, or if this page
+    // defaults to it (ask.html via data-default-tab) and the URL sets no ?tab.
+    const requestedTab = new URLSearchParams(window.location.search).get("tab") || DEFAULT_TAB;
     if (requestedTab === "interview") {
       tabBar.querySelectorAll(".popup-tab").forEach(t =>
         t.classList.toggle("active", t.dataset.tab === "interview")
