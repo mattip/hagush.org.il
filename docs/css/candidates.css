@@ -494,14 +494,17 @@ body {
 .card-select-btn.selected::after { content: "✓"; }
 
 /* Scroll-lock: position:fixed prevents Safari background scroll */
+/* Scroll lock: <body> is the fixed element because openPopup() sets its
+   `top: -scrollY` to hold the background in place. Fixing <html> instead (as it
+   used to) left that offset inert and snapped the page to the top on open. */
 body.no-scroll {
+  position: fixed;
   overflow: hidden;
   width: 100%;
 }
 
 html.no-scroll {
   overflow: hidden;
-  position: fixed;
   width: 100%;
 }
 
