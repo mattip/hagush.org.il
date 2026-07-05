@@ -26,7 +26,7 @@ let interviewIds = new Set(); // candidate ids with a parsed interview (intervie
 // ── Anonymous popup-open analytics ────────────────────────────────
 // Fire-and-forget ping to the same Apps Script /exec the forms use.
 // No cookie, no visitor id — only candidate + trigger + click time.
-const EVENT_URL   = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
+const EVENT_URL   = "/api/question";
 const EVENT_TOKEN = "NachshavBaot2026";
 const _evLast = {}; // de-dupe accidental double-fires (per candidate+trigger)
 
