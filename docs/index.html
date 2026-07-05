@@ -186,10 +186,8 @@
 
           <script>
           (function () {
-            // ── Replace with your deployed Apps Script URL ──────────────────
-            const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
+            const SUBMIT_URL = "/api/question";
             const TOKEN      = "NachshavBaot2026";
-            // ────────────────────────────────────────────────────────────────
 
             const form    = document.getElementById("joinForm");
             const noteYes = document.getElementById("jf-note-yes");
@@ -251,7 +249,6 @@
               try {
                 await fetch(SUBMIT_URL, {
                   method: "POST",
-                  mode: "no-cors",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify(data),
                 });

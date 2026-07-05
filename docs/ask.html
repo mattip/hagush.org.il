@@ -241,7 +241,7 @@
 
     <script src="./js/app.js?v=16" data-popups="true" data-share-self="true" data-default-tab="interview"></script>
     <script>
-    const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbyPXkZWptHieBiqSfaCJGwgVQTJKZreRJONKmGyDtKZ5z3iio56rtjaE3G_TdXgYWRW/exec";
+    const SUBMIT_URL = "/api/question";
     const TOKEN      = "NachshavBaot2026";
     const PORTRAITS  = "portraits";
 
@@ -464,7 +464,6 @@
       try {
         await fetch(SUBMIT_URL, {
           method: "POST",
-          mode: "no-cors",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
