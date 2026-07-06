@@ -129,12 +129,16 @@ function checkEventCap() {
 
 // ── Helper: append a row, creating a bold header row if empty ─────
 function appendRow(sheetId, columns, values) {
-  const sheet = SpreadsheetApp.openById(sheetId).getActiveSheet();
+  const sheet = SpreadsheetApp.openById(sheetId).getSheets()[0];
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(columns);
     sheet.getRange(1, 1, 1, columns.length).setFontWeight('bold');
   }
+  const rowBefore = sheet.getLastRow();
   sheet.appendRow(values);
+  if (sheet.getLastRow() <= rowBefore) {
+    throw new Error("appendRow silently failed — check for active filters on sheet " + sheetId);
+  }
 }
 
 // ── Helper: log rejected submissions to a "rejections" tab ────────
