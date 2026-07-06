@@ -297,25 +297,22 @@
         try {
           const indexRes = await fetch("interviews/index.json", { cache: "no-cache" });
           if (indexRes.ok) {
-            const indexIds = await indexRes.json();
-            const pastFromFiles = [];
-            for (const cid of indexIds) {
-              try {
-                const ivRes = await fetch(`interviews/${cid}.json`, { cache: "no-cache" });
-                if (!ivRes.ok) continue;
-                const ivData = await ivRes.json();
-                const c = candidates.find(x => x.id === cid);
-                pastFromFiles.push({
-                  candidate_id: cid,
-                  candidate_name: c ? c.name : (ivData.candidate_name || cid),
-                  candidate_photo: c && c.photos && c.photos[2] ? c.photos[2] : "",
-                  date: ivData.date || "",
-                  time: "00:00",
-                  day_label: ivData.date || "",
-                  source: ivData.source || "whatsapp",
-                });
-              } catch {}
-            }
+            const index = await indexRes.json();
+            // Support both new format (objects) and legacy (string IDs)
+            const pastFromFiles = index.map(entry => {
+              const isObj = typeof entry === "object";
+              const cid = isObj ? entry.id : entry;
+              const c = candidates.find(x => x.id === cid);
+              return {
+                candidate_id: cid,
+                candidate_name: c ? c.name : (isObj ? entry.name : cid),
+                candidate_photo: c && c.photos && c.photos[2] ? c.photos[2] : "",
+                date: isObj ? (entry.date || "") : "",
+                time: "00:00",
+                day_label: isObj ? (entry.date || "") : "",
+                source: isObj ? (entry.source || "whatsapp") : "whatsapp",
+              };
+            });
             pastFromFiles.sort((a, b) => (b.date).localeCompare(a.date));
             renderPast(pastFromFiles);
             if (pastFromFiles.length === 0) {
