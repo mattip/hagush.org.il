@@ -160,6 +160,19 @@ function logRejection(reason, data) {
       JSON.stringify(data).substring(0, 500),
     ]);
   } catch (e) { Logger.log('logRejection error: ' + e); }
+
+ // Email alert — separate try so it fires even if sheet logging failed
+  try {
+    if (reason.startsWith("sheet_error") || reason === "rate_limit") {
+      MailApp.sendEmail({
+        to: "matti.picus@gmail.com",
+        subject: "⚠ טופס נדחה: " + reason,
+        body: "סיבה: " + reason + "\n"
+          + "סוג: " + (data.formType || "join") + "\n"
+          + "נתונים: " + JSON.stringify(data).substring(0, 300),
+      });
+    }
+  } catch (e) { Logger.log('email alert error: ' + e); }
 }
 
 // ── Main POST handler ─────────────────────────────────────────────
