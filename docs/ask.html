@@ -259,16 +259,16 @@
     const db = firebase.firestore();
 
     // ── Load candidates + interviews ──
+    // app.js already fetches candidates.json and index.json → allPeople, interviewIndex.
+    // We wait for that, then only fetch Firestore for upcoming interviews.
     let candidates = [];
 
     async function init() {
       try {
-        const [candRes, snap] = await Promise.all([
-          fetch("candidates.json").then(r => r.json()),
-          db.collection("interviews").orderBy("date").get()
-        ]);
-        candidates = candRes;
+        await dataReady;
+        candidates = allPeople;
 
+        const snap = await db.collection("interviews").orderBy("date").get();
         const all = snap.docs.map(d => {
           const iv = { id: d.id, ...d.data() };
           const c = candidates.find(x => x.id === iv.candidate_id);
@@ -282,9 +282,6 @@
           return iv;
         });
         const now = Date.now();
-        // Compare against the full date+time, so an interview earlier *today*
-        // drops to "past" once its time passes — not only at the next calendar
-        // day (bug #1).
         const startMs = iv => new Date(`${iv.date}T${iv.time || "00:00"}:00`).getTime();
 
         const upcoming = all.filter(iv => startMs(iv) >= now)
@@ -293,37 +290,24 @@
         renderUpcoming(upcoming);
         renderCandidateRadios(upcoming);
 
-        // Past interviews from static index.json (covers both WhatsApp and DOCX)
-        try {
-          const indexRes = await fetch("interviews/index.json", { cache: "no-cache" });
-          if (indexRes.ok) {
-            const index = await indexRes.json();
-            // Support both new format (objects) and legacy (string IDs)
-            const pastFromFiles = index.map(entry => {
-              const isObj = typeof entry === "object";
-              const cid = isObj ? entry.id : entry;
-              const c = candidates.find(x => x.id === cid);
-              return {
-                candidate_id: cid,
-                candidate_name: c ? c.name : (isObj ? entry.name : cid),
-                candidate_photo: c && c.photos && c.photos[2] ? c.photos[2] : "",
-                date: isObj ? (entry.date || "") : "",
-                time: "00:00",
-                day_label: isObj ? (entry.date || "") : "",
-                source: isObj ? (entry.source || "whatsapp") : "whatsapp",
-              };
-            });
-            pastFromFiles.sort((a, b) => (b.date).localeCompare(a.date));
-            renderPast(pastFromFiles);
-            if (pastFromFiles.length === 0) {
-              document.getElementById("prevLink").style.display = "none";
-            }
-          } else {
-            renderPast([]);
-            document.getElementById("prevLink").style.display = "none";
-          }
-        } catch {
-          renderPast([]);
+        // Past interviews from interviewIndex (already loaded by app.js)
+        const pastFromFiles = interviewIndex.map(entry => {
+          const isObj = typeof entry === "object";
+          const cid = isObj ? entry.id : entry;
+          const c = candidates.find(x => x.id === cid);
+          return {
+            candidate_id: cid,
+            candidate_name: c ? c.name : (isObj ? entry.name : cid),
+            candidate_photo: c && c.photos && c.photos[2] ? c.photos[2] : "",
+            date: isObj ? (entry.date || "") : "",
+            time: "00:00",
+            day_label: isObj ? (entry.date || "") : "",
+            source: isObj ? (entry.source || "whatsapp") : "whatsapp",
+          };
+        });
+        pastFromFiles.sort((a, b) => (b.date).localeCompare(a.date));
+        renderPast(pastFromFiles);
+        if (pastFromFiles.length === 0) {
           document.getElementById("prevLink").style.display = "none";
         }
       } catch (err) {
@@ -378,54 +362,32 @@
         const dayMatch = (iv.day_label || "").match(/(\d{1,2}\.\d{1,2})/);
         const dateStr = dayMatch ? dayMatch[1] : iv.date || "";
         const photo = iv.candidate_photo || "";
+        const label = iv.source === "document" ? "ראיון כתוב" : "ראיון חי · וואטסאפ";
+        const person = candidates.find(c => c.id === iv.candidate_id);
+        const href = `candidates.html?id=${encodeURIComponent(iv.candidate_id)}&tab=interview`;
 
-        // Start inert: a passed interview isn't a live link until its JSON has
-        // been parsed and committed (bug #2). markInterviewWhenReady() flips it.
-        const card = el("a", { class: "past-card past-card--pending" },
+        const card = el("a", { class: "past-card", href },
           el("span", { class: "pc-date", text: dateStr }),
           el("div", { class: "pc-info" },
             el("p", { class: "pc-name", text: iv.candidate_name }),
-            el("p", { class: "pc-type" }, "הראיון יעלה בקרוב"),
+            el("p", { class: "pc-type" }, label),
           ),
           photo ? el("img", { class: "pc-photo", src: `${PORTRAITS}/${photo}`, alt: iv.candidate_name || "" }) : null,
         );
-        list.appendChild(card);
-        markInterviewWhenReady(card, iv);
-      });
-    }
 
-    // A past interview becomes a live card only once interviews/<id>.json exists
-    // with questions — the same readiness signal app.js uses to show the popup's
-    // interview tab. When ready, clicking opens the shared popup in-place over
-    // ask.html (feature #1) instead of navigating away; the href is kept as a
-    // graceful fallback.
-    async function markInterviewWhenReady(card, iv) {
-      const person = candidates.find(c => c.id === iv.candidate_id);
-      if (!person) return; // unknown candidate → no popup target, stay inert
-
-      let ready = false;
-      let data = null;
-      try {
-        const res = await fetch(`interviews/${iv.candidate_id}.json`, { cache: "no-cache" });
-        if (res.ok) {
-          data = await res.json();
-          ready = !!(data && Array.isArray(data.messages) && data.messages.length);
+        if (person) {
+          card.addEventListener("click", (e) => {
+            if (typeof openPopup !== "function") return;
+            e.preventDefault();
+            const url = new URL(location);
+            url.searchParams.set("id", iv.candidate_id);
+            url.searchParams.set("tab", "interview");
+            history.replaceState(null, "", url);
+            openPopup(person, document.body, false, "ask");
+          });
         }
-      } catch {}
-      if (!ready) return;
 
-      card.classList.remove("past-card--pending");
-      card.querySelector(".pc-type").textContent =
-        data.source === "document" ? "ראיון כתוב" : "ראיון חי · וואטסאפ";
-      card.href = `candidates.html?id=${encodeURIComponent(iv.candidate_id)}&tab=interview`;
-      card.addEventListener("click", (e) => {
-        if (typeof openPopup !== "function") return; // let the href handle it
-        e.preventDefault();
-        const url = new URL(location);
-        url.searchParams.set("id", iv.candidate_id);
-        url.searchParams.set("tab", "interview");
-        history.replaceState(null, "", url);
-        openPopup(person, document.body, false, "ask");
+        list.appendChild(card);
       });
     }
 
