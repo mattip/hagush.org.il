@@ -842,6 +842,8 @@ async function initPopupTabs(candidateId) {
 
   if (data && Array.isArray(data.messages) && data.messages.length > 0) {
     tabBar.style.display = "flex";
+    tabBar.querySelector('[data-tab="interview"]').textContent =
+      data.source === "document" ? "עכשיו שואלות!" : "ראיון וואטסאפ";
     try {
       renderChat(data);
     } catch (err) {

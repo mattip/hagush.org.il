@@ -239,7 +239,7 @@
       </div>
     </div>
 
-    <script src="./js/app.js?v=16" data-popups="true" data-share-self="true" data-default-tab="interview"></script>
+    <script src="./js/app.js?v=17" data-popups="true" data-share-self="true" data-default-tab="interview"></script>
     <script>
     const SUBMIT_URL = "/api/question";
     const TOKEN      = "NachshavBaot2026";
@@ -288,14 +288,44 @@
 
         const upcoming = all.filter(iv => startMs(iv) >= now)
           .sort((a, b) => startMs(a) - startMs(b));
-        const past = all.filter(iv => startMs(iv) < now)
-          .sort((a, b) => startMs(b) - startMs(a)); // newest first
 
         renderUpcoming(upcoming);
-        renderPast(past);
         renderCandidateRadios(upcoming);
 
-        if (past.length === 0) {
+        // Past interviews from static index.json (covers both WhatsApp and DOCX)
+        try {
+          const indexRes = await fetch("interviews/index.json", { cache: "no-cache" });
+          if (indexRes.ok) {
+            const indexIds = await indexRes.json();
+            const pastFromFiles = [];
+            for (const cid of indexIds) {
+              try {
+                const ivRes = await fetch(`interviews/${cid}.json`, { cache: "no-cache" });
+                if (!ivRes.ok) continue;
+                const ivData = await ivRes.json();
+                const c = candidates.find(x => x.id === cid);
+                pastFromFiles.push({
+                  candidate_id: cid,
+                  candidate_name: c ? c.name : (ivData.candidate_name || cid),
+                  candidate_photo: c && c.photos && c.photos[2] ? c.photos[2] : "",
+                  date: ivData.date || "",
+                  time: "00:00",
+                  day_label: ivData.date || "",
+                  source: ivData.source || "whatsapp",
+                });
+              } catch {}
+            }
+            pastFromFiles.sort((a, b) => (b.date).localeCompare(a.date));
+            renderPast(pastFromFiles);
+            if (pastFromFiles.length === 0) {
+              document.getElementById("prevLink").style.display = "none";
+            }
+          } else {
+            renderPast([]);
+            document.getElementById("prevLink").style.display = "none";
+          }
+        } catch {
+          renderPast([]);
           document.getElementById("prevLink").style.display = "none";
         }
       } catch (err) {
@@ -376,17 +406,19 @@
       if (!person) return; // unknown candidate → no popup target, stay inert
 
       let ready = false;
+      let data = null;
       try {
         const res = await fetch(`interviews/${iv.candidate_id}.json`, { cache: "no-cache" });
         if (res.ok) {
-          const data = await res.json();
+          data = await res.json();
           ready = !!(data && Array.isArray(data.messages) && data.messages.length);
         }
       } catch {}
       if (!ready) return;
 
       card.classList.remove("past-card--pending");
-      card.querySelector(".pc-type").textContent = "ראיון טקסט חי · וואטסאפ";
+      card.querySelector(".pc-type").textContent =
+        data.source === "document" ? "ראיון כתוב" : "ראיון חי · וואטסאפ";
       card.href = `candidates.html?id=${encodeURIComponent(iv.candidate_id)}&tab=interview`;
       card.addEventListener("click", (e) => {
         if (typeof openPopup !== "function") return; // let the href handle it
