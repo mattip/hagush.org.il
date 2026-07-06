@@ -10,6 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Open Sans', sans-serif; background: #f5f6fa; color: #1a1a2e; min-height: 100vh; }
@@ -173,8 +174,8 @@
       <h2>ניתוח ראיון מוואטסאפ</h2>
       <div class="upload-zone" id="uploadZone">
         <div class="upload-icon">📁</div>
-        <p>גרור קובץ ZIP של צ׳אט וואטסאפ לכאן, או לחץ לבחירה</p>
-        <input type="file" id="zipInput" accept=".zip" />
+        <p>גרור קובץ ZIP (וואטסאפ) או DOCX (ראיון כתוב) לכאן, או לחץ לבחירה</p>
+        <input type="file" id="zipInput" accept=".zip,.docx" />
       </div>
       <div id="detectStatus" style="margin-top:.8rem; font-size:.85rem; color:#666; display:none"></div>
     </div>
@@ -182,6 +183,23 @@
     <div class="form-card" id="detectResults" style="display:none">
       <h2>ראיונות שזוהו</h2>
       <div id="detectList"></div>
+    </div>
+
+    <div class="form-card" id="docxCard" style="display:none">
+      <h2>ראיון מקובץ מסמך</h2>
+      <div class="detect-fields">
+        <div>
+          <label>מועמד.ת *</label>
+          <select id="docxCandidate"><option value="">— בחרו —</option></select>
+        </div>
+        <div>
+          <label>תאריך</label>
+          <input type="date" id="docxDate" dir="ltr" />
+        </div>
+      </div>
+      <div class="detect-btn-row" style="margin-top:.6rem">
+        <button class="detect-btn detect-parse" id="docxParseBtn">נתח ▸</button>
+      </div>
     </div>
 
     <div class="form-card" id="editorCard" style="display:none">
@@ -553,6 +571,7 @@
         candidate_id: candidateId,
         candidate_name: candidateName,
         date: data.date || "",
+        ...(data.source ? { source: data.source } : {}),
         interviewer: "",
         questions: blocks,
       };
@@ -782,8 +801,122 @@
   uploadZone.addEventListener("click", () => zipInput.click());
   uploadZone.addEventListener("dragover", e => { e.preventDefault(); uploadZone.classList.add("drag-over"); });
   uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("drag-over"));
-  uploadZone.addEventListener("drop", e => { e.preventDefault(); uploadZone.classList.remove("drag-over"); handleZip(e.dataTransfer.files[0]); });
-  zipInput.addEventListener("change", () => { if (zipInput.files[0]) handleZip(zipInput.files[0]); });
+  uploadZone.addEventListener("drop", e => { e.preventDefault(); uploadZone.classList.remove("drag-over"); handleUpload(e.dataTransfer.files[0]); });
+  zipInput.addEventListener("change", () => { if (zipInput.files[0]) handleUpload(zipInput.files[0]); });
+
+  function handleUpload(file) {
+    if (file.name.endsWith(".docx")) {
+      handleDocx(file);
+    } else {
+      handleZip(file);
+    }
+  }
+
+  // ── DOCX handling ──
+  let docxQuestions = [];
+
+  async function handleDocx(file) {
+    detectStatus.style.display = "block";
+    detectStatus.textContent = "קורא מסמך…";
+    document.getElementById("detectResults").style.display = "none";
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const text = result.value;
+
+      docxQuestions = parseDocxInterview(text);
+      detectStatus.textContent = `${docxQuestions.length} שאלות זוהו`;
+
+      // Try to extract candidate name from header
+      const nameMatch = text.match(/ראיון\s*עם\s*:?\s*(.+)/);
+      const docxGuess = nameMatch ? fuzzyMatchCandidate(nameMatch[1].trim()) : null;
+
+      // Try to extract date
+      const dateMatch = text.match(/(\d{1,2})\s+(ינואר|פברואר|מרץ|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)[,.]?\s*(\d{4})/);
+      if (dateMatch) {
+        const months = {"ינואר":"01","פברואר":"02","מרץ":"03","אפריל":"04","מאי":"05","יוני":"06","יולי":"07","אוגוסט":"08","ספטמבר":"09","אוקטובר":"10","נובמבר":"11","דצמבר":"12"};
+        document.getElementById("docxDate").value = `${dateMatch[3]}-${months[dateMatch[2]]}-${dateMatch[1].padStart(2,"0")}`;
+      }
+
+      // Show candidate picker
+      const card = document.getElementById("docxCard");
+      card.style.display = "block";
+      const sel = document.getElementById("docxCandidate");
+      if (sel.options.length <= 1) {
+        candidates.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c.id;
+          opt.textContent = c.name;
+          sel.appendChild(opt);
+        });
+      }
+      if (docxGuess) sel.value = docxGuess.id;
+    } catch (err) {
+      detectStatus.textContent = "שגיאה: " + err.message;
+    }
+  }
+
+  function parseDocxInterview(text) {
+    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+    const blocks = [];
+    let current = null;
+    let mode = null; // "q" or "a"
+
+    for (const line of lines) {
+      // Skip the title line (first line with the candidate name + date)
+      if (line.startsWith("ראיון עם")) continue;
+      // Skip date-only lines
+      if (/^\d{1,2}\s/.test(line) && /\d{4}$/.test(line)) continue;
+
+      const isQ = /^שאלה$/.test(line);
+      const isA = /^תשובה$/.test(line);
+
+      if (isQ) {
+        if (current && current.question.length) {
+          blocks.push(current);
+        }
+        current = { question: [], answer: [], response: [] };
+        mode = "q";
+      } else if (isA) {
+        mode = "a";
+      } else if (current) {
+        if (mode === "q") current.question.push(line);
+        else if (mode === "a") current.answer.push(line);
+      }
+    }
+    if (current && current.question.length) blocks.push(current);
+    return blocks;
+  }
+
+  document.getElementById("docxParseBtn").addEventListener("click", () => {
+    const candidateId = document.getElementById("docxCandidate").value;
+    const date = document.getElementById("docxDate").value;
+    if (!candidateId) { alert("נא לבחור מועמד.ת"); return; }
+    if (!docxQuestions.length) { alert("לא זוהו שאלות במסמך"); return; }
+
+    const candidate = candidates.find(c => c.id === candidateId);
+    const candidateName = candidate ? candidate.name : candidateId;
+
+    const questions = docxQuestions.map((b, i) => ({
+      id: `q${i + 1}`,
+      summary: (b.question[0] || "").slice(0, 80),
+      question: b.question,
+      answer: b.answer,
+      response: b.response,
+    }));
+
+    currentEditData = {
+      candidate_id: candidateId,
+      candidate_name: candidateName,
+      date: date,
+      source: "document",
+      questions,
+    };
+    currentEditImages = {};
+
+    renderEditor(questions, candidateName, currentEditImages, true);
+  });
 
   async function handleZip(file) {
     detectStatus.style.display = "block";
@@ -1088,6 +1221,7 @@
         candidate_id: cid,
         candidate_name: currentEditData.candidate_name,
         date: currentEditData.date,
+        ...(currentEditData.source ? { source: currentEditData.source } : {}),
         messages: blocksToMessages(currentEditData.questions),
       };
       zip.file(`${cid}.json`, JSON.stringify(jsonData, null, 2));
