@@ -1226,12 +1226,42 @@
       };
       zip.file(`${cid}.json`, JSON.stringify(jsonData, null, 2));
 
-      // index.json — manifest the candidates grid reads to show the "שואלות"
-      // badge. Re-scan so it reflects every parsed interview, add this one, and
+      // index.json — manifest with metadata for ask.html and candidates grid badge.
+      // Re-scan so it reflects every parsed interview, add this one, and
       // ship it at the zip root (unzips into interviews/ alongside <cid>.json).
       await checkExistingInterviews(candidates.map((c) => c.id));
-      const indexIds = [...new Set([...existingInterviews, cid])].sort();
-      zip.file("index.json", JSON.stringify(indexIds, null, 2));
+      const allIds = [...new Set([...existingInterviews, cid])].sort();
+
+      // Fetch metadata for existing interviews, use current data for the new one
+      const indexEntries = [];
+      for (const id of allIds) {
+        if (id === cid) {
+          indexEntries.push({
+            id: cid,
+            name: currentEditData.candidate_name,
+            date: currentEditData.date,
+            source: currentEditData.source || "whatsapp",
+          });
+        } else {
+          try {
+            const res = await fetch(INTERVIEWS_DIR + id + ".json");
+            if (res.ok) {
+              const d = await res.json();
+              indexEntries.push({
+                id,
+                name: d.candidate_name || id,
+                date: d.date || "",
+                source: d.source || "whatsapp",
+              });
+            } else {
+              indexEntries.push({ id, name: id, date: "", source: "whatsapp" });
+            }
+          } catch {
+            indexEntries.push({ id, name: id, date: "", source: "whatsapp" });
+          }
+        }
+      }
+      zip.file("index.json", JSON.stringify(indexEntries, null, 2));
 
       // Add images to subfolder
       let imgCount = 0;
