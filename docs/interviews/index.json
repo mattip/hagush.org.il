@@ -1,15 +1,80 @@
 [
-  "katy_p",
-  "dany_e",
-  "galeb_s",
-  "yael_c",
-  "moran_z",
-  "lee_h",
-  "moshe_r",
-  "nava_r",
-  "nimrod_s",
-  "rotem_s",
-  "somaya_b",
-  "tomera",
-  "yaya_f"
+  {
+    "id": "dany_e",
+    "name": "דני אלגרט",
+    "date": "2026-07-06",
+    "source": "document"
+  },
+  {
+    "id": "galeb_s",
+    "name": "גאלב סלאמנה",
+    "date": "2026-07-06",
+    "source": "document"
+  },
+  {
+    "id": "katy_p",
+    "name": "קטי פיאסצקי",
+    "date": "2026-07-06",
+    "source": "document"
+  },
+  {
+    "id": "lee_h",
+    "name": "לי הופמן אגיב",
+    "date": "2026-07-06",
+    "source": "document"
+  },
+  {
+    "id": "moran_z",
+    "name": "מורן זר קצנשטיין",
+    "date": "2026-07-06",
+    "source": "document"
+  },
+  {
+    "id": "moshe_r",
+    "name": "משה רדמן אבוטבול",
+    "date": "2026-06-18",
+    "source": "whatsapp"
+  },
+  {
+    "id": "nava_r",
+    "name": "נאווה רוזוליו",
+    "date": "2026-06-25",
+    "source": "whatsapp"
+  },
+  {
+    "id": "nimrod_s",
+    "name": "נמרוד שפר",
+    "date": "2026-06-22",
+    "source": "whatsapp"
+  },
+  {
+    "id": "rotem_s",
+    "name": "רתם סיון-הופמן",
+    "date": "2026-07-05",
+    "source": "whatsapp"
+  },
+  {
+    "id": "somaya_b",
+    "name": "סומיה בשיר",
+    "date": "2026-06-28",
+    "source": "whatsapp"
+  },
+  {
+    "id": "tomera",
+    "name": "תומר אביטל",
+    "date": "2026-07-02",
+    "source": "whatsapp"
+  },
+  {
+    "id": "yael_c",
+    "name": "יעל כהן פארן",
+    "date": "2026-07-06",
+    "source": "document"
+  },
+  {
+    "id": "yaya_f",
+    "name": "יאיא פינק",
+    "date": "2026-06-30",
+    "source": "whatsapp"
+  }
 ]

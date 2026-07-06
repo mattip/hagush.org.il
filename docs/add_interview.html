@@ -869,7 +869,7 @@
       // Skip date-only lines
       if (/^\d{1,2}\s/.test(line) && /\d{4}$/.test(line)) continue;
 
-      const isQ = /^שאלה$/.test(line);
+      const isQ = /^שאלה:?$/.test(line);
       const isA = /^תשובה$/.test(line);
 
       if (isQ) {
