@@ -163,7 +163,7 @@
         <img class="footer-logo" src="images/logo_blue.svg" alt="עכשיו באות!" />
       </a>
       כל הזכויות שמורות לעכשיו באות! 2026
-      <a href="privacy.html" style="color: inherit; text-decoration: underline;">מדיניות פרטיות</a>
+      <a href="privacy.html" style="color: inherit; text-decoration: underline; font-weight: 400; font-size: 0.75rem;">מדיניות פרטיות</a>
     </footer>
 
     <!-- Popup — shared with candidates.html, driven by ./js/app.js -->
@@ -495,12 +495,31 @@
 
       let networkOk = false;
       try {
-        await fetch(SUBMIT_URL, {
+        const resp = await fetch(SUBMIT_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
-        networkOk = true;
+        if (resp.ok) {
+          try {
+            const result = await resp.json();
+            if (result.ok === false) {
+              errBox.textContent = "שגיאה ברישום השאלה, נסו שוב יותר מאוחר";
+              errBox.style.display = "block";
+              btn.disabled = false;
+              btn.textContent = "שליחת השאלה";
+            } else {
+              networkOk = true;
+            }
+          } catch {
+            networkOk = true;
+          }
+        } else {
+          errBox.textContent = "שגיאה ברישום השאלה, נסו שוב יותר מאוחר";
+          errBox.style.display = "block";
+          btn.disabled = false;
+          btn.textContent = "שליחת השאלה";
+        }
       } catch (err) {
         errBox.textContent = !navigator.onLine
           ? "נראה שאין חיבור לאינטרנט."
