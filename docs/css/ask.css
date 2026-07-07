@@ -317,6 +317,14 @@ body {
   opacity: 0.8;
 }
 
+.past-card--doc {
+  padding: 8px 14px;
+}
+
+.past-card--doc .pc-info {
+  text-align: right;
+}
+
 .pc-photo {
   width: 44px;
   height: 44px;

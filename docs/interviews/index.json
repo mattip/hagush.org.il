@@ -1,8 +1,20 @@
 [
   {
+    "id": "eran_n",
+    "name": "ערן ניסן",
+    "date": "2026-07-07",
+    "source": "document"
+  },
+  {
+    "id": "amirh",
+    "name": "ד״ר אמיר ח׳ניפס",
+    "date": "2026-07-07",
+    "source": "document"
+  },
+  {
     "id": "dany_e",
     "name": "דני אלגרט",
-    "date": "2026-07-06",
+    "date": "2026-07-07",
     "source": "document"
   },
   {
@@ -40,6 +52,12 @@
     "name": "נאווה רוזוליו",
     "date": "2026-06-25",
     "source": "whatsapp"
+  },
+  {
+    "id": "nedal_m",
+    "name": "נדאל מסאלחה",
+    "date": "2026-07-07",
+    "source": "document"
   },
   {
     "id": "nimrod_s",
