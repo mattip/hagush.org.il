@@ -225,6 +225,9 @@ function doPost(e) {
     if (type === 'question') {
       return handleQuestion(data, respond);
     }
+    if (type === 'pending_event') {
+      return handlePendingEvent(data, respond);
+    }
     return handleJoin(data, respond);
   } catch (err) {
     Logger.log('Sheet error: ' + err.toString());
@@ -312,6 +315,36 @@ function doGet() {
 }
 
 // ── Manual tests ──────────────────────────────────────────────────
+// ── Pending event notification ──────────────────────────────────
+function handlePendingEvent(data, respond) {
+  const participants = data.participants || "לא צוין";
+  const date = data.date || "לא צוין";
+  const time = data.time || "";
+  const city = data.city || "";
+  const submitter = [data.submitter_name, data.submitter_phone, data.submitter_email]
+    .filter(Boolean).join(" · ") || "לא צוין";
+
+  try {
+    MailApp.sendEmail({
+      to: "matti.picus@gmail.com",
+      subject: "אירוע חדש ממתין לאישור — " + city + " " + date,
+      body: "אירוע חדש ממתין לאישור באתר עכשיו באות:\n\n"
+        + "תאריך: " + date + " " + time + "\n"
+        + "עיר: " + city + "\n"
+        + "כתובת: " + (data.address || "") + "\n"
+        + "משתתפים: " + participants + "\n"
+        + "תאור: " + (data.description || "") + "\n"
+        + "לינק: " + (data.registration_link || "") + "\n\n"
+        + "נשלח ע\"י: " + submitter + "\n\n"
+        + "לאישור: https://hagush.org.il/add_event.html",
+    });
+  } catch (e) {
+    Logger.log("pending_event email error: " + e);
+  }
+
+  return respond(true, "notification sent");
+}
+
 function test_join() {
   const fakeEvent = { postData: { contents: JSON.stringify({
     _token: SECRET_TOKEN, website: '', source: 'whatsapp',
