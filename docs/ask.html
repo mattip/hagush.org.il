@@ -305,7 +305,12 @@
             source: isObj ? (entry.source || "whatsapp") : "whatsapp",
           };
         });
-        pastFromFiles.sort((a, b) => (b.date).localeCompare(a.date));
+        pastFromFiles.sort((a, b) => {
+          const aDoc = a.source === "document" ? 1 : 0;
+          const bDoc = b.source === "document" ? 1 : 0;
+          if (aDoc !== bDoc) return aDoc - bDoc;
+          return (b.date).localeCompare(a.date);
+        });
         renderPast(pastFromFiles);
         if (pastFromFiles.length === 0) {
           document.getElementById("prevLink").style.display = "none";
@@ -360,14 +365,15 @@
       list.replaceChildren();
       interviews.forEach(iv => {
         const dayMatch = (iv.day_label || "").match(/(\d{1,2}\.\d{1,2})/);
-        const dateStr = dayMatch ? dayMatch[1] : iv.date || "";
+        const dateStr = iv.source === "document" ? "" : (dayMatch ? dayMatch[1] : iv.date || "");
         const photo = iv.candidate_photo || "";
         const label = iv.source === "document" ? "ראיון כתוב" : "ראיון חי · וואטסאפ";
         const person = candidates.find(c => c.id === iv.candidate_id);
         const href = `candidates.html?id=${encodeURIComponent(iv.candidate_id)}&tab=interview`;
 
-        const card = el("a", { class: "past-card", href },
-          el("span", { class: "pc-date", text: dateStr }),
+        const isDoc = iv.source === "document";
+        const card = el("a", { class: isDoc ? "past-card past-card--doc" : "past-card", href },
+          isDoc ? null : el("span", { class: "pc-date", text: dateStr }),
           el("div", { class: "pc-info" },
             el("p", { class: "pc-name", text: iv.candidate_name }),
             el("p", { class: "pc-type" }, label),
