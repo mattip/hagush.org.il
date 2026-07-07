@@ -18,10 +18,18 @@
   </style>
 </head>
 <body>
-  <h1>הוספת event_adder הרשאות</h1>
-  <p class="info">התחברו כ-admin, הדביקו רשימת אימיילים עם מועמד.ת מועדף.ת (tab-separated, אפשר להדביק מ-Google Sheets).</p>
+  <h1>הוספת הרשאות</h1>
+  <p class="info">התחברו כ-admin, בחרו תפקיד, הדביקו רשימת אימיילים עם מועמד.ת מועדף.ת (tab-separated, אפשר להדביק מ-Google Sheets).</p>
   <button id="login-btn">כניסה עם Google</button>
   <span id="user-status" style="margin-right:8px; font-size:.85rem; color:#666"></span>
+  <br><br>
+  <label style="font-weight:600; font-size:.9rem;">תפקיד:
+    <select id="role-select" style="padding:.3rem .6rem; border-radius:6px; font:inherit; font-size:.85rem;">
+      <option value="event_adder">event_adder — הוספת אירועים</option>
+      <option value="event_admin">event_admin — ניהול ואישור אירועים</option>
+      <option value="ask_admin">ask_admin — ניהול ראיונות</option>
+    </select>
+  </label>
   <br><br>
   <textarea id="emails" placeholder="one@gmail.com&#9;נמרוד שפר&#10;two@gmail.com&#9;נאווה רוזוליו&#10;three@gmail.com"></textarea>
   <br>
@@ -68,6 +76,7 @@
     log.textContent = `Found ${rows.length} emails. Creating roles...\n`;
     document.getElementById("run-btn").disabled = true;
 
+    const selectedRole = document.getElementById("role-select").value;
     let ok = 0, skip = 0, fail = 0;
     for (const { email, candidate } of rows) {
       try {
@@ -84,13 +93,13 @@
           }
         } else {
           const roleData = {
-            role: "event_adder",
+            role: selectedRole,
             active: true,
             created_at: firebase.firestore.FieldValue.serverTimestamp(),
           };
           if (candidate) roleData.preferred_candidate = candidate;
           await ref.set(roleData);
-          log.textContent += `✓ ${email} — event_adder${candidate ? ` (${candidate})` : ""}\n`;
+          log.textContent += `✓ ${email} — ${selectedRole}${candidate ? ` (${candidate})` : ""}\n`;
           ok++;
         }
       } catch (err) {

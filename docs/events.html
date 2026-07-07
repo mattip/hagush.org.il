@@ -129,6 +129,7 @@
 
         allEvents = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
+          .filter(ev => !ev.status || ev.status === "approved")
           .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
       // Only current/upcoming events for filters

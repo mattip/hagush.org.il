@@ -70,6 +70,7 @@
 
     /* Form */
     #admin-panel { display: none; max-width: 600px; margin: 1.5rem auto; padding: 0 1rem; }
+    #main-content { max-width: 600px; margin: 1.5rem auto; padding: 0 1rem; }
 
     .form-card {
       background: #fff;
@@ -288,6 +289,22 @@
       background: none;
       border: none;
       color: #c0392b;
+
+    /* Auth bar */
+    .auth-bar { background: #fff; border-bottom: 1px solid #eee; padding: .5rem 1.5rem; display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: .8rem; color: #666; }
+    .auth-bar button { background: #09366d; color: #fff; border: none; border-radius: 6px; padding: .3rem .8rem; font: inherit; font-size: .8rem; cursor: pointer; }
+    .auth-bar .auth-email { font-size: .75rem; color: #09366d; font-weight: 600; }
+
+    /* Submitter contact */
+    .submitter-section { background: #f0f4fb; border-radius: 8px; padding: .8rem; margin-top: .5rem; }
+    .submitter-section .field { margin-bottom: .5rem; }
+    .submitter-section label { font-size: .8rem; }
+
+    /* Pending events */
+    .pending-badge { display: inline-block; background: #ffeeba; color: #856404; font-size: .7rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+    .approved-badge { display: inline-block; background: #d4edda; color: #155724; font-size: .7rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+    .btn-approve { background: #27ae60; color: #fff; border: none; border-radius: 4px; padding: 2px 8px; font: inherit; font-size: .75rem; font-weight: 600; cursor: pointer; }
+    .btn-reject { background: #c0392b; color: #fff; border: none; border-radius: 4px; padding: 2px 8px; font: inherit; font-size: .75rem; font-weight: 600; cursor: pointer; }
       cursor: pointer;
       font-size: .8rem;
       font-weight: 600;
@@ -313,28 +330,17 @@
     </nav>
   </header>
 
-  <!-- Login -->
-  <div id="login-screen">
-    <div class="login-box">
-      <h2>הוספת אירוע</h2>
-      <p style="color:#666; margin-bottom:1rem; font-size:.9rem">כניסת מנהלים</p>
-      <button id="login-btn">כניסה עם Google</button>
-      <div class="login-error" id="login-error"></div>
-    </div>
-  </div>
-
-  <!-- Admin panel -->
-  <div id="admin-panel">
+  <!-- Combined header + auth -->
+  <div id="main-content">
     <div class="top-bar">
       <h1>הוספת אירוע</h1>
-      <div style="display:flex; align-items:center; gap:8px">
-        <span id="userEmail" style="font-size:.75rem; opacity:.7"></span>
-        <button id="logout-btn">יציאה</button>
+      <div id="authStatus" style="display:flex; align-items:center; gap:8px">
+        <button id="login-btn" style="background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:6px; padding:.4rem 1rem; font:inherit; font-size:.8rem; cursor:pointer;">כניסה עם Google (למנהלים)</button>
       </div>
     </div>
 
     <div class="form-card" style="margin-top:1.5rem">
-      <h2>אירוע חדש</h2>
+      <h2 id="formTitle">אירוע חדש</h2>
 
       <div class="field">
         <label>תאריך *</label>
@@ -343,7 +349,7 @@
 
       <div class="field">
         <label>שעה *</label>
-        <input type="time" id="evTime" required />
+        <input type="time" id="evTime" required value="20:00" step="3600" />
       </div>
 
       <div class="field">
@@ -402,15 +408,40 @@
         <div class="hint">השאירו ריק אם אין צורך ברישום</div>
       </div>
 
+      <!-- Submitter contact (shown when not logged in as admin) -->
+      <div class="submitter-section" id="submitterSection">
+        <p style="font-size:.85rem; font-weight:600; margin-bottom:.5rem;">פרטי יצירת קשר (לאישור האירוע)</p>
+        <div class="field">
+          <label>שם מלא *</label>
+          <input type="text" id="evSubmitterName" placeholder="ישראל ישראלי" />
+        </div>
+        <div class="field">
+          <label>טלפון *</label>
+          <input type="tel" id="evSubmitterPhone" placeholder="050-1234567" dir="ltr" />
+        </div>
+        <div class="field">
+          <label>אימייל</label>
+          <input type="email" id="evSubmitterEmail" placeholder="email@example.com" dir="ltr" />
+        </div>
+      </div>
+
       <div class="btn-row">
         <button class="submit-btn" id="submitBtn">הוסף אירוע</button>
         <button class="cancel-btn" id="cancelBtn" style="display:none" type="button">ביטול</button>
       </div>
     </div>
 
+    <!-- Pending events (admin only) -->
+    <div class="form-card" id="pendingCard" style="display:none">
+      <h2>אירועים ממתינים לאישור</h2>
+      <div class="existing-events" id="pendingEvents">
+        <p style="color:#999">אין אירועים ממתינים</p>
+      </div>
+    </div>
+
     <!-- Existing events -->
     <div class="form-card">
-      <h2>אירועים קיימים</h2>
+      <h2>אירועים מאושרים</h2>
       <div class="existing-events" id="existingEvents">
         <p style="color:#999">טוען…</p>
       </div>
@@ -454,19 +485,18 @@
   })();
 
   // ── Auth ──
-  const loginScreen = document.getElementById("login-screen");
-  const adminPanel  = document.getElementById("admin-panel");
+  // Auth state
+  let userRole = null;  // null, "admin", "event_adder", "event_admin"
 
-  document.getElementById("login-btn").addEventListener("click", async () => {
-    document.getElementById("login-error").textContent = "";
-    try {
-      await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-    } catch (err) {
-      document.getElementById("login-error").textContent = err.code + ": " + err.message;
+  // Login/logout handled dynamically in updateAuthUI
+
+  // Force minutes to :00 when user changes hours
+  document.getElementById("evTime").addEventListener("input", function() {
+    if (this.value && this.value.length >= 2) {
+      const h = this.value.split(":")[0];
+      this.value = h.padStart(2, "0") + ":00";
     }
   });
-
-  document.getElementById("logout-btn").addEventListener("click", () => auth.signOut());
 
   // ── Load candidates for participant dropdown ──
   let candidateNames = [];
@@ -628,6 +658,26 @@
 
     let step = "";  // records exactly which Firestore call is in flight, for the failure log
     try {
+      // If not logged in, use anonymous auth for Firestore write
+      if (!auth.currentUser) {
+        step = "anonymous auth";
+        await auth.signInAnonymously();
+      }
+
+      const isManager = canManageEvents();
+
+      // Validate submitter contact for non-managers
+      if (!isManager) {
+        const subName = document.getElementById("evSubmitterName").value.trim();
+        const subPhone = document.getElementById("evSubmitterPhone").value.trim();
+        if (!subName || !subPhone) {
+          alert("נא למלא שם וטלפון ליצירת קשר");
+          btn.disabled = false;
+          btn.textContent = "הוסף אירוע";
+          return;
+        }
+      }
+
       const eventData = {
         date:              date,
         time:              time,
@@ -637,7 +687,15 @@
         participants:      participants,
         description:       document.getElementById("evDesc").value.trim(),
         registration_link: document.getElementById("evLink").value.trim(),
+        status:            isManager ? "approved" : "pending",
       };
+
+      // Add submitter contact for non-managers
+      if (!isManager) {
+        eventData.submitter_name  = document.getElementById("evSubmitterName").value.trim();
+        eventData.submitter_phone = document.getElementById("evSubmitterPhone").value.trim();
+        eventData.submitter_email = document.getElementById("evSubmitterEmail").value.trim();
+      }
 
       if (editingId) {
         // Update existing
@@ -645,31 +703,45 @@
         await db.collection("campaign_events").doc(editingId).update(eventData);
         editingId = null;
       } else {
-        // Create new — event + owner as separate docs sharing same ID
+        // Create new
         const docRef = db.collection("campaign_events").doc();
         step = "create campaign_events";
         await docRef.set(eventData);
-        step = "create campaign_event_owner";
-        await db.collection("campaign_event_owner").doc(docRef.id).set({
-          email: auth.currentUser.email,
-          created_at: firebase.firestore.FieldValue.serverTimestamp(),
-        });
+        if (isManager && auth.currentUser && !auth.currentUser.isAnonymous) {
+          step = "create campaign_event_owner";
+          await db.collection("campaign_event_owner").doc(docRef.id).set({
+            email: auth.currentUser.email,
+            created_at: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        }
       }
 
-      // Reset form
-      document.getElementById("evDate").value = "";
-      document.getElementById("evTime").value = "";
-      clearRegion();
-      document.getElementById("evCity").value = "";
-      document.getElementById("evAddress").value = "";
-      document.getElementById("evDesc").value = "";
-      document.getElementById("evLink").value = "";
-      document.querySelectorAll("#pdList input").forEach(cb => cb.checked = false);
-      otherParticipants = [];
-      renderParticipants();
+      // Notify admin of pending events via email
+      if (!isManager) {
+        try {
+          await fetch("/api/event", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              _token: "NachshavBaot2026",
+              formType: "pending_event",
+              date, time, city,
+              address: eventData.address,
+              participants: participants.join(", "),
+              description: eventData.description,
+              registration_link: eventData.registration_link,
+              submitter_name: eventData.submitter_name || "",
+              submitter_phone: eventData.submitter_phone || "",
+              submitter_email: eventData.submitter_email || "",
+            }),
+          });
+        } catch {}
+      }
 
       // Toast
+      const toastMsg = isManager ? "האירוע נוסף בהצלחה!" : "האירוע נשלח לאישור. ניצור קשר בקרוב!";
       const toast = document.getElementById("toast");
+      toast.textContent = toastMsg;
       toast.style.display = "block";
       setTimeout(() => toast.style.display = "none", 3000);
 
@@ -703,27 +775,50 @@
   let isUserAdmin = false;
   let preferredCandidate = null;
 
+  function canManageEvents() {
+    return userRole === "admin" || userRole === "event_adder" || userRole === "event_admin";
+  }
+
+  function updateAuthUI() {
+    const bar = document.getElementById("authStatus");
+    const submitter = document.getElementById("submitterSection");
+    if (auth.currentUser && !auth.currentUser.isAnonymous) {
+      bar.innerHTML = `<span style="font-size:.75rem; color:rgba(255,255,255,.7)">${auth.currentUser.email}</span>
+        <button id="logout-btn" style="background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:6px; padding:.3rem .8rem; font:inherit; font-size:.8rem; cursor:pointer;">יציאה</button>`;
+      document.getElementById("logout-btn").addEventListener("click", () => auth.signOut());
+      submitter.style.display = canManageEvents() ? "none" : "block";
+    } else {
+      bar.innerHTML = `<button id="login-btn" style="background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:6px; padding:.3rem .8rem; font:inherit; font-size:.8rem; cursor:pointer;">כניסה עם Google (למנהלים)</button>`;
+      document.getElementById("login-btn").addEventListener("click", async () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: "select_account" });
+        await auth.signInWithPopup(provider);
+      });
+      submitter.style.display = "block";
+    }
+    // Show/hide pending section for admins
+    document.getElementById("pendingCard").style.display = "block";
+  }
+
   auth.onAuthStateChanged(async (user) => {
-    currentUserEmail = user ? user.email : null;
+    currentUserEmail = user && !user.isAnonymous ? user.email : null;
     isUserAdmin = false;
+    userRole = null;
     preferredCandidate = null;
-    if (user) {
+    if (user && !user.isAnonymous && user.email) {
       try {
         const roleDoc = await db.collection("roles").doc(user.email.toLowerCase()).get();
         if (roleDoc.exists && roleDoc.data().active) {
-          if (roleDoc.data().role === "admin") isUserAdmin = true;
+          userRole = roleDoc.data().role;
+          if (userRole === "admin") isUserAdmin = true;
           if (roleDoc.data().preferred_candidate) preferredCandidate = roleDoc.data().preferred_candidate;
         }
-      } catch (e) { /* no role doc */ }
-      loginScreen.style.display = "none";
-      adminPanel.style.display  = "block";
-      document.getElementById("userEmail").textContent = user.email;
-      loadCandidateNames();
-      loadExisting();
-    } else {
-      loginScreen.style.display = "flex";
-      adminPanel.style.display  = "none";
+      } catch {}
     }
+    updateAuthUI();
+    loadCandidateNames();
+    loadExisting();
+    loadPending();
   });
 
   async function loadExisting() {
@@ -762,7 +857,9 @@
     const missing = eventIds.filter(id => !ownerMap[id]);
     if (missing.length) console.warn("Events without owners:", missing);
 
-    wrap.replaceChildren(...snap.docs.map(doc => {
+    wrap.replaceChildren(...snap.docs
+      .filter(doc => { const s = doc.data().status; return !s || s === "approved"; })
+      .map(doc => {
       const ev = doc.data();
       const names = (ev.participants || []).join(", ");
       const ownerEmail = ownerMap[doc.id] || "";
@@ -781,6 +878,50 @@
         ),
       );
     }));
+  }
+
+  // ── Pending events (admin/event_admin only) ──
+  async function loadPending() {
+    const snap = await db.collection("campaign_events")
+      .where("status", "==", "pending")
+      .orderBy("date")
+      .get();
+
+    const wrap = document.getElementById("pendingEvents");
+    if (snap.empty) {
+      wrap.innerHTML = '<p style="color:#999">אין אירועים ממתינים</p>';
+      return;
+    }
+
+    wrap.replaceChildren(...snap.docs.map(doc => {
+      const ev = doc.data();
+      const names = (ev.participants || []).join(", ");
+      const contact = [ev.submitter_name, ev.submitter_phone, ev.submitter_email].filter(Boolean).join(" · ");
+
+      return el("div", { class: "existing-event" },
+        el("div", null,
+          el("div", { class: "ev-info" }, `${names} `, el("span", { class: "pending-badge" }, "ממתין")),
+          el("div", { class: "ev-date" }, `${ev.date || ""} ${ev.time || ""} — ${ev.city || ""}`),
+          el("div", { class: "ev-creator", text: contact ? "נשלח ע״י " + contact : "" }),
+        ),
+        el("div", { class: "ev-actions" },
+          canManageEvents() ? el("button", { class: "btn-approve", onclick: () => approveEvent(doc.id) }, "אשר") : null,
+          canManageEvents() ? el("button", { class: "btn-reject", onclick: () => rejectEvent(doc.id) }, "דחה") : null,
+        ),
+      );
+    }));
+  }
+
+  async function approveEvent(id) {
+    await db.collection("campaign_events").doc(id).update({ status: "approved" });
+    loadPending();
+    loadExisting();
+  }
+
+  async function rejectEvent(id) {
+    if (!confirm("למחוק אירוע זה?")) return;
+    await db.collection("campaign_events").doc(id).delete();
+    loadPending();
   }
 
   // ── Edit event — load into form ──
@@ -822,7 +963,7 @@
   document.getElementById("cancelBtn").addEventListener("click", () => {
     editingId = null;
     document.getElementById("evDate").value = "";
-    document.getElementById("evTime").value = "";
+    document.getElementById("evTime").value = "20:00";
     document.getElementById("evRegion").value = "";
     document.getElementById("evCity").value = "";
     document.getElementById("evAddress").value = "";
