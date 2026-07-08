@@ -15,7 +15,7 @@
     <meta property="og:locale" content="he_IL" />
     <meta name="description" content="ניפגש בקבוצת הוואטסאפ הייעודית שלנו כדי להכיר את המועמדים.ות ולשאול אותם את כל השאלות הקשות! תוכלו לשאול" />
 
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800&family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./css/main.css?v=4" />
     <link rel="stylesheet" href="./css/candidates.css?v=10" />
     <link rel="stylesheet" href="./css/ask.css?v=3" />
@@ -42,6 +42,11 @@
     </header>
 
     <main>
+      <!-- ── Banner ── -->
+      <div class="ask-banner">
+        <strong>בקרוב — בוחרות!</strong> ביום שלישי, 14.7.26, 15:00, ראיון מיוחד עם נציגת "עכשיו באות!" שבו נענה על כל השאלות ביחס לפריימריז, הליך הבחירה שעשינו וההמלצות שלנו בעקבותיו
+      </div>
+
       <!-- ── Hero ── -->
       <section class="ask-hero section">
         <h1 class="ask-title">עכשיו שואלות!</h1>
@@ -347,7 +352,7 @@
         return;
       }
       grid.replaceChildren(...interviews.map(iv =>
-        el("div", { class: "upcoming-card" },
+        el("div", { class: iv.important ? "upcoming-card upcoming-card--important" : "upcoming-card" },
           el("p", { class: "uc-name", text: iv.candidate_name }),
           el("p", { class: "uc-time" },
             `ניפגש ביום ${iv.day_label || ""},`, el("br"), `בשעה ${iv.time || ""}`),

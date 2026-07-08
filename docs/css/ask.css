@@ -6,6 +6,20 @@ body {
   background: #fff;
 }
 
+/* ── Banner ────────────────────────────────────────────────────── */
+.ask-banner {
+  background: #c96a00;
+  color: #fff;
+  text-align: center;
+  padding: 10px 20px;
+  margin: 8px auto 0;
+  max-width: fit-content;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
 /* ── Hero ─────────────────────────────────────────────────────────── */
 .ask-hero {
   padding: 2rem 2rem 1rem;
@@ -54,6 +68,10 @@ body {
   border-radius: 12px;
   padding: 1.2rem 1rem;
   text-align: center;
+}
+
+.upcoming-card--important {
+  border: 2.5px solid var(--nav, #09366d);
 }
 
 .uc-name {
