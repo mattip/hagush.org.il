@@ -1,11 +1,5 @@
 [
   {
-    "id": "eran_n",
-    "name": "ערן ניסן",
-    "date": "2026-07-07",
-    "source": "document"
-  },
-  {
     "id": "amirh",
     "name": "ד״ר אמיר ח׳ניפס",
     "date": "2026-07-07",
@@ -14,6 +8,18 @@
   {
     "id": "dany_e",
     "name": "דני אלגרט",
+    "date": "2026-07-06",
+    "source": "document"
+  },
+  {
+    "id": "emily_m",
+    "name": "אמילי מואטי",
+    "date": "2026-07-06",
+    "source": "document"
+  },
+  {
+    "id": "eran_n",
+    "name": "ערן ניסן",
     "date": "2026-07-07",
     "source": "document"
   },
@@ -21,6 +27,18 @@
     "id": "galeb_s",
     "name": "גאלב סלאמנה",
     "date": "2026-07-06",
+    "source": "document"
+  },
+  {
+    "id": "hadas_r",
+    "name": "הדס רגולסקי",
+    "date": "2026-07-07",
+    "source": "document"
+  },
+  {
+    "id": "inbal",
+    "name": "ענבל וורטמן שהם",
+    "date": "2026-07-07",
     "source": "document"
   },
   {
