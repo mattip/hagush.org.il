@@ -442,6 +442,10 @@
     <!-- Existing events -->
     <div class="form-card">
       <h2>אירועים מאושרים</h2>
+      <label style="font-size:.8rem; color:#666; cursor:pointer;">
+        <input type="checkbox" id="showAllEvents" style="margin-inline-end:4px;" />
+        הצג גם אירועים שעברו
+      </label>
       <div class="existing-events" id="existingEvents">
         <p style="color:#999">טוען…</p>
       </div>
@@ -821,6 +825,8 @@
     loadPending();
   });
 
+  document.getElementById("showAllEvents").addEventListener("change", () => loadExisting());
+
   async function loadExisting() {
     const snap = await db.collection("campaign_events")
       .orderBy("date")
@@ -857,8 +863,12 @@
     const missing = eventIds.filter(id => !ownerMap[id]);
     if (missing.length) console.warn("Events without owners:", missing);
 
+    const showAll = document.getElementById("showAllEvents").checked;
+    const today = new Date().toISOString().slice(0, 10);
+
     wrap.replaceChildren(...snap.docs
       .filter(doc => { const s = doc.data().status; return !s || s === "approved"; })
+      .filter(doc => showAll || (doc.data().date || "") >= today)
       .map(doc => {
       const ev = doc.data();
       const names = (ev.participants || []).join(", ");
