@@ -110,6 +110,17 @@
     .status-draft { background: #ffeeba; color: #856404; }
     .status-published { background: #d4edda; color: #155724; }
     .status-skipped { background: #e0e3e8; color: #666; }
+
+    /* ── Manual assignment UI ── */
+    .assign-msg { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid #eee; }
+    .assign-msg:last-child { border-bottom: none; }
+    .assign-toggle { min-width: 36px; height: 28px; border: none; border-radius: 6px; font: inherit; font-size: .75rem; font-weight: 700; cursor: pointer; }
+    .assign-toggle[data-role="skip"] { background: #e0e3e8; color: #888; }
+    .assign-toggle[data-role="question"] { background: #d9fdd3; color: #1a6a1a; }
+    .assign-toggle[data-role="answer"] { background: #fff; color: #09366d; border: 1.5px solid #09366d; }
+    .assign-text { flex: 1; font-size: .8rem; line-height: 1.5; color: #333; white-space: pre-line; }
+    .assign-text.dimmed { opacity: .35; }
+    .assign-list { max-height: 60vh; overflow-y: auto; padding: 8px 0; }
   </style>
 </head>
 <body>
@@ -183,6 +194,25 @@
     <div class="form-card" id="detectResults" style="display:none">
       <h2>ראיונות שזוהו</h2>
       <div id="detectList"></div>
+    </div>
+
+    <div class="form-card" id="assignCard" style="display:none">
+      <h2>שיוך ידני — ש׳ שאלה / ת׳ תשובה</h2>
+      <p style="font-size:.8rem; color:#666; margin-bottom:.5rem;">לחצו על הכפתור ליד כל הודעה כדי לסמן שאלה (ש), תשובה (ת), או דילוג (×). שאלות ותשובות עוקבות ימוזגו לבלוקים.</p>
+      <div class="detect-fields">
+        <div>
+          <label>מועמד.ת *</label>
+          <select id="assignCandidate"><option value="">— בחרו —</option></select>
+        </div>
+        <div>
+          <label>תאריך</label>
+          <input type="date" id="assignDate" dir="ltr" />
+        </div>
+      </div>
+      <div class="assign-list" id="assignList"></div>
+      <div class="detect-btn-row" style="margin-top:.6rem">
+        <button class="detect-btn detect-parse" id="assignGenBtn">ייצר ראיון ▸</button>
+      </div>
     </div>
 
     <div class="form-card" id="docxCard" style="display:none">
@@ -693,8 +723,17 @@
         const endTime = guestMsgs[guestMsgs.length - 1].time.slice(0, 5);
         const candidateGuess = fuzzyMatchCandidate(guest.sender);
 
-        const [month, day, year] = date.split("/");
-        const isoDate = `20${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+        const dateParts = date.split("/");
+        let isoDate;
+        if (dateParts[2].length === 4) {
+          // D/M/YYYY format (European/Israeli)
+          const [day, month, year] = dateParts;
+          isoDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+        } else {
+          // M/D/YY format (US)
+          const [month, day, year] = dateParts;
+          isoDate = `20${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+        }
 
         const isSkipped = skippedInterviews.some(
           s => s.sender === guest.sender && s.date === date
@@ -955,6 +994,11 @@
 
       detectStatus.textContent = `${detected.length} ראיונות זוהו`;
       renderDetected(detected);
+
+      // If no interviews detected, offer manual assignment mode
+      if (detected.length === 0 && allParsedMsgs.length > 5) {
+        showManualAssignment(allParsedMsgs);
+      }
     } catch (err) {
       detectStatus.textContent = "שגיאה: " + err.message;
     }
@@ -1294,6 +1338,122 @@
     btn.disabled = false;
     btn.textContent = "ייצוא ZIP ופרסום";
   }
+  // ── Manual assignment mode ──────────────────────────────────────
+  let assignMessages = [];  // [{text, image, role}]
+
+  function showManualAssignment(msgs) {
+    const card = document.getElementById("assignCard");
+    card.style.display = "block";
+    detectStatus.textContent += " — מצב שיוך ידני (הודעות ללא שולח מזוהה)";
+
+    // Populate candidate dropdown
+    const sel = document.getElementById("assignCandidate");
+    if (sel.options.length <= 1) {
+      candidates.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+    }
+
+    // Filter to content messages (skip system, short filler)
+    assignMessages = msgs
+      .filter(m => !isSystem(m.text) && (m.text.length > 2 || m.image))
+      .map(m => ({
+        text: m.image ? `[${m.image}]` : m.text.trim(),
+        image: m.image || "",
+        role: "skip",  // skip | question | answer
+      }));
+
+    renderAssignList();
+  }
+
+  function renderAssignList() {
+    const wrap = document.getElementById("assignList");
+    wrap.innerHTML = assignMessages.map((m, i) => {
+      const label = m.role === "question" ? "ש" : m.role === "answer" ? "ת" : "×";
+      const dimmed = m.role === "skip" ? " dimmed" : "";
+      const preview = m.text.length > 120 ? m.text.slice(0, 120) + "…" : m.text;
+      const escaped = preview.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      return `<div class="assign-msg">
+        <button class="assign-toggle" data-role="${m.role}" onclick="cycleRole(${i})">${label}</button>
+        <span class="assign-text${dimmed}">${escaped}</span>
+      </div>`;
+    }).join("");
+  }
+
+  function cycleRole(i) {
+    const roles = ["skip", "question", "answer"];
+    const cur = roles.indexOf(assignMessages[i].role);
+    assignMessages[i].role = roles[(cur + 1) % 3];
+    renderAssignList();
+  }
+
+  document.getElementById("assignGenBtn").addEventListener("click", () => {
+    const candidateId = document.getElementById("assignCandidate").value;
+    const date = document.getElementById("assignDate").value;
+    if (!candidateId) { alert("נא לבחור מועמד.ת"); return; }
+
+    // Build Q/A blocks from assignments
+    const blocks = [];
+    let currentQ = null;
+
+    for (const m of assignMessages) {
+      if (m.role === "skip") continue;
+
+      const item = m.image
+        ? { type: /\.(mp4|webm|mov)$/i.test(m.image) ? "video" : /\.(opus|ogg|mp3|m4a)$/i.test(m.image) ? "audio" : "image", file: m.image }
+        : m.text;
+
+      if (m.role === "question") {
+        if (currentQ && currentQ.answer.length) blocks.push(currentQ);
+        if (!currentQ || currentQ.answer.length) {
+          currentQ = { question: [], answer: [] };
+        }
+        currentQ.question.push(item);
+      } else if (m.role === "answer") {
+        if (!currentQ) currentQ = { question: [], answer: [] };
+        currentQ.answer.push(item);
+      }
+    }
+    if (currentQ && (currentQ.question.length || currentQ.answer.length)) blocks.push(currentQ);
+
+    if (!blocks.length) { alert("לא סומנו הודעות"); return; }
+
+    const candidate = candidates.find(c => c.id === candidateId);
+    const candidateName = candidate ? candidate.name : candidateId;
+
+    const questions = blocks.map((b, i) => ({
+      id: `q${i + 1}`,
+      summary: (b.question.find(p => typeof p === "string") || "").split("\n")[0].slice(0, 80),
+      question: b.question,
+      answer: b.answer,
+      response: [],
+    }));
+
+    currentEditData = {
+      candidate_id: candidateId,
+      candidate_name: candidateName,
+      date: date,
+      source: "whatsapp",
+      questions,
+    };
+    currentEditImages = {};
+    // Collect images from ZIP
+    for (const b of blocks) {
+      for (const section of [b.question, b.answer]) {
+        for (const p of section) {
+          if (typeof p === "object" && p.file && zipImages[p.file]) {
+            currentEditImages[p.file] = zipImages[p.file];
+          }
+        }
+      }
+    }
+
+    renderEditor(questions, candidateName, currentEditImages, true);
+  });
+
   </script>
 </body>
 </html>
