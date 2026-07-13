@@ -24,6 +24,12 @@
     "source": "document"
   },
   {
+    "id": "eran_e",
+    "name": "ערן עציון",
+    "date": "2026-07-13",
+    "source": "whatsapp"
+  },
+  {
     "id": "eran_n",
     "name": "ערן ניסן",
     "date": "2026-07-07",
@@ -64,6 +70,12 @@
     "name": "לי הופמן אגיב",
     "date": "2026-07-06",
     "source": "document"
+  },
+  {
+    "id": "moran_m",
+    "name": "מורן מישל",
+    "date": "2026-07-13",
+    "source": "whatsapp"
   },
   {
     "id": "moran_z",
