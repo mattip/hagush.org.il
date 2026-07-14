@@ -1,0 +1,90 @@
+/* ── Hero ─────────────────────────────────────────────────────── */
+.ch-hero {
+  position: relative;
+  width: 100%;
+  height: 50vh;
+  overflow: hidden;
+}
+
+.ch-hero img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+.ch-hero-title {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 0; left: 0;
+  text-align: center;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 800;
+  text-shadow: 0 2px 12px rgba(0,0,0,.5);
+  line-height: 1.3;
+  padding: 0 1rem;
+}
+
+/* ── Content ──────────────────────────────────────────────────── */
+.ch-content {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  text-align: center;
+}
+
+.ch-subtitle {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--nav, #09366d);
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Candidate photo grid ─────────────────────────────────────── */
+.ch-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.ch-grid img {
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.ch-row-lg img { width: 110px; height: 110px; }
+.ch-row-md img { width: 90px; height: 90px; }
+.ch-row-sm img { width: 100px; height: 100px; }
+
+/* ── Text blocks ──────────────────────────────────────────────── */
+.ch-text {
+  text-align: right;
+  font-size: .95rem;
+  line-height: 1.8;
+  color: #333;
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: #f5f7fb;
+  border-radius: 12px;
+}
+
+/* ── Interview section ────────────────────────────────────────── */
+.ch-interview-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--nav, #09366d);
+  margin: 2rem 0 0.8rem;
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .ch-hero-title { font-size: 1.4rem; bottom: 1rem; }
+  .ch-row-lg img { width: 90px; height: 90px; }
+  .ch-row-md img { width: 72px; height: 72px; }
+  .ch-row-sm img { width: 80px; height: 80px; }
+}
