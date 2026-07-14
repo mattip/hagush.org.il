@@ -57,6 +57,18 @@
   object-fit: cover;
 }
 
+.ch-fig {
+  margin: 0;
+  text-align: center;
+}
+
+.ch-fig figcaption {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--nav, #09366d);
+  margin-top: 4px;
+}
+
 .ch-row-lg img { width: 110px; height: 110px; }
 .ch-row-md img { width: 90px; height: 90px; }
 .ch-row-sm img { width: 100px; height: 100px; }
