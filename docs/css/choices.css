@@ -81,6 +81,10 @@
   margin: 2rem 0 0.8rem;
 }
 
+.ch-content .iv-chat {
+  text-align: right;
+}
+
 /* ── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .ch-hero-title { font-size: 1.4rem; bottom: 1rem; }
