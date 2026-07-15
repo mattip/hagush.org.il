@@ -18,6 +18,12 @@
     "source": "document"
   },
   {
+    "id": "eli_s",
+    "name": "עלי סלאלחה",
+    "date": "2026-07-15",
+    "source": "document"
+  },
+  {
     "id": "emily_m",
     "name": "אמילי מואטי",
     "date": "2026-07-06",
@@ -88,6 +94,12 @@
     "name": "משה רדמן אבוטבול",
     "date": "2026-06-18",
     "source": "whatsapp"
+  },
+  {
+    "id": "naor_n",
+    "name": "נאור נרקיס",
+    "date": "2026-07-15",
+    "source": "document"
   },
   {
     "id": "nava_r",

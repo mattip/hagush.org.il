@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ניהול ראיונות | עכשיו באות!</title>
   <link rel="icon" href="favicon.ico" />
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800&family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/main.css?v=5" />
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -913,21 +914,58 @@
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      const text = result.value;
 
-      docxQuestions = parseDocxInterview(text);
-      detectStatus.textContent = `${docxQuestions.length} שאלות זוהו`;
+      // Convert to HTML with a custom image handler that stashes each image
+      // as a Blob (with a generated filename) and returns a marker src we can
+      // recognize when walking the DOM below.
+      const docxImages = {};
+      let imgCounter = 0;
+      const options = {
+        convertImage: mammoth.images.imgElement(function (image) {
+          return image.read().then(function (buffer) {
+            const contentType = image.contentType || "image/png";
+            const extRaw = (contentType.split("/")[1] || "png").toLowerCase();
+            const ext = extRaw === "jpeg" ? "jpg" : extRaw;
+            imgCounter++;
+            const filename = `docx_img_${imgCounter}.${ext}`;
+            docxImages[filename] = new Blob([buffer], { type: contentType });
+            return { src: `attachment:${filename}` };
+          });
+        }),
+      };
+
+      const result = await mammoth.convertToHtml({ arrayBuffer }, options);
+      // Make DOCX images available to the editor + publish pipeline. Merging
+      // into zipImages lets the existing "grab everything referenced" loops
+      // in docxParseBtn/publishZip find them the same way ZIP images work.
+      zipImages = Object.assign({}, zipImages, docxImages);
+
+      const items = extractDocxItems(result.value);
+      docxQuestions = parseDocxInterview(items);
+
+      const imgNote = imgCounter ? ` (${imgCounter} תמונות)` : "";
+      detectStatus.textContent = `${docxQuestions.length} שאלות זוהו${imgNote}`;
+
+      // Plaintext view used only for header/date detection
+      const plainText = items.filter(x => x.text).map(x => x.text).join("\n");
 
       // Try to extract candidate name from header
-      const nameMatch = text.match(/ראיון\s*עם\s*:?\s*(.+)/);
+      const nameMatch = plainText.match(/ראיון\s*עם\s*:?\s*(.+)/);
       const docxGuess = nameMatch ? fuzzyMatchCandidate(nameMatch[1].trim()) : null;
 
-      // Try to extract date
-      const dateMatch = text.match(/(\d{1,2})\s+(ינואר|פברואר|מרץ|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)[,.]?\s*(\d{4})/);
+      // Try to extract date — Hebrew month first, then D.M.YY(YY) fallback
+      const dateEl = document.getElementById("docxDate");
+      const dateMatch = plainText.match(/(\d{1,2})\s+(ינואר|פברואר|מרץ|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)[,.]?\s*(\d{4})/);
       if (dateMatch) {
         const months = {"ינואר":"01","פברואר":"02","מרץ":"03","אפריל":"04","מאי":"05","יוני":"06","יולי":"07","אוגוסט":"08","ספטמבר":"09","אוקטובר":"10","נובמבר":"11","דצמבר":"12"};
-        document.getElementById("docxDate").value = `${dateMatch[3]}-${months[dateMatch[2]]}-${dateMatch[1].padStart(2,"0")}`;
+        dateEl.value = `${dateMatch[3]}-${months[dateMatch[2]]}-${dateMatch[1].padStart(2,"0")}`;
+      } else {
+        const dm = plainText.match(/(\d{1,2})\.(\d{1,2})\.(\d{2,4})/);
+        if (dm) {
+          const [, d, m, y] = dm;
+          const year = y.length === 2 ? "20" + y : y;
+          dateEl.value = `${year}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
+        }
       }
 
       // Show candidate picker
@@ -944,24 +982,75 @@
       }
       if (docxGuess) sel.value = docxGuess.id;
     } catch (err) {
+      console.error("handleDocx failed:", err);
       detectStatus.textContent = "שגיאה: " + err.message;
     }
   }
 
-  function parseDocxInterview(text) {
-    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  // Walk mammoth's HTML output and flatten to an ordered list of
+  // { text } and { image: filename } items. Preserves inline image position
+  // within paragraphs (an image mid-answer stays where it was written).
+  function extractDocxItems(html) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const items = [];
+
+    for (const block of doc.body.children) {
+      let textBuf = "";
+      const flushText = () => {
+        const t = textBuf.trim();
+        if (t) items.push({ text: t });
+        textBuf = "";
+      };
+      (function walk(node) {
+        for (const c of node.childNodes) {
+          if (c.nodeType === 3) {                    // Node.TEXT_NODE
+            textBuf += c.nodeValue;
+          } else if (c.nodeName === "IMG") {
+            flushText();
+            const src = c.getAttribute("src") || "";
+            if (src.startsWith("attachment:")) {
+              items.push({ image: src.slice("attachment:".length) });
+            }
+          } else if (c.nodeName === "BR") {
+            textBuf += "\n";
+          } else {
+            walk(c);
+          }
+        }
+      })(block);
+      flushText();
+    }
+    return items;
+  }
+
+  function parseDocxInterview(items) {
     const blocks = [];
     let current = null;
     let mode = null; // "q" or "a"
 
-    for (const line of lines) {
+    for (const item of items) {
+      // Image → attach to current section as a media part, preserving position
+      if (item.image) {
+        if (!current || !mode) continue;
+        const filename = item.image;
+        const type = /\.(mp4|webm|mov)$/i.test(filename) ? "video"
+                    : /\.(opus|ogg|mp3|m4a|aac)$/i.test(filename) ? "audio"
+                    : "image";
+        const media = { type, file: filename };
+        if (mode === "q") current.question.push(media);
+        else current.answer.push(media);
+        continue;
+      }
+
+      const line = (item.text || "").trim();
+      if (!line) continue;
       // Skip the title line (first line with the candidate name + date)
       if (line.startsWith("ראיון עם")) continue;
       // Skip date-only lines
       if (/^\d{1,2}\s/.test(line) && /\d{4}$/.test(line)) continue;
 
-      const isQ = /^שאלה:?$/.test(line);
-      const isA = /^תשובה$/.test(line);
+      const isQ = /^שאלה\s*:?\s*$/.test(line);
+      const isA = /^תשובה\s*:?\s*$/.test(line);
 
       if (isQ) {
         if (current && current.question.length) {
@@ -989,13 +1078,16 @@
     const candidate = candidates.find(c => c.id === candidateId);
     const candidateName = candidate ? candidate.name : candidateId;
 
-    const questions = docxQuestions.map((b, i) => ({
-      id: `q${i + 1}`,
-      summary: (b.question[0] || "").slice(0, 80),
-      question: b.question,
-      answer: b.answer,
-      response: b.response,
-    }));
+    const questions = docxQuestions.map((b, i) => {
+      const firstText = (b.question || []).find(p => typeof p === "string") || "";
+      return {
+        id: `q${i + 1}`,
+        summary: firstText.slice(0, 80),
+        question: b.question,
+        answer: b.answer,
+        response: b.response,
+      };
+    });
 
     currentEditData = {
       candidate_id: candidateId,
@@ -1004,7 +1096,18 @@
       source: "document",
       questions,
     };
+
+    // Pull in every image the questions reference from the DOCX pool
     currentEditImages = {};
+    for (const q of questions) {
+      for (const section of ["question", "answer"]) {
+        for (const p of (q[section] || [])) {
+          if (typeof p === "object" && p.file && zipImages[p.file]) {
+            currentEditImages[p.file] = zipImages[p.file];
+          }
+        }
+      }
+    }
 
     renderEditor(questions, candidateName, currentEditImages, true);
   });
@@ -1224,44 +1327,46 @@
 
     const items = [];
     questions.forEach((q, qi) => {
-      const role = q.question ? "question" : "answer";
-      const parts = q[role] || [];
-      parts.forEach((p, pi) => {
-        const isQ = role === "question";
-        const bubbleClass = isQ ? "ed-bubble ed-bubble-iv" : "ed-bubble ed-bubble-cd";
+      for (const role of ["question", "answer"]) {
+        const parts = q[role] || [];
+        parts.forEach((p, pi) => {
+          const isQ = role === "question";
+          const bubbleClass = isQ ? "ed-bubble ed-bubble-iv" : "ed-bubble ed-bubble-cd";
 
-        const del = el("button", { class: "ed-del", onclick: () => {
-          currentEditData.questions[qi][role].splice(pi, 1);
-          if (currentEditData.questions[qi][role].length === 0) {
-            currentEditData.questions.splice(qi, 1);
-          }
-          renderEditor(currentEditData.questions, name, images);
-        }}, "✕");
-
-        if (typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio")) {
-          const blob = images[p.file];
-          const src = blob ? URL.createObjectURL(blob) : (p.url || "");
-          let media;
-          if (!src) media = el("span", { style: "color:#999" }, `[${p.file || p.type}]`);
-          else if (p.type === "video") media = el("video", { src, controls: "", playsinline: "", style: "max-width:200px; border-radius:8px" });
-          else if (p.type === "audio") media = el("audio", { controls: "", src, style: "max-width:200px" });
-          else media = el("img", { src, style: "max-width:200px; border-radius:8px" });
-          items.push(el("div", { class: bubbleClass }, media, del));
-        } else {
-          const text = (typeof p === "object" && p.type === "text") ? (p.text || "") : (typeof p === "string" ? p : "");
-          const ta = el("textarea", { rows: "1" });
-          ta.value = text;
-          ta.addEventListener("input", () => {
-            autoGrow(ta);
-            if (typeof currentEditData.questions[qi][role][pi] === "object" && currentEditData.questions[qi][role][pi].type === "text") {
-              currentEditData.questions[qi][role][pi].text = ta.value;
-            } else {
-              currentEditData.questions[qi][role][pi] = ta.value;
+          const del = el("button", { class: "ed-del", onclick: () => {
+            currentEditData.questions[qi][role].splice(pi, 1);
+            const blk = currentEditData.questions[qi];
+            if ((blk.question || []).length === 0 && (blk.answer || []).length === 0) {
+              currentEditData.questions.splice(qi, 1);
             }
-          });
-          items.push(el("div", { class: bubbleClass }, ta, del));
-        }
-      });
+            renderEditor(currentEditData.questions, name, images);
+          }}, "✕");
+
+          if (typeof p === "object" && (p.type === "image" || p.type === "video" || p.type === "audio")) {
+            const blob = images[p.file];
+            const src = blob ? URL.createObjectURL(blob) : (p.url || "");
+            let media;
+            if (!src) media = el("span", { style: "color:#999" }, `[${p.file || p.type}]`);
+            else if (p.type === "video") media = el("video", { src, controls: "", playsinline: "", style: border-radius:8px" });
+            else if (p.type === "audio") media = el("audio", { controls: "", src});
+            else media = el("img", { src, style: "border-radius:8px" });
+            items.push(el("div", { class: bubbleClass }, media, del));
+          } else {
+            const text = (typeof p === "object" && p.type === "text") ? (p.text || "") : (typeof p === "string" ? p : "");
+            const ta = el("textarea", { rows: "1" });
+            ta.value = text;
+            ta.addEventListener("input", () => {
+              autoGrow(ta);
+              if (typeof currentEditData.questions[qi][role][pi] === "object" && currentEditData.questions[qi][role][pi].type === "text") {
+                currentEditData.questions[qi][role][pi].text = ta.value;
+              } else {
+                currentEditData.questions[qi][role][pi] = ta.value;
+              }
+            });
+            items.push(el("div", { class: bubbleClass }, ta, del));
+          }
+        });
+      }
     });
 
     wrap.replaceChildren(...items);

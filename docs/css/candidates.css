@@ -829,7 +829,6 @@ html.no-scroll {
 
 .iv-bubble-img {
   width: 100%;
-  max-width: 240px;
   border-radius: 8px;
   display: block;
 }
@@ -843,7 +842,6 @@ html.no-scroll {
 
 .iv-video-wrap video {
   width: 100%;
-  max-width: 240px;
   border-radius: 8px;
   display: block;
 }
@@ -881,7 +879,6 @@ html.no-scroll {
 
 .iv-audio {
   display: block;
-  max-width: 240px;
   border-radius: 24px;
 }
 
