@@ -25,42 +25,8 @@ let popupHistory = []; // stack of {person, card} for back navigation
 let interviewIds = new Set(); // candidate ids with a parsed interview (interviews/index.json)
 let interviewIndex = [];       // full index.json entries (for ask.html)
 
-// ── Anonymous popup-open analytics ────────────────────────────────
-// Fire-and-forget ping to the same Apps Script /exec the forms use.
-// No cookie, no visitor id — only candidate + trigger + click time.
-const EVENT_URL   = "/api/event";
-const EVENT_TOKEN = "NachshavBaot2026";
-const _evLast = {}; // de-dupe accidental double-fires (per candidate+trigger)
-
 // ── Tooltip: show "עוד מידע" hint until user clicks a card ──────
 let hasClickedCard = false;
-
-function logCandidateOpen(person, via) {
-  if (!person || !person.id) return;
-  const key = person.id + "|" + (via || "card");
-  const now = Date.now();
-  if (_evLast[key] && now - _evLast[key] < 1000) return; // coalesce <1s repeats
-  _evLast[key] = now;
-  try {
-    fetch(EVENT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      keepalive: true, // survive if the click also navigates the page
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        _token: EVENT_TOKEN,
-        formType: "event",
-        event: "candidate_open",
-        candidateId: person.id,
-        candidateName: person.name || "",
-        via: via || "card",
-        ts: new Date().toISOString(), // time-of-click, with the visitor's UTC offset
-      }),
-    });
-  } catch (e) {
-    /* analytics must never break the popup */
-  }
-}
 
 // ── Bootstrap ────────────────────────────────────────────────────
 const dataReady = Promise.all([
@@ -334,7 +300,6 @@ function rowShow(id, show) {
 function openPopup(person, card, pushHistory = true, via = "card") {
   const photos = person.photos || [];
   if (!photos.length) return;
-  logCandidateOpen(person, via);
   const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
   document.body.style.paddingRight = `${scrollbarWidth}px`;
 
