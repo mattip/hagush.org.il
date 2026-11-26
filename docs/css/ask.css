@@ -47,6 +47,24 @@ body {
   padding: 0 1.5rem;
 }
 
+/* ── This week's interview ────────────────────────────────────────── */
+.ask-week {
+  font-size: 0.9rem;
+  color: var(--nav, #09366d);
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+}
+.ask-week p { margin-bottom: 0.8em; }
+.ask-week .link { overflow-wrap: anywhere; }
+
+.ask-week-title {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--nav, #09366d);
+  margin-bottom: 0.6rem;
+}
+
 .ask-empty {
   text-align: center;
   color: #999;

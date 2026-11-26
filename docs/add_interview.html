@@ -172,20 +172,18 @@
       <h2 id="formTitle">ראיון חדש</h2>
 
       <div class="field">
-        <label>מועמד.ת *</label>
-        <select id="ivCandidate">
-          <option value="">— בחרו מועמד.ת —</option>
-        </select>
+        <label>שם המרואיין.ת *</label>
+        <input type="text" id="ivGuest" required />
       </div>
 
       <div class="field">
-        <label>תאריך *</label>
-        <input type="date" id="ivDate" required />
+        <label>תאריך * <span style="font-weight:400;color:#888">(יום.חודש.שנה — x במקום יום/חודש לא ידוע, למשל x.12.2026)</span></label>
+        <input type="text" id="ivDate" dir="ltr" placeholder="2.12.2026" required />
       </div>
 
       <div class="field">
-        <label>שעה *</label>
-        <input type="time" id="ivTime" required />
+        <label>שעה <span style="font-weight:400;color:#888">(חובה כשהתאריך ידוע)</span></label>
+        <input type="time" id="ivTime" />
       </div>
 
       <div class="btn-row">
@@ -295,13 +293,6 @@
       const res = await fetch("candidates.json");
       candidates = await res.json();
       candidates.sort((a, b) => lastNameKey(a.name).localeCompare(lastNameKey(b.name), "he"));
-      const sel = document.getElementById("ivCandidate");
-      candidates.forEach(c => {
-        const opt = document.createElement("option");
-        opt.value = c.id;
-        opt.textContent = c.name;
-        sel.appendChild(opt);
-      });
     } catch (err) {
       console.error("Failed to load candidates:", err);
     }
@@ -343,36 +334,73 @@
     return `${HEB_DAYS[d.getDay()]}, ${day}.${month}`;
   }
 
+  // Parse "D.M.YYYY" where D, or both D and M, may be a letter (x, y…) for
+  // "not known yet". The stored `date` stays a sortable string: unknown parts
+  // become "xx", which sorts after every digit — "2026-12-xx" lands after all
+  // known December dates, "2026-xx-xx" after all of 2026.
+  // Returns { date, day_label, known } or null if the input is invalid.
+  function parseDateInput(str) {
+    const m = str.trim().match(/^(\d{1,2}|[a-z])\.(\d{1,2}|[a-z])\.(\d{4})$/i);
+    if (!m) return null;
+    const [, d, mo, y] = m;
+    const dayKnown = /^\d+$/.test(d), monthKnown = /^\d+$/.test(mo);
+    if (dayKnown && !monthKnown) return null;          // a day without a month makes no sense
+    if (monthKnown && (+mo < 1 || +mo > 12)) return null;
+    if (!dayKnown) {
+      const mm = monthKnown ? String(+mo).padStart(2, "0") : "xx";
+      return { date: `${y}-${mm}-xx`, day_label: monthKnown ? `x.${+mo}` : "", known: false };
+    }
+    const iso = `${y}-${String(+mo).padStart(2, "0")}-${String(+d).padStart(2, "0")}`;
+    const dt = new Date(iso + "T00:00:00");
+    if (isNaN(dt) || dt.getDate() !== +d) return null;  // e.g. 31.2.2026
+    return { date: iso, day_label: autoDayLabel(iso), known: true };
+  }
+
+  // Inverse of parseDateInput, for filling the form when editing.
+  function dateToInput(date) {
+    const m = (date || "").match(/^(\d{4})-(\d{2}|xx)-(\d{2}|xx)$/);
+    if (!m) return date || "";
+    const [, y, mo, d] = m;
+    const part = (s) => (s === "xx" ? "x" : String(+s));
+    return `${part(d)}.${part(mo)}.${y}`;
+  }
+
   // ── Submit ──
   let editingId = null;
 
   document.getElementById("submitBtn").addEventListener("click", async () => {
-    const candidateId = document.getElementById("ivCandidate").value;
-    const date = document.getElementById("ivDate").value;
+    const guest = document.getElementById("ivGuest").value.trim();
+    const parsed = parseDateInput(document.getElementById("ivDate").value);
     const time = document.getElementById("ivTime").value;
 
-    if (!candidateId || !date || !time) {
-      alert("נא לבחור מועמד.ת, תאריך ושעה");
+    if (!guest) {
+      alert("נא למלא את שם המרואיין.ת");
       return;
     }
-
-    const candidate = candidates.find(c => c.id === candidateId);
-
-    const dayLabel = autoDayLabel(date);
+    if (!parsed) {
+      alert("תאריך לא תקין. יש לכתוב יום.חודש.שנה, למשל 2.12.2026, או x.12.2026 כשהיום עוד לא ידוע");
+      return;
+    }
+    if (parsed.known && !time) {
+      alert("נא למלא שעה");
+      return;
+    }
 
     const btn = document.getElementById("submitBtn");
     btn.disabled = true;
 
     const data = {
-      candidate_id:    candidateId,
-      candidate_name:  candidate ? candidate.name : candidateId,
-      date:            date,
+      candidate_name:  guest,
+      date:            parsed.date,
       time:            time,
-      day_label:       dayLabel,
+      day_label:       parsed.day_label,
     };
 
     try {
       if (editingId) {
+        // Older records point at candidates.json via candidate_id; the guest is
+        // now free text, so drop the stale id rather than let it override the name.
+        data.candidate_id = firebase.firestore.FieldValue.delete();
         await db.collection("interviews").doc(editingId).update(data);
       } else {
         data.created_at = firebase.firestore.FieldValue.serverTimestamp();
@@ -393,7 +421,7 @@
 
   function resetForm() {
     editingId = null;
-    document.getElementById("ivCandidate").value = "";
+    document.getElementById("ivGuest").value = "";
     document.getElementById("ivDate").value = "";
     document.getElementById("ivTime").value = "";
     document.getElementById("submitBtn").textContent = "הוסף ראיון";
@@ -430,7 +458,7 @@
         el("div", null,
           el("div", { class: "iv-info" }, displayName, " ", badge),
           el("div", { class: "iv-meta" },
-            `${iv.day_label || iv.date || ""} ${iv.time || ""} ${iv.created_by ? "— " + iv.created_by : ""}`),
+            `${iv.day_label || dateToInput(iv.date)} ${iv.time || ""} ${iv.created_by ? "— " + iv.created_by : ""}`),
         ),
         el("div", { class: "iv-actions" },
           el("button", { class: "iv-edit", onclick: () => editInterview(doc.id) }, "ערוך"),
@@ -445,8 +473,9 @@
     if (!doc.exists) return;
     const iv = doc.data();
 
-    document.getElementById("ivCandidate").value = iv.candidate_id || "";
-    document.getElementById("ivDate").value = iv.date || "";
+    const c = candidates.find(x => x.id === iv.candidate_id);
+    document.getElementById("ivGuest").value = c ? c.name : (iv.candidate_name || "");
+    document.getElementById("ivDate").value = dateToInput(iv.date);
     document.getElementById("ivTime").value = iv.time || "";
 
     editingId = id;
@@ -1344,7 +1373,7 @@
             const src = blob ? URL.createObjectURL(blob) : (p.url || "");
             let media;
             if (!src) media = el("span", { style: "color:#999" }, `[${p.file || p.type}]`);
-            else if (p.type === "video") media = el("video", { src, controls: "", playsinline: "", style: border-radius:8px" });
+            else if (p.type === "video") media = el("video", { src, controls: "", playsinline: "", style: "border-radius:8px" });
             else if (p.type === "audio") media = el("audio", { controls: "", src});
             else media = el("img", { src, style: "border-radius:8px" });
             items.push(el("div", { class: bubbleClass }, media, del));
