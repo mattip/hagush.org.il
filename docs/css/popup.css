@@ -1,0 +1,419 @@
+/* ── popup.css ──────────────────────────────────────────────────────
+   Candidate popup (profile + interview chat), driven by js/app.js.
+   main.css handles: reset, tokens, body, nav, footer.
+──────────────────────────────────────────────────────────────────── */
+
+body {
+  background: var(--light);
+}
+
+/* ── Popup shell ────────────────────────────────────────────────── */
+.popup {
+  position: fixed;
+  z-index: 300;
+  overflow-y: hidden;
+  background: var(--light);
+  color: var(--text);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 40px rgba(26, 39, 68, 0.35),
+    0 2px 8px rgba(26, 39, 68, 0.15);
+  display: flex;
+  flex-direction: column;
+  width: 90vw;
+  /* hidden state */
+  top: -9999px;
+  left: -9999px;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.93) translateY(5px);
+  transition:
+    opacity 0.18s,
+    transform 0.18s cubic-bezier(0.22, 0.68, 0, 1.2),
+    visibility 0s linear 0.18s;
+}
+.popup.open {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: all;
+  transform: scale(1) translateY(0);
+  transition:
+    opacity 0.18s,
+    transform 0.18s cubic-bezier(0.22, 0.68, 0, 1.2),
+    visibility 0s;
+}
+.popup.full-size {
+  --popup-margin: 8px;
+  top: var(--popup-margin);
+  left: var(--popup-margin);
+  right: var(--popup-margin);
+  bottom: var(--popup-margin);
+  width: auto !important;
+  max-height: calc(100vh - 2 * var(--popup-margin));
+}
+
+/* Close & back buttons — shared styles, differ only in position */
+.popup-close,
+.popup-back {
+  position: absolute;
+  top: 8px;
+  background: var(--blue);
+  border: none;
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.popup-close:hover,
+.popup-back:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+.popup-close { left: 8px; }
+.popup-back  { right: 42px; }
+
+.popup-pin {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--blue);
+  border: none;
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.popup-pin:hover { background: rgba(0, 0, 0, 0.3); }
+
+.popup-pin-toast {
+  position: absolute;
+  top: 40px;
+  right: 8px;
+  background: var(--nav, #09366d);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+  z-index: 10;
+}
+.popup-pin-toast.show { opacity: 1; }
+
+
+/* ── Popup image block ───────────────────────────────────────── */
+.popup-img-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  flex-shrink: 0;
+  background: #eef2fb;
+  overflow: hidden;
+}
+.popup-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+.popup-name-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: var(--blue);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 4px 12px 5px;
+  border-radius: 4px 0 0 0;
+}
+
+
+/* ── Popup info table ────────────────────────────────────────── */
+.popup-info {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0; /* Safari: allow flex child to shrink below content size */
+  -webkit-overflow-scrolling: touch; /* iOS: enable momentum scrolling after pinch-zoom */
+  touch-action: pan-y;
+}
+
+.pi-row {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 6px 14px;
+  align-items: baseline;
+}
+.pi-2col {
+  display: grid;
+  grid-template-columns: 5em 1fr;
+  column-gap: 0.5em;
+}
+.pi-full {
+  display: block;
+  padding: 8px 14px 10px;
+}
+.pi-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 8px 14px 10px;
+}
+.pi-links {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+}
+.pi-tag {
+  font-weight: 700;
+  color: var(--nav);
+  white-space: nowrap;
+}
+
+#piRationale {
+  white-space: pre-line;
+}
+
+/* Social icon links */
+.pi-link-icons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.pi-social-link {
+  display: flex;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.pi-social-link:hover {
+  transform: scale(1.15);
+  opacity: 0.85;
+}
+.pi-social-link svg { width: 26px; height: 26px; }
+.social-icon-img    { color: white; }
+
+/* Homepage text link */
+.pi-homepage-link {
+  color: var(--blue, #1a6aff);
+  text-decoration: underline;
+  margin-left: 8px;
+}
+
+/* Recommendation name links with hover tooltip */
+.pi-rec-link {
+  position: relative;
+  color: var(--blue, #1a6aff);
+  text-decoration: underline;
+  white-space: nowrap;
+}
+.pi-rec-link:hover { opacity: 0.8; }
+.pi-rec-show {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 50%;
+  transform: translateX(50%);
+  font-size: 0.75em;
+  font-weight: 700;
+  background: var(--nav, #09366d);
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.pi-rec-link:hover .pi-rec-show { display: block; }
+
+
+/* Scroll lock: <body> is the fixed element because openPopup() sets its
+   `top: -scrollY` to hold the background in place. Fixing <html> instead (as it
+   used to) left that offset inert and snapped the page to the top on open. */
+body.no-scroll {
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
+}
+
+html.no-scroll {
+  overflow: hidden;
+  width: 100%;
+}
+
+/* ── Popup tabs ───────────────────────────────────────────────────── */
+.popup-tabs {
+  display: flex;
+  border-bottom: 2px solid #eaeff6;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.popup-tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #7890a6;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.popup-tab:hover { color: var(--nav, #09366d); }
+
+.popup-tab.active {
+  color: var(--nav, #09366d);
+  border-bottom-color: var(--nav, #09366d);
+}
+
+/* ── Interview accordion ──────────────────────────────────────────── */
+.popup-interview {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.iv-loading {
+  text-align: center;
+  color: #999;
+  padding: 2rem 0;
+  font-size: 0.9rem;
+}
+
+/* ── Interview chat flow ──────────────────────────────────────────── */
+.iv-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.iv-bubble {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  white-space: pre-line;
+}
+
+.iv-bubble-iv {
+  align-self: flex-start;
+  background: #d9fdd3;
+  color: #1a1a2e;
+  border-top-left-radius: 2px;
+}
+
+.iv-bubble-cd {
+  align-self: flex-end;
+  background: #fff;
+  color: #1a1a2e;
+  border: 1px solid #e8ebf0;
+  border-top-right-radius: 2px;
+}
+
+.iv-link {
+  color: #0a58ca;
+  text-decoration: underline;
+  overflow-wrap: anywhere; /* let long URLs wrap inside the bubble */
+}
+
+.iv-bubble-img {
+  width: 100%;
+  border-radius: 8px;
+  display: block;
+}
+
+
+.iv-video-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.iv-video-wrap video {
+  width: 100%;
+  border-radius: 8px;
+  display: block;
+}
+
+.iv-video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.5);
+  color: #fff;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .2s;
+}
+
+.iv-video-play:hover {
+  background: rgba(0,0,0,.7);
+}
+
+.iv-video-play.playing {
+  opacity: 0;
+}
+
+.iv-video-wrap:hover .iv-video-play.playing {
+  opacity: .6;
+}
+
+.iv-audio {
+  display: block;
+  border-radius: 24px;
+}
+
+/* ── Responsive overrides ───────────────────────────────────────── */
+@media (min-width: 768px) {
+  .popup.full-size {
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    max-width: 550px;
+    max-height: 90vh;
+  }
+}

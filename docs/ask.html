@@ -17,8 +17,8 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800&family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./css/main.css?v=4" />
-    <link rel="stylesheet" href="./css/candidates.css?v=11" />
-    <link rel="stylesheet" href="./css/ask.css?v=4" />
+    <link rel="stylesheet" href="./css/popup.css?v=1" />
+    <link rel="stylesheet" href="./css/ask.css?v=5" />
   </head>
   <body>
     <header>
@@ -31,8 +31,6 @@
         </label>
         <ul>
           <li><a href="index.html">דף בית</a></li>
-          <li><a href="candidates.html">בחירות בדמוקרטים!</a></li>
-          <li><a href="choices.html">עכשיו בוחרות!</a></li>
           <li><a href="ask.html" class="active">עכשיו שואלות!</a></li>
           <li><a href="events.html">יומן אירועים</a></li>
           <li><a href="about.html">אודות</a></li>
@@ -88,7 +86,7 @@
       <a href="privacy.html" style="color: inherit; text-decoration: underline; font-weight: 400; font-size: 0.75rem;">מדיניות פרטיות</a>
     </footer>
 
-    <!-- Popup — shared with candidates.html, driven by ./js/app.js -->
+    <!-- Popup — driven by ./js/app.js -->
     <div class="popup full-size" id="popup" role="dialog" aria-modal="true">
       <!-- ① Photo block -->
       <div class="popup-img-wrap">
@@ -162,7 +160,7 @@
       </div>
     </div>
 
-    <script src="./js/app.js?v=20" data-popups="true" data-share-self="true" data-default-tab="interview"></script>
+    <script src="./js/app.js?v=21" data-default-tab="interview"></script>
     <script>
     const PORTRAITS  = "portraits";
 
@@ -204,24 +202,8 @@
       }
     }
 
-    // DOM builder — untrusted values reach the page only via textContent /
-    // setAttribute / addEventListener, so escaping is automatic (no innerHTML
-    // string building, no quote-breakout risk).
-    function el(tag, props, ...kids) {
-      const n = document.createElement(tag);
-      for (const [k, v] of Object.entries(props || {})) {
-        if (v == null || v === false) continue;
-        if (k === "class") n.className = v;
-        else if (k === "text") n.textContent = v;
-        else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2).toLowerCase(), v);
-        else n.setAttribute(k, v);
-      }
-      for (const c of kids.flat()) {
-        if (c == null || c === false) continue;
-        n.append(c.nodeType ? c : document.createTextNode(String(c)));
-      }
-      return n;
-    }
+    // DOM builder from app.js — escaping is automatic (no innerHTML).
+    const el = elem;
 
     // ── Past interview cards ──
     function renderPast(interviews) {
@@ -237,7 +219,7 @@
         const photo = iv.candidate_photo || "";
         const label = iv.source === "document" ? "ראיון כתוב" : "ראיון חי · וואטסאפ";
         const person = candidates.find(c => c.id === iv.candidate_id);
-        const href = `candidates.html?id=${encodeURIComponent(iv.candidate_id)}&tab=interview`;
+        const href = `ask.html?id=${encodeURIComponent(iv.candidate_id)}&tab=interview`;
 
         const isDoc = iv.source === "document";
         const card = el("a", { class: isDoc ? "past-card past-card--doc" : "past-card", href },
@@ -251,13 +233,12 @@
 
         if (person) {
           card.addEventListener("click", (e) => {
-            if (typeof openPopup !== "function") return;
             e.preventDefault();
             const url = new URL(location);
             url.searchParams.set("id", iv.candidate_id);
             url.searchParams.set("tab", "interview");
             history.replaceState(null, "", url);
-            openPopup(person, document.body, false, "ask");
+            openPopup(person, false);
           });
         }
 

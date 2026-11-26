@@ -1,6 +1,6 @@
 /* ── Ask page — "עכשיו שואלות!" ─────────────────────────────────── */
 
-/* We pull in candidates.css for the shared popup styles; its body rule
+/* We pull in popup.css for the shared popup styles; its body rule
    (background: var(--light)) would otherwise tint this page. Keep ask white. */
 body {
   background: #fff;
