@@ -11,22 +11,7 @@ body {
   margin: 0 auto;
 }
 
-/* ── Group 1 (turquoise): title block — tight spacing ──────────── */
-.hero-eyebrow {
-  font-size: 0.9rem;
-  color: var(--nav);
-  margin-bottom: 0;
-}
-.events-hero .hero-h1 {
-  margin-bottom: 0.05em;
-}
-.events-hero .hero-h2 {
-  margin-top: 0;
-  margin-bottom: 0.2em;
-}
-.events-hero .hero-date {
-  margin-bottom: 0.4em;
-}
+/* ── Group 1 (turquoise): title block ───────────────────────────── */
 .events-hero .cta-pill {
   margin-bottom: 0;
 }
