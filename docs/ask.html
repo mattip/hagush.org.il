@@ -10,15 +10,17 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="עכשיו באות!" />
     <meta property="og:title" content="עכשיו שואלות!" />
-    <meta property="og:description" content="ניפגש בקבוצת הוואטסאפ הייעודית שלנו כדי להכיר את המועמדים.ות ולשאול אותם את כל השאלות הקשות! תוכלו לשאול" />
+    <meta property="og:description" content="הראיון השבוע - על ההסתדרות. הצטרפו לקבוצת הוואטסאפ של עכשיו שואלות ושאלו את כל השאלות הקשות!" />
     <meta property="og:url" content="https://hagush.org.il/ask.html" />
     <meta property="og:locale" content="he_IL" />
-    <meta name="description" content="ניפגש בקבוצת הוואטסאפ הייעודית שלנו כדי להכיר את המועמדים.ות ולשאול אותם את כל השאלות הקשות! תוכלו לשאול" />
+    <meta name="description" content="הראיון השבוע - על ההסתדרות. הצטרפו לקבוצת הוואטסאפ של עכשיו שואלות ושאלו את כל השאלות הקשות!" />
 
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800&family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./css/main.css?v=4" />
     <link rel="stylesheet" href="./css/popup.css?v=1" />
-    <link rel="stylesheet" href="./css/ask.css?v=5" />
+    <link rel="stylesheet" href="./css/ask.css?v=6" />
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   </head>
   <body>
     <header>
@@ -42,10 +44,108 @@
       <section class="ask-hero section">
         <h1 class="ask-title">עכשיו שואלות!</h1>
         <p class="ask-desc">
-          נפגשנו בקבוצת הוואטסאפ הייעודית שלנו כדי להכיר את
-          המועמדים.ות ולשאול אותם את כל השאלות הקשות!
+          ממשלת שינוי עוד לא קמה והסכנה של שלטון נתניהו עוד לא חלפה.
+          במקביל - אנחנו כבר עם הפנים קדימה- לאתגרים הבאים בדרך לתיקון
+          מדינת ישראל. התפקיד שלנו כציבור הוא להיות מעורבות ולשאול את כל
+          השאלות, ובשביל זה אנחנו כאן. בחודשים הקרובים נארח א.נשים שיספרו
+          על המאבקים והאתגרים העכשוויים והרלוונטיים לנו כחברי וחברות
+          מפלגת הדמוקרטים
         </p>
-        <p><b>הראיונות שקיימנו מרוכזים כאן מטה</b></p>
+      </section>
+
+      <!-- ── This week's interview ── -->
+      <section class="ask-section ask-week">
+        <h2 class="ask-week-title">הראיון השבוע - על ההסתדרות</h2>
+        <p>
+          בעוד חצי שנה יתקיימו בחירות למוסדות ההסתדרות. זו הזדמנות טובה
+          להבין מהי ההסתדרות, מה התפקיד שלה בדמוקרטיה, איך היא הושחתה ככה
+          בשנים האחרונות, האם צריך לתקן אותה ומה צריך לעשות בשביל שזה יקרה.
+        </p>
+        <p>
+          נארח את עו"ד נאוה פינצ'וק-אלכסנדר, חברת ועדת החוקה של מפלגת
+          הדמוקרטים ועו"ד לדיני עבודה, שמנהלת בימים אלה ממש מאבק משפטי כדי
+          לנסות ולהפוך את סיעת הדמוקרטים בהסתדרות לסיעה דמוקרטית ונשאל אותה
+          את כל השאלות הקשות.
+        </p>
+        <p>
+          <b>הראיון יתקיים בקבוצה הייעודית של "עכשיו שואלות" &gt;&gt;
+          <a class="link" href="https://ltl.me/45a41m" target="_blank" rel="noreferrer">https://ltl.me/45a41m</a></b>
+        </p>
+      </section>
+
+      <!-- ── Upcoming interviews (Firestore, managed in add_interview.html) ── -->
+      <section class="ask-section">
+        <div class="upcoming-grid" id="upcomingGrid"></div>
+      </section>
+
+      <!-- ── Links row ── -->
+      <section class="ask-section ask-links">
+        <a class="ask-prev-link" href="#past" id="prevLink">ראיונות קודמים &gt;</a>
+        <a class="ask-wa-link" href="https://ltl.me/45a41m" target="_blank" rel="noreferrer">
+          <img src="whatsapp.svg" alt="" class="ask-wa-icon" />
+          הצטרפו לקבוצת הראיונות
+        </a>
+      </section>
+
+      <!-- ── Question form ── -->
+      <section class="ask-form-section" id="askFormSection">
+        <div class="ask-form-banner">יש לי שאלה למרואיין.ת &gt;</div>
+
+        <div class="ask-form-wrap">
+          <form id="askForm" class="ask-form" novalidate>
+            <input type="text" name="website" tabindex="-1" autocomplete="off"
+              style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0"
+              aria-hidden="true" />
+
+            <!-- Interviewee selector -->
+            <div class="af-field">
+              <p class="af-label">השאלה שלי ל:</p>
+              <div class="af-candidates" id="candidateRadios"></div>
+            </div>
+
+            <div class="af-field">
+              <label class="af-label" for="af-question">השאלה שלי <span class="af-req">*</span></label>
+              <textarea class="af-input af-textarea" id="af-question" name="question" rows="4" required></textarea>
+            </div>
+
+            <div class="af-field">
+              <label class="af-label" for="af-name">שם <span class="af-req">*</span></label>
+              <input class="af-input" id="af-name" name="name" type="text" required autocomplete="name" />
+            </div>
+
+            <div class="af-field">
+              <label class="af-label" for="af-phone">טלפון <span class="af-req">*</span></label>
+              <input class="af-input" id="af-phone" name="phone" type="tel" required autocomplete="tel" dir="ltr" placeholder="05X-XXXXXXX" />
+            </div>
+
+            <div class="af-field">
+              <p class="af-label">התפקדות לדמוקרטים</p>
+              <label class="af-radio">
+                <input type="radio" name="registered" value="yes" />
+                התפקדתי לדמוקרטים
+              </label>
+              <label class="af-radio">
+                <input type="radio" name="registered" value="no" />
+                עוד לא התפקדתי
+              </label>
+            </div>
+
+            <div class="af-error" id="af-error" style="display:none"></div>
+            <button class="af-submit" type="submit">שליחת השאלה</button>
+
+            <p class="af-disclaimer" style="font-size:.75rem;color:#888;line-height:1.4;margin-top:.7rem">
+              מילוי טופס מהווה אישור לקבלת הודעות פרטיות מעכשיו באות
+            </p>
+          </form>
+
+          <div class="af-success" id="af-success" style="display:none">
+            <p>✓ תודה! השאלה התקבלה.</p>
+            <a class="ask-wa-link" href="https://ltl.me/45a41m" target="_blank" rel="noreferrer">
+              <img src="whatsapp.svg" alt="" class="ask-wa-icon" />
+              כבר הצטרפתם לקבוצה?
+            </a>
+          </div>
+        </div>
       </section>
 
       <!-- ── Past interviews ── -->
@@ -161,18 +261,77 @@
 
     <script src="./js/app.js?v=21" data-default-tab="interview"></script>
     <script>
+    const SUBMIT_URL = "/api/question";
+    const TOKEN      = "NachshavBaot2026";
     const PORTRAITS  = "portraits";
+
+    // ── Firebase ──
+    const firebaseConfig = {
+      apiKey:            "AIzaSyC7hQs04G8U0BMs9UXrHEurQnxgxN7jmLw",
+      authDomain:        "hagush-org-il.firebaseapp.com",
+      projectId:         "hagush-org-il",
+      storageBucket:     "hagush-org-il.firebasestorage.app",
+      messagingSenderId: "674306617225",
+      appId:             "1:674306617225:web:7f84e8f09bc35222e77b58",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
     // ── Load candidates + interviews ──
     // app.js already fetches candidates.json and interviews/index.json →
-    // allPeople, interviewIndex. The interview round is over, so index.json is
-    // the only source: no Firestore query, no upcoming-interview scheduling.
+    // allPeople, interviewIndex. Upcoming interviews come from Firestore
+    // (managed in add_interview.html); guests are free-text names.
     let candidates = [];
+
+    // Firestore `date` is "YYYY-MM-DD", or "YYYY-MM-xx" / "YYYY-xx-xx" when the
+    // day (and month) isn't known yet — see parseDateInput in add_interview.html.
+    const isDateKnown = iv => /^\d{4}-\d{2}-\d{2}$/.test(iv.date || "");
+    function isUpcoming(iv, now) {
+      if (isDateKnown(iv)) {
+        return new Date(`${iv.date}T${iv.time || "23:59"}:00`).getTime() >= now.getTime();
+      }
+      // "x" sorts after every digit, so "2026-12-xx" stays upcoming until the
+      // month is over and "2026-xx-xx" until the year is over.
+      const y = now.getFullYear();
+      const today = `${y}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      return (iv.date || "") >= today;
+    }
+
+    const HEB_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי",
+                        "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
+    function whenText(iv) {
+      if (isDateKnown(iv)) {
+        return [`ניפגש ביום ${iv.day_label || ""},`, el("br"), `בשעה ${iv.time || ""}`];
+      }
+      const [y, m] = (iv.date || "").split("-");
+      const month = /^\d{2}$/.test(m) ? `ב${HEB_MONTHS[+m - 1]} ${y}` : `ב-${y}`;
+      return [`ניפגש ${month},`, el("br"), "המועד המדויק יפורסם בקרוב"];
+    }
 
     async function init() {
       try {
         await dataReady;
         candidates = allPeople;
+
+        try {
+          const snap = await db.collection("interviews").orderBy("date").get();
+          const now = new Date();
+          const upcoming = snap.docs
+            .map(d => {
+              const iv = { id: d.id, ...d.data() };
+              const c = candidates.find(x => x.id === iv.candidate_id);
+              iv.candidate_name = c ? c.name : (iv.candidate_name || iv.candidate_id || "?");
+              return iv;
+            })
+            .filter(iv => isUpcoming(iv, now))
+            .sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
+          renderUpcoming(upcoming);
+          renderCandidateRadios(upcoming);
+        } catch (err) {
+          console.error("Failed to load upcoming interviews:", err);
+          renderUpcoming([]);
+          renderCandidateRadios([]);
+        }
 
         // Interviews come solely from interviews/index.json (loaded by app.js)
         const pastFromFiles = interviewIndex.map(entry => {
@@ -196,6 +355,9 @@
           return (b.date).localeCompare(a.date);
         });
         renderPast(pastFromFiles);
+        if (pastFromFiles.length === 0) {
+          document.getElementById("prevLink").style.display = "none";
+        }
       } catch (err) {
         console.error("Failed to load interviews:", err);
       }
@@ -203,6 +365,117 @@
 
     // DOM builder from app.js — escaping is automatic (no innerHTML).
     const el = elem;
+
+    // ── Upcoming interview cards ──
+    function renderUpcoming(interviews) {
+      const grid = document.getElementById("upcomingGrid");
+      if (!interviews.length) {
+        grid.replaceChildren(el("p", { class: "ask-empty" }, "אין ראיונות קרובים כרגע"));
+        return;
+      }
+      grid.replaceChildren(...interviews.map(iv =>
+        el("div", { class: iv.important ? "upcoming-card upcoming-card--important" : "upcoming-card" },
+          el("p", { class: "uc-name", text: iv.candidate_name }),
+          el("p", { class: "uc-time" }, ...whenText(iv)),
+        )
+      ));
+    }
+
+    // ── Interviewee radio buttons in form ──
+    function renderCandidateRadios(interviews) {
+      const wrap = document.getElementById("candidateRadios");
+      if (!interviews.length) {
+        wrap.replaceChildren(el("p", { style: "color:#999; font-size:.85rem" }, "אין ראיונות קרובים כרגע"));
+        return;
+      }
+      wrap.replaceChildren(...interviews.map((iv, i) => {
+        const input = el("input", {
+          type: "radio", name: "candidate",
+          value: iv.candidate_name, "data-id": iv.candidate_id || "",
+        });
+        if (i === 0) input.checked = true;
+        return el("label", { class: "af-radio" }, input, ` ${iv.candidate_name}`);
+      }));
+
+      updateQuestionLabel();
+      wrap.addEventListener("change", updateQuestionLabel);
+    }
+
+    function updateQuestionLabel() {
+      const selected = document.querySelector('input[name="candidate"]:checked');
+      if (selected) {
+        document.querySelector('label[for="af-question"]')
+          .replaceChildren(`השאלה שלי ל${selected.value} `, el("span", { class: "af-req" }, "*"));
+      }
+    }
+
+    // ── Form submission ──
+    const form    = document.getElementById("askForm");
+    const errBox  = document.getElementById("af-error");
+    const success = document.getElementById("af-success");
+
+    function showError(msg) {
+      errBox.textContent = msg;
+      errBox.style.display = "block";
+      const btn = form.querySelector(".af-submit");
+      btn.disabled = false;
+      btn.textContent = "שליחת השאלה";
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errBox.style.display = "none";
+
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const btn = form.querySelector(".af-submit");
+      btn.disabled = true;
+      btn.textContent = "שולח/ת...";
+
+      const candidateRadio = form.querySelector('input[name="candidate"]:checked');
+
+      const data = {
+        _token:       TOKEN,
+        formType:     "question",
+        website:      form.website.value,
+        candidate_id: candidateRadio ? candidateRadio.dataset.id : "",
+        candidate:    candidateRadio ? candidateRadio.value : "",
+        name:         form.name.value.trim(),
+        phone:        form.phone.value.trim(),
+        registered:   form.registered ? form.registered.value : "",
+        question:     form.question.value.trim(),
+      };
+
+      let networkOk = false;
+      try {
+        const resp = await fetch(SUBMIT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (resp.ok) {
+          try {
+            const result = await resp.json();
+            if (result.ok === false) showError("שגיאה ברישום השאלה, נסו שוב יותר מאוחר");
+            else networkOk = true;
+          } catch {
+            networkOk = true;
+          }
+        } else {
+          showError("שגיאה ברישום השאלה, נסו שוב יותר מאוחר");
+        }
+      } catch (err) {
+        showError(!navigator.onLine ? "נראה שאין חיבור לאינטרנט." : "שגיאה בשליחה. נסי/נסה שוב.");
+      }
+
+      if (networkOk) {
+        form.style.display = "none";
+        success.style.display = "block";
+      }
+    });
 
     // ── Past interview cards ──
     function renderPast(interviews) {
